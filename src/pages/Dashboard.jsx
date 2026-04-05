@@ -10,7 +10,8 @@ import StatCard from "../components/StatCard";
 import WalletDisplay from "../components/WalletDisplay";
 import useMarketData from "../lib/useMarketData";
 import useDealer from "../lib/useDealer";
-import { UserPlus, FileText, Trophy, Send, TrendingUp, Users, DollarSign } from "lucide-react";
+import { UserPlus, FileText, Trophy, Send, TrendingUp, Users, DollarSign, Download } from "lucide-react";
+import { utils, writeFile } from "xlsx";
 
 export default function Dashboard() {
   useEffect(() => { document.title = "SolFort - 대시보드"; }, []);
@@ -37,6 +38,26 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const handleExcelDownload = async () => {
+    const filtered = records.filter(r => r.dealer_name === dealer.dealer_name);
+    const data = filtered.map(r => ({
+      "날짜": r.sale_date || '',
+      "고객명": r.customer_name || '',
+      "연락처": r.phone || '',
+      "매출금액": r.sales_amount || 0,
+      "SOF수량": r.final_quantity || 0,
+      "지갑주소": r.wallet_address || ''
+    }));
+    
+    const now = new Date();
+    const month = String(now.getMonth() + 1).padStart(2, '0');
+    const year = now.getFullYear();
+    const ws = utils.json_to_sheet(data);
+    const wb = utils.book_new();
+    utils.book_append_sheet(wb, ws, "매출현황");
+    writeFile(wb, `내매출현황_${year}-${month}.xlsx`);
   };
 
   useEffect(() => {
@@ -164,11 +185,11 @@ export default function Dashboard() {
             { label: "고객 등록", icon: UserPlus, path: "/register", primary: true },
             { label: "매출내역", icon: FileText, path: "/records" },
             { label: "랭킹", icon: Trophy, path: "/ranking" },
-            { label: "텔레그램 전송", icon: Send, path: "#" },
+            { label: "엑셀 다운로드", icon: Download, path: "#", onClick: handleExcelDownload },
           ].map((btn) => (
             <button
               key={btn.label}
-              onClick={() => btn.path !== "#" && navigate(btn.path)}
+              onClick={() => btn.onClick ? btn.onClick() : (btn.path !== "#" && navigate(btn.path))}
               className={`flex items-center justify-center gap-2 py-3.5 rounded-xl font-medium text-sm transition-all ${
                 btn.primary
                   ? "sf-gradient-btn text-white"
