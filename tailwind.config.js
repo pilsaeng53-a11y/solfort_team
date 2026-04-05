@@ -2,8 +2,18 @@
 module.exports = {
     darkMode: ["class"],
     content: ["./index.html", "./src/**/*.{ts,tsx,js,jsx}"],
+    safelist: [
+      'bg-emerald-500/20', 'text-emerald-400', 'border-emerald-500/30',
+      'bg-purple-500/20', 'text-purple-400', 'border-purple-500/30',
+      'bg-yellow-500/20', 'text-yellow-400', 'border-yellow-500/30',
+      'bg-blue-500/20', 'text-blue-400', 'border-blue-500/30',
+      'bg-red-500/20', 'text-red-400', 'border-red-500/30',
+    ],
   theme: {
   	extend: {
+      fontFamily: {
+        inter: ['var(--font-inter)'],
+      },
   		borderRadius: {
   			lg: 'var(--radius)',
   			md: 'calc(var(--radius) - 2px)',
@@ -63,20 +73,12 @@ module.exports = {
   		},
   		keyframes: {
   			'accordion-down': {
-  				from: {
-  					height: '0'
-  				},
-  				to: {
-  					height: 'var(--radix-accordion-content-height)'
-  				}
+  				from: { height: '0' },
+  				to: { height: 'var(--radix-accordion-content-height)' }
   			},
   			'accordion-up': {
-  				from: {
-  					height: 'var(--radix-accordion-content-height)'
-  				},
-  				to: {
-  					height: '0'
-  				}
+  				from: { height: 'var(--radix-accordion-content-height)' },
+  				to: { height: '0' }
   			}
   		},
   		animation: {

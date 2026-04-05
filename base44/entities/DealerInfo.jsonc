@@ -1,0 +1,50 @@
+{
+  "name": "DealerInfo",
+  "type": "object",
+  "properties": {
+    "dealer_name": {
+      "type": "string",
+      "title": "\ub300\ub9ac\uc810\uba85"
+    },
+    "owner_name": {
+      "type": "string",
+      "title": "\ub300\ub9ac\uc810\uc8fc"
+    },
+    "phone": {
+      "type": "string",
+      "title": "\uc5f0\ub77d\ucc98"
+    },
+    "region": {
+      "type": "string",
+      "title": "\uc9c0\uc5ed"
+    },
+    "grade": {
+      "type": "string",
+      "title": "\ub4f1\uae09",
+      "enum": [
+        "GREEN",
+        "PURPLE",
+        "GOLD",
+        "PLATINUM"
+      ],
+      "default": "GREEN"
+    },
+    "rebate_wallet": {
+      "type": "string",
+      "title": "\ub9ac\ubca0\uc774\ud2b8 \uc9c0\uac11"
+    },
+    "usdt_wallet": {
+      "type": "string",
+      "title": "USDT \uc9c0\uac11"
+    },
+    "backpack_wallet": {
+      "type": "string",
+      "title": "\ubc31\ud329 \uc9c0\uac11"
+    }
+  },
+  "required": [
+    "dealer_name",
+    "owner_name",
+    "phone"
+  ]
+}

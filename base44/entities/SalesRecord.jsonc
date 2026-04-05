@@ -1,0 +1,70 @@
+{
+  "name": "SalesRecord",
+  "type": "object",
+  "properties": {
+    "dealer_name": {
+      "type": "string",
+      "title": "\ub300\ub9ac\uc810\uba85"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "\uace0\uac1d\uba85"
+    },
+    "phone": {
+      "type": "string",
+      "title": "\uc804\ud654\ubc88\ud638"
+    },
+    "wallet_address": {
+      "type": "string",
+      "title": "\uc9c0\uac11\uc8fc\uc18c"
+    },
+    "sales_amount": {
+      "type": "number",
+      "title": "\ud310\ub9e4\uae08\uc561(KRW)"
+    },
+    "usdt_rate": {
+      "type": "number",
+      "title": "USDT \ud658\uc728"
+    },
+    "token_price": {
+      "type": "number",
+      "title": "\ud1a0\ud070 \uac00\uaca9"
+    },
+    "promotion_pct": {
+      "type": "number",
+      "title": "\ud504\ub85c\ubaa8\uc158 \ubc30\uc728",
+      "default": 300
+    },
+    "usdt_amount": {
+      "type": "number",
+      "title": "USDT \uc218\ub7c9"
+    },
+    "base_quantity": {
+      "type": "number",
+      "title": "\uae30\ubcf8 SOF"
+    },
+    "final_quantity": {
+      "type": "number",
+      "title": "\ucd5c\uc885 SOF"
+    },
+    "customer_status": {
+      "type": "string",
+      "title": "\uace0\uac1d \uc0c1\ud0dc",
+      "enum": [
+        "new",
+        "existing",
+        "duplicate"
+      ]
+    },
+    "sale_date": {
+      "type": "string",
+      "title": "\ud310\ub9e4\uc77c\uc790"
+    }
+  },
+  "required": [
+    "dealer_name",
+    "customer_name",
+    "phone",
+    "sales_amount"
+  ]
+}
