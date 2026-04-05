@@ -21,37 +21,37 @@ export default function AuthLogin() {
     }
     setLoading(true);
     setError("");
-    try {
-      const res = await fetch("https://solfort-js.onrender.com/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ username, password }),
-      });
-      const data = await res.json();
-      if (data.token) {
-        Auth.login(data);
-        navigate(Auth.getHomeRoute());
-        setLoading(false);
-        return;
-      }
-    } catch {}
-    // Fallback: Base44 entity lookup
-    const dealers = await base44.entities.DealerInfo.filter({ username, status: 'active' });
-    const dealer = dealers.find(d => d.password === password);
+
+    // 1. SuperAdmin 체크
+    const admins = await base44.entities.SuperAdmin.list();
+    const admin = admins.find(a => a.username === username && a.password === password && a.status === 'active');
+    if (admin) {
+      Auth.login({ token: 'admin_' + admin.id, role: 'super_admin', dealer_name: admin.name, user_id: admin.id });
+      navigate(Auth.getHomeRoute());
+      setLoading(false);
+      return;
+    }
+
+    // 2. DealerInfo 체크
+    const dealers = await base44.entities.DealerInfo.list();
+    const dealer = dealers.find(d => d.username === username && d.password === password && d.status === 'active');
     if (dealer) {
-      Auth.login({ token: 'local_' + dealer.id, role: 'dealer', dealer_name: dealer.dealer_name, user_id: dealer.id });
+      Auth.login({ token: 'dealer_' + dealer.id, role: dealer.role || 'dealer', dealer_name: dealer.dealer_name, user_id: dealer.id });
       navigate(Auth.getHomeRoute());
       setLoading(false);
       return;
     }
-    const callMembers = await base44.entities.CallTeamMember.filter({ username, status: 'active' });
-    const callMember = callMembers.find(c => c.password === password);
-    if (callMember) {
-      Auth.login({ token: 'local_' + callMember.id, role: 'call_team', dealer_name: callMember.name, user_id: callMember.id });
+
+    // 3. CallTeamMember 체크
+    const callMembers = await base44.entities.CallTeamMember.list();
+    const member = callMembers.find(m => m.username === username && m.password === password && m.status === 'active');
+    if (member) {
+      Auth.login({ token: 'call_' + member.id, role: member.role || 'call_team', dealer_name: member.name, user_id: member.id });
       navigate(Auth.getHomeRoute());
       setLoading(false);
       return;
     }
+
     setError("아이디 또는 비밀번호가 올바르지 않습니다");
     setLoading(false);
   };

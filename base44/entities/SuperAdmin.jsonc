@@ -1,0 +1,37 @@
+{
+  "name": "SuperAdmin",
+  "type": "object",
+  "properties": {
+    "username": {
+      "type": "string",
+      "title": "\uc544\uc774\ub514"
+    },
+    "password": {
+      "type": "string",
+      "title": "\ube44\ubc00\ubc88\ud638"
+    },
+    "name": {
+      "type": "string",
+      "title": "\uc774\ub984"
+    },
+    "role": {
+      "type": "string",
+      "title": "\uc5ed\ud560",
+      "default": "super_admin"
+    },
+    "status": {
+      "type": "string",
+      "title": "\uc0c1\ud0dc",
+      "default": "active"
+    },
+    "created_at": {
+      "type": "string",
+      "title": "\uc0dd\uc131\uc77c\uc2dc"
+    }
+  },
+  "required": [
+    "username",
+    "password",
+    "name"
+  ]
+}

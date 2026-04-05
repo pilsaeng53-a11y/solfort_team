@@ -19,6 +19,7 @@ import AdminDealer from './pages/AdminDealer';
 import AdminCall from './pages/AdminCall';
 import AdminSuper from './pages/AdminSuper';
 import Register from './pages/Register';
+import InitAdmin from './pages/InitAdmin';
 
 const HIDE_NAV = ['/', '/call', '/admin/dealer', '/admin/call', '/admin/super'];
 
@@ -31,6 +32,7 @@ const AppContent = () => {
         <Routes>
           <Route path="/" element={<AuthLogin />} />
           <Route path="/register" element={<Register />} />
+          <Route path="/init-admin" element={<InitAdmin />} />
 
           {/* 딜러 */}
           <Route path="/dashboard" element={<ProtectedRoute roles={['dealer']}><Dashboard /></ProtectedRoute>} />
