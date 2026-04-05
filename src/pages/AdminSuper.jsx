@@ -11,6 +11,9 @@ import SettlementPanel from "../components/SettlementPanel";
 import SalesOrderPanel from "../components/SalesOrderPanel";
 import DealerDetailModal from "../components/DealerDetailModal";
 import ContentManagementPanel from "../components/ContentManagementPanel";
+import AnomalyPanel from "../components/AnomalyPanel";
+import SystemLogPanel from "../components/SystemLogPanel";
+import { Logger } from "../lib/logger";
 
 const API = "https://solfort-js.onrender.com";
 const today = new Date().toISOString().split("T")[0];
@@ -38,7 +41,7 @@ export default function AdminSuper() {
       {/* Category Selector */}
       <div className="px-4 pt-3 pb-0 border-b border-white/[0.06]">
         <div className="flex gap-2 mb-3">
-          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["content", "📋 콘텐츠 관리"]].map(([k, l]) => (
+          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["content", "📋 콘텐츠 관리"], ["anomaly", "🔍 이상 감지"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
             <button key={k} onClick={() => setCategory(k)}
               className={`px-4 py-2 rounded-t-lg text-xs font-semibold transition-all ${category === k ? "bg-purple-500/20 text-purple-400 border-t border-x border-purple-500/30 border-b-0" : "bg-white/5 text-gray-400 hover:text-white"}`}>
               {l}
@@ -99,6 +102,8 @@ export default function AdminSuper() {
           </>
         )}
         {category === "content" && <ContentManagementPanel />}
+        {category === "anomaly" && <AnomalyPanel />}
+        {category === "syslog" && <SystemLogPanel />}
       </div>
     </div>
   );
@@ -288,7 +293,7 @@ function DealerOverview() {
                     {isSuperAdmin ? (
                       <div className="flex gap-1 flex-wrap">
                         {GRADES.map(g => (
-                          <GradeBtn key={g} grade={g} current={d.grade} dealerId={d.id} onUpdate={(id, grade) => setDealers(prev => prev.map(x => x.id === id ? { ...x, grade } : x))} />
+                          <GradeBtn key={g} grade={g} current={d.grade} dealerId={d.id} dealerName={d.dealer_name} onUpdate={(id, grade) => setDealers(prev => prev.map(x => x.id === id ? { ...x, grade } : x))} />
                         ))}
                       </div>
                     ) : <GradeBadge grade={d.grade || "GREEN"} />}
@@ -304,12 +309,13 @@ function DealerOverview() {
   );
 }
 
-function GradeBtn({ grade, current, dealerId, onUpdate }) {
+function GradeBtn({ grade, current, dealerId, dealerName, onUpdate }) {
   const [loading, setLoading] = useState(false);
   const change = async () => {
     if (current === grade) return;
     setLoading(true);
     await base44.entities.DealerInfo.update(dealerId, { grade });
+    Logger.log("grade_change", Auth.getDealerName(), Auth.getRole(), dealerName, "등급 변경", current, grade);
     onUpdate(dealerId, grade);
     setLoading(false);
   };
@@ -378,9 +384,9 @@ function DealerManagement() {
                       <td className="py-3 px-2 text-gray-500">{d.referral_code || "-"}</td>
                       <td className="py-3 px-2">
                         <div className="flex gap-1.5">
-                          <button onClick={() => updateDealer(d.id, { status: "active" })} disabled={updating === d.id}
+                          <button onClick={async () => { await updateDealer(d.id, { status: "active" }); Logger.log("approval", Auth.getDealerName(), Auth.getRole(), d.dealer_name, "가입 승인", "pending", "active"); }} disabled={updating === d.id}
                             className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[10px] hover:bg-emerald-500/30 disabled:opacity-50">✅ 승인</button>
-                          <button onClick={() => updateDealer(d.id, { status: "rejected" })} disabled={updating === d.id}
+                          <button onClick={async () => { await updateDealer(d.id, { status: "rejected" }); Logger.log("approval", Auth.getDealerName(), Auth.getRole(), d.dealer_name, "가입 거절", "pending", "rejected"); }} disabled={updating === d.id}
                             className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-[10px] hover:bg-red-500/30 disabled:opacity-50">❌ 거절</button>
                         </div>
                       </td>

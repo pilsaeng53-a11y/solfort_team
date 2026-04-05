@@ -1,0 +1,46 @@
+{
+  "name": "SystemLog",
+  "type": "object",
+  "properties": {
+    "log_type": {
+      "type": "string",
+      "title": "\ub85c\uadf8 \uc720\ud615"
+    },
+    "actor": {
+      "type": "string",
+      "title": "\uc218\ud589\uc790"
+    },
+    "actor_role": {
+      "type": "string",
+      "title": "\uc5ed\ud560"
+    },
+    "target": {
+      "type": "string",
+      "title": "\ub300\uc0c1"
+    },
+    "action": {
+      "type": "string",
+      "title": "\ub0b4\uc6a9"
+    },
+    "before_value": {
+      "type": "string",
+      "title": "\ubcc0\uacbd \uc804"
+    },
+    "after_value": {
+      "type": "string",
+      "title": "\ubcc0\uacbd \ud6c4"
+    },
+    "ip_address": {
+      "type": "string",
+      "title": "IP \uc8fc\uc18c"
+    },
+    "created_at": {
+      "type": "string",
+      "title": "\uc77c\uc2dc"
+    }
+  },
+  "required": [
+    "log_type",
+    "actor"
+  ]
+}
