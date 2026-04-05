@@ -79,6 +79,27 @@
     "referrer_name": {
       "type": "string",
       "title": "\ucd94\ucc9c\uc778 \ub300\ub9ac\uc810\uba85"
+    },
+    "assigned_dealer": {
+      "type": "string",
+      "title": "\ub2f4\ub2f9 \ub300\ub9ac\uc810\uba85 (\ub9e4\ub2c8\uc800\uc6a9)"
+    },
+    "region_coverage": {
+      "type": "string",
+      "title": "\ub2f4\ub2f9 \uac00\ub2a5 \uc9c0\uc5ed (\ucf64\ub9c8 \uad6c\ubd84)"
+    },
+    "region_cities": {
+      "type": "string",
+      "title": "\uc8fc\ub825 \uc2dc/\ub3c4"
+    },
+    "agreed_terms": {
+      "type": "boolean",
+      "title": "\uc57d\uad00 \ub3d9\uc758 \uc5ec\ubd80",
+      "default": false
+    },
+    "agreed_at": {
+      "type": "string",
+      "title": "\uc57d\uad00 \ub3d9\uc758 \uc2dc\uac04"
     }
   },
   "required": [
