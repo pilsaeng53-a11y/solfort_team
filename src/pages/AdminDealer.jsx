@@ -40,8 +40,13 @@ function OverviewPanel() {
   const [dealers, setDealers] = useState([]);
   const [sales, setSales] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [allowedRegions, setAllowedRegions] = useState([]);
 
   useEffect(() => {
+    const regionScope = localStorage.getItem("sf_region_scope") || "";
+    const regions = regionScope.trim() ? regionScope.split(",").map(r => r.trim()) : [];
+    setAllowedRegions(regions);
+
     (async () => {
       const [d, s] = await Promise.all([
         base44.entities.DealerInfo.list("-created_date", 500),
@@ -53,10 +58,14 @@ function OverviewPanel() {
 
   if (loading) return <Loader />;
 
+  const filteredDealers = allowedRegions.length > 0 
+    ? dealers.filter(d => allowedRegions.includes(d.region))
+    : dealers;
+
   const todayRecs = sales.filter(s => s.sale_date === today);
   const todaySalesTotal = todayRecs.reduce((a, s) => a + (s.sales_amount || 0), 0);
-  const activeCount = dealers.filter(d => d.status === "active").length;
-  const pendingCount = dealers.filter(d => d.status === "pending").length;
+  const activeCount = filteredDealers.filter(d => d.status === "active").length;
+  const pendingCount = filteredDealers.filter(d => d.status === "pending").length;
 
   const summaryCards = [
     { label: "총 활성 딜러", value: `${activeCount}명`, color: "text-blue-400" },
@@ -66,7 +75,7 @@ function OverviewPanel() {
   ];
 
   // dealer today sales table
-  const dealerRows = dealers
+  const dealerRows = filteredDealers
     .filter(d => d.status === "active")
     .map(d => {
       const dTodayRecs = todayRecs.filter(s => s.dealer_name === d.dealer_name);
@@ -131,8 +140,13 @@ function DealerAccountPanel() {
   const [statusFilter, setStatusFilter] = useState("all");
   const [updating, setUpdating] = useState(null);
   const [gradeMap, setGradeMap] = useState({});
+  const [allowedRegions, setAllowedRegions] = useState([]);
 
   useEffect(() => {
+    const regionScope = localStorage.getItem("sf_region_scope") || "";
+    const regions = regionScope.trim() ? regionScope.split(",").map(r => r.trim()) : [];
+    setAllowedRegions(regions);
+
     base44.entities.DealerInfo.list("-created_date", 500)
       .then(d => {
         setDealers(d);
@@ -154,8 +168,12 @@ function DealerAccountPanel() {
     await updateDealer(id, { status: "active", grade });
   };
 
-  const pending = dealers.filter(d => d.status === "pending");
-  const filtered = statusFilter === "all" ? dealers : dealers.filter(d => d.status === statusFilter);
+  const filteredDealers = allowedRegions.length > 0 
+    ? dealers.filter(d => allowedRegions.includes(d.region))
+    : dealers;
+
+  const pending = filteredDealers.filter(d => d.status === "pending");
+  const filtered = statusFilter === "all" ? filteredDealers : filteredDealers.filter(d => d.status === statusFilter);
 
   if (loading) return <Loader />;
 
