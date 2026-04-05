@@ -7,7 +7,7 @@ import SFCard from "../components/SFCard";
 import { ReportPanel } from "./AdminCall";
 
 const API = "https://solfort-js.onrender.com";
-const TABS = ["전체 현황", "딜러 관리", "콜팀 관리", "시스템 설정", "전체 리포트"];
+const TABS = ["전체 현황", "딜러 관리", "콜팀 관리", "시스템 설정", "전체 리포트", "전체 회원 관리"];
 const today = new Date().toISOString().split("T")[0];
 const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
 
@@ -30,6 +30,7 @@ export default function AdminSuper() {
         {tab === 2 && <CallManagement />}
         {tab === 3 && <SystemSettings />}
         {tab === 4 && <ReportPanel accent="purple" />}
+        {tab === 5 && <AllMembersPanel />}
       </div>
     </div>
   );
@@ -294,6 +295,137 @@ function SystemSettings() {
           </button>
         </div>
       </SFCard>
+    </div>
+  );
+}
+
+function AllMembersPanel() {
+  const [dealers, setDealers] = useState([]);
+  const [callMembers, setCallMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(null);
+
+  const load = async () => {
+    setLoading(true);
+    const [d, c] = await Promise.all([
+      base44.entities.DealerInfo.list("-created_date", 200),
+      base44.entities.CallTeamMember.list("-created_date", 200),
+    ]);
+    setDealers(d); setCallMembers(c); setLoading(false);
+  };
+  useEffect(() => { load(); }, []);
+
+  const approveCall = async (id, status) => {
+    setUpdating(id);
+    await base44.entities.CallTeamMember.update(id, { status });
+    setCallMembers(prev => prev.map(m => m.id === id ? { ...m, status } : m));
+    setUpdating(null);
+  };
+
+  const pendingCall = callMembers.filter(m => m.status === "pending");
+
+  const dCount = (s) => dealers.filter(d => d.status === s).length;
+  const cCount = (s) => callMembers.filter(m => m.status === s).length;
+
+  if (loading) return <Loader />;
+
+  return (
+    <div className="space-y-8">
+      {/* Section A: 콜팀 승인 대기 */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="text-sm font-semibold text-white">콜팀 승인 대기</h3>
+          {pendingCall.length > 0 && <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">{pendingCall.length}건</span>}
+        </div>
+        {pendingCall.length === 0 ? (
+          <p className="text-xs text-gray-600 py-6 text-center">승인 대기 중인 콜팀원이 없습니다</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                {["가입일","이름","아이디","연락처","소속팀","사원번호","처리"].map(h => <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {pendingCall.map(m => (
+                  <tr key={m.id} className="border-b border-white/[0.04]">
+                    <td className="py-3 px-2 text-gray-500">{m.created_date?.split("T")[0]}</td>
+                    <td className="py-3 px-2 text-white font-medium">{m.name}</td>
+                    <td className="py-3 px-2 text-gray-500">{m.username}</td>
+                    <td className="py-3 px-2 text-gray-400">{m.phone}</td>
+                    <td className="py-3 px-2 text-gray-400">{m.team}</td>
+                    <td className="py-3 px-2 text-gray-500">{m.employee_id || "-"}</td>
+                    <td className="py-3 px-2">
+                      <div className="flex gap-1.5">
+                        <button onClick={() => approveCall(m.id, "active")} disabled={updating === m.id}
+                          className="px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-[10px] hover:bg-emerald-500/30 transition-all disabled:opacity-50">
+                          ✅ 승인
+                        </button>
+                        <button onClick={() => approveCall(m.id, "suspended")} disabled={updating === m.id}
+                          className="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-[10px] hover:bg-red-500/30 transition-all disabled:opacity-50">
+                          ❌ 거절
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Section B: 전체 계정 현황 */}
+      <div>
+        <h3 className="text-sm font-semibold text-white mb-4">전체 계정 현황</h3>
+        <div className="grid grid-cols-2 gap-3 mb-6">
+          <SFCard>
+            <p className="text-xs text-gray-400 mb-2">🏪 대리점 계정</p>
+            <div className="flex gap-3 text-[11px]">
+              <span className="text-emerald-400">활성 {dCount("active")}</span>
+              <span className="text-yellow-400">대기 {dCount("pending")}</span>
+              <span className="text-red-400">정지 {dCount("suspended")}</span>
+            </div>
+          </SFCard>
+          <SFCard>
+            <p className="text-xs text-gray-400 mb-2">📞 콜팀 계정</p>
+            <div className="flex gap-3 text-[11px]">
+              <span className="text-emerald-400">활성 {cCount("active")}</span>
+              <span className="text-yellow-400">대기 {cCount("pending")}</span>
+              <span className="text-red-400">정지 {cCount("suspended")}</span>
+            </div>
+          </SFCard>
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+              {["유형","이름","아이디","연락처","가입일","상태"].map(h => <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {[...dealers.map(d => ({ type: "대리점", name: d.dealer_name, username: d.username, phone: d.phone, date: d.created_date, status: d.status, id: d.id })),
+                ...callMembers.map(m => ({ type: "콜팀", name: m.name, username: m.username, phone: m.phone, date: m.created_date, status: m.status, id: m.id }))]
+                .sort((a, b) => (b.date || "").localeCompare(a.date || ""))
+                .map(row => (
+                  <tr key={row.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                    <td className="py-2.5 px-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${row.type === "대리점" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"}`}>{row.type}</span>
+                    </td>
+                    <td className="py-2.5 px-2 text-white font-medium">{row.name}</td>
+                    <td className="py-2.5 px-2 text-gray-500">{row.username || "-"}</td>
+                    <td className="py-2.5 px-2 text-gray-400">{row.phone}</td>
+                    <td className="py-2.5 px-2 text-gray-500">{row.date?.split("T")[0]}</td>
+                    <td className="py-2.5 px-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                        row.status === "active" ? "bg-emerald-500/20 text-emerald-400" :
+                        row.status === "pending" ? "bg-yellow-500/20 text-yellow-400" :
+                        "bg-red-500/20 text-red-400"
+                      }`}>{row.status === "active" ? "활성" : row.status === "pending" ? "대기" : "정지"}</span>
+                    </td>
+                  </tr>
+                ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }

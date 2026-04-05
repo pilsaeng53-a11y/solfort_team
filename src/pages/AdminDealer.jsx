@@ -7,7 +7,7 @@ import StatusBadge from "../components/StatusBadge";
 import SFCard from "../components/SFCard";
 
 const API = "https://solfort-js.onrender.com";
-const TABS = ["딜러 현황", "매출 현황", "고객 데이터", "알림/전송"];
+const TABS = ["딜러 현황", "매출 현황", "고객 데이터", "알림/전송", "회원 관리"];
 const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
 const today = new Date().toISOString().split("T")[0];
 
@@ -29,6 +29,7 @@ export default function AdminDealer() {
         {tab === 1 && <SalesStatus />}
         {tab === 2 && <CustomerData />}
         {tab === 3 && <NotifyPanel />}
+        {tab === 4 && <MemberManagement />}
       </div>
     </div>
   );
@@ -286,6 +287,143 @@ function NotifyPanel() {
           </div>
         </SFCard>
       )}
+    </div>
+  );
+}
+
+function MemberManagement() {
+  const [dealers, setDealers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [statusFilter, setStatusFilter] = useState("all");
+  const [updating, setUpdating] = useState(null);
+
+  const load = () => {
+    setLoading(true);
+    base44.entities.DealerInfo.list("-created_date", 200).then(setDealers).finally(() => setLoading(false));
+  };
+  useEffect(() => { load(); }, []);
+
+  const updateStatus = async (id, status) => {
+    setUpdating(id);
+    await base44.entities.DealerInfo.update(id, { status });
+    setDealers(prev => prev.map(d => d.id === id ? { ...d, status } : d));
+    setUpdating(null);
+  };
+
+  const changeGrade = async (id, grade) => {
+    setUpdating(id);
+    await base44.entities.DealerInfo.update(id, { grade });
+    setDealers(prev => prev.map(d => d.id === id ? { ...d, grade } : d));
+    setUpdating(null);
+  };
+
+  const pending = dealers.filter(d => d.status === "pending");
+  const filtered = statusFilter === "all" ? dealers : dealers.filter(d => d.status === statusFilter);
+
+  if (loading) return <Loader />;
+
+  return (
+    <div className="space-y-8">
+      {/* Section A: 승인 대기 */}
+      <div>
+        <div className="flex items-center gap-2 mb-3">
+          <h3 className="text-sm font-semibold text-white">승인 대기 대리점</h3>
+          {pending.length > 0 && <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">{pending.length}건</span>}
+        </div>
+        {pending.length === 0 ? (
+          <p className="text-xs text-gray-600 py-6 text-center">승인 대기 중인 계정이 없습니다</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                {["가입일","대리점명","대리점주","연락처","지역","추천코드","처리"].map(h => <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>)}
+              </tr></thead>
+              <tbody>
+                {pending.map(d => (
+                  <tr key={d.id} className="border-b border-white/[0.04]">
+                    <td className="py-3 px-2 text-gray-500">{d.created_date?.split("T")[0]}</td>
+                    <td className="py-3 px-2 text-white font-medium">{d.dealer_name}</td>
+                    <td className="py-3 px-2 text-gray-400">{d.owner_name}</td>
+                    <td className="py-3 px-2 text-gray-400">{d.phone}</td>
+                    <td className="py-3 px-2 text-gray-400">{d.region}</td>
+                    <td className="py-3 px-2 text-gray-500">{d.referral_code || "-"}</td>
+                    <td className="py-3 px-2">
+                      <div className="flex gap-1.5">
+                        <button onClick={() => updateStatus(d.id, "active")} disabled={updating === d.id}
+                          className="px-3 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-[10px] hover:bg-emerald-500/30 transition-all disabled:opacity-50">
+                          ✅ 승인
+                        </button>
+                        <button onClick={() => updateStatus(d.id, "suspended")} disabled={updating === d.id}
+                          className="px-3 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-[10px] hover:bg-red-500/30 transition-all disabled:opacity-50">
+                          ❌ 거절
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Section B: 전체 계정 */}
+      <div>
+        <h3 className="text-sm font-semibold text-white mb-3">전체 대리점 계정</h3>
+        <div className="flex gap-2 mb-4 flex-wrap">
+          {[["all","전체"],["active","활성"],["pending","대기"],["suspended","정지"]].map(([v, l]) => (
+            <button key={v} onClick={() => setStatusFilter(v)}
+              className={`px-3 py-2 rounded-lg text-xs transition-all ${statusFilter === v ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-white/5 text-gray-400"}`}>
+              {l}
+            </button>
+          ))}
+        </div>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+              {["대리점명","아이디","등급","상태","등급변경","계정 처리"].map(h => <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>)}
+            </tr></thead>
+            <tbody>
+              {filtered.map(d => (
+                <tr key={d.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                  <td className="py-3 px-2 text-white font-medium">{d.dealer_name}</td>
+                  <td className="py-3 px-2 text-gray-500">{d.username || "-"}</td>
+                  <td className="py-3 px-2"><GradeBadge grade={d.grade} /></td>
+                  <td className="py-3 px-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${
+                      d.status === "active" ? "bg-emerald-500/20 text-emerald-400" :
+                      d.status === "pending" ? "bg-yellow-500/20 text-yellow-400" :
+                      "bg-red-500/20 text-red-400"
+                    }`}>{d.status === "active" ? "활성" : d.status === "pending" ? "대기" : "정지"}</span>
+                  </td>
+                  <td className="py-3 px-2">
+                    <div className="flex gap-1">
+                      {GRADES.map(g => (
+                        <button key={g} onClick={() => changeGrade(d.id, g)} disabled={updating === d.id || d.grade === g}
+                          className={`px-2 py-0.5 rounded text-[10px] transition-all ${d.grade === g ? "bg-blue-500/30 text-blue-300" : "bg-white/5 text-gray-500 hover:bg-white/10"}`}>
+                          {g}
+                        </button>
+                      ))}
+                    </div>
+                  </td>
+                  <td className="py-3 px-2">
+                    <button
+                      onClick={() => updateStatus(d.id, d.status === "active" ? "suspended" : "active")}
+                      disabled={updating === d.id}
+                      className={`px-3 py-1 rounded-lg text-[10px] border transition-all disabled:opacity-50 ${
+                        d.status === "active"
+                          ? "bg-red-500/20 text-red-400 border-red-500/30 hover:bg-red-500/30"
+                          : "bg-emerald-500/20 text-emerald-400 border-emerald-500/30 hover:bg-emerald-500/30"
+                      }`}>
+                      {d.status === "active" ? "정지" : "활성화"}
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
     </div>
   );
 }
