@@ -44,6 +44,11 @@ export default function CallDashboard() {
 
   const todayLogs = logs.filter(l => (l.called_at || "").startsWith(today));
   const todayConnected = todayLogs.filter(l => l.call_result === "연결됨");
+  const todayTaggedLeads = leads.filter(l => (l.created_at || "").startsWith(today));
+  const blueToday = todayTaggedLeads.filter(l => l.color_tag === "blue").length;
+  const yellowToday = todayTaggedLeads.filter(l => l.color_tag === "yellow").length;
+  const redToday = todayTaggedLeads.filter(l => l.color_tag === "red").length;
+  const noneToday = todayTaggedLeads.filter(l => !l.color_tag).length;
   const todayConverted = leads.filter(l => l.status === "매출전환" && (l.converted_at || "").startsWith(today));
   const totalLeads = leads.length;
   const interestLeads = leads.filter(l => l.status === "관심있음");
@@ -134,6 +139,25 @@ export default function CallDashboard() {
             </div>
           </SFCard>
         )}
+
+        {/* 오늘 콜 결과 색상 집계 */}
+        <SFCard className="border border-white/10">
+          <h3 className="text-sm font-semibold text-white mb-3">오늘 콜 결과</h3>
+          <div className="grid grid-cols-4 gap-2">
+            {[
+              { icon: "🔵", label: "거절", count: blueToday, color: "text-blue-400" },
+              { icon: "🟡", label: "가망", count: yellowToday, color: "text-yellow-400" },
+              { icon: "🔴", label: "수낙", count: redToday, color: "text-red-400" },
+              { icon: "⚪", label: "미처리", count: noneToday, color: "text-gray-400" },
+            ].map(s => (
+              <div key={s.label} className="text-center py-2">
+                <p className="text-xl">{s.icon}</p>
+                <p className={`text-2xl font-bold ${s.color}`}>{s.count}</p>
+                <p className="text-[10px] text-gray-600">{s.label}</p>
+              </div>
+            ))}
+          </div>
+        </SFCard>
 
         {/* 최근 콜 기록 피드 */}
         <SFCard>

@@ -1,0 +1,39 @@
+{
+  "name": "CallQueue",
+  "type": "object",
+  "properties": {
+    "session_name": {
+      "type": "string",
+      "title": "\uc138\uc158 \uc774\ub984"
+    },
+    "total_count": {
+      "type": "number",
+      "title": "\uc804\uccb4 \uace0\uac1d \uc218"
+    },
+    "current_index": {
+      "type": "number",
+      "title": "\ud604\uc7ac \uc9c4\ud589 \uc704\uce58",
+      "default": 0
+    },
+    "status": {
+      "type": "string",
+      "title": "\uc0c1\ud0dc",
+      "default": "active"
+    },
+    "created_by": {
+      "type": "string",
+      "title": "\ub2f4\ub2f9\uc790 username"
+    },
+    "created_at": {
+      "type": "string",
+      "title": "\uc0dd\uc131 \uc2dc\uac01"
+    },
+    "completed_at": {
+      "type": "string",
+      "title": "\uc644\ub8cc \uc2dc\uac01"
+    }
+  },
+  "required": [
+    "session_name"
+  ]
+}

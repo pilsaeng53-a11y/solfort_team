@@ -23,13 +23,14 @@ import CallInterest from './pages/CallInterest';
 import CallConvert from './pages/CallConvert';
 import CallScripts from './pages/CallScripts';
 import CallAI from './pages/CallAI';
+import CallQueuePage from './pages/CallQueuePage';
 import AdminDealer from './pages/AdminDealer';
 import AdminCall from './pages/AdminCall';
 import AdminSuper from './pages/AdminSuper';
 import Register from './pages/Register';
 import InitAdmin from './pages/InitAdmin';
 
-const HIDE_NAV = ['/', '/call', '/admin/dealer', '/admin/call', '/admin/super', '/call/dashboard', '/call/leads', '/call/logs', '/call/interest', '/call/convert', '/call/scripts', '/call/ai'];
+const HIDE_NAV = ['/', '/call', '/admin/dealer', '/admin/call', '/admin/super', '/call/dashboard', '/call/leads', '/call/queue', '/call/logs', '/call/interest', '/call/convert', '/call/scripts', '/call/ai'];
 
 const AppContent = () => {
   const location = useLocation();
@@ -62,6 +63,7 @@ const AppContent = () => {
             <Route path="/call/convert" element={<CallConvert />} />
             <Route path="/call/scripts" element={<CallScripts />} />
             <Route path="/call/ai" element={<CallAI />} />
+            <Route path="/call/queue" element={<CallQueuePage />} />
           </Route>
 
           {/* 관리자 */}

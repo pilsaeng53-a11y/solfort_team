@@ -7,9 +7,10 @@ import { LogOut } from "lucide-react";
 const NAV_ITEMS = [
   { path: "/call/dashboard", label: "콜 대시보드" },
   { path: "/call/leads", label: "고객 리드" },
+  { path: "/call/queue", label: "콜 큐" },
   { path: "/call/logs", label: "콜 기록" },
   { path: "/call/interest", label: "관심 고객" },
-  { path: "/call/convert", label: "매출 연결" },
+  { path: "/call/convert", label: "매입 연결" },
   { path: "/call/scripts", label: "콜 스크립트" },
   { path: "/call/ai", label: "AI 영업 도우미" },
 ];

@@ -7,6 +7,14 @@ import SFCard from "@/components/SFCard";
 import { Plus, X, ChevronDown } from "lucide-react";
 
 const STATUS_OPTS = ["신규", "연락됨", "관심있음", "거절", "매출전환"];
+const COLOR_FILTERS = [
+  { key: "전체", label: "전체" },
+  { key: "blue", label: "파란 거절" },
+  { key: "yellow", label: "노란 가망" },
+  { key: "red", label: "빨강 수낙" },
+  { key: "none", label: "미태깅" },
+];
+const COLOR_BORDER = { blue: "border-l-4 border-blue-500", yellow: "border-l-4 border-yellow-500", red: "border-l-4 border-red-500" };
 const STATUS_BADGE = {
   신규: "bg-gray-500/20 text-gray-400",
   연락됨: "bg-blue-500/20 text-blue-400",
@@ -33,6 +41,7 @@ export default function CallLeads() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [tab, setTab] = useState("전체");
+  const [colorFilter, setColorFilter] = useState("전체");
   const [search, setSearch] = useState("");
   const [showModal, setShowModal] = useState(false);
   const [form, setForm] = useState(EMPTY);
@@ -70,7 +79,8 @@ export default function CallLeads() {
     const q = search.toLowerCase();
     const matchS = !q || l.name?.toLowerCase().includes(q) || l.phone?.includes(q);
     const matchT = tab === "전체" || l.status === tab;
-    return matchS && matchT;
+    const matchC = colorFilter === "전체" || (colorFilter === "none" ? !l.color_tag : l.color_tag === colorFilter);
+    return matchS && matchT && matchC;
   });
 
   if (loading) return <><CallNav /><Loader /></>;
@@ -96,15 +106,27 @@ export default function CallLeads() {
           ))}
         </div>
 
+        <div className="flex flex-wrap gap-2">
+          {COLOR_FILTERS.map(f => (
+            <button key={f.key} onClick={() => setColorFilter(f.key)}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
+                colorFilter === f.key ? "bg-white/15 text-white border border-white/20" : "bg-white/5 text-gray-500 hover:text-gray-300"
+              }`}>
+              {f.label}
+            </button>
+          ))}
+        </div>
+
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="이름 또는 연락처 검색"
           className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-600" />
 
         <div className="space-y-2">
           {filtered.length === 0 && <p className="text-center py-12 text-xs text-gray-600">리드가 없습니다</p>}
           {filtered.map(lead => {
-            const iStyle = INTEREST_STYLE[lead.interest_level] || INTEREST_STYLE.낮음;
+            const iStyle = INTEREST_STYLE[lead.interest_level] || INTEREST_STYLE["낙음"];
+            const borderCls = COLOR_BORDER[lead.color_tag] || "border-l-4 border-transparent";
             return (
-              <SFCard key={lead.id}>
+              <SFCard key={lead.id} className={borderCls}>
                 <div className="flex items-start gap-3">
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
