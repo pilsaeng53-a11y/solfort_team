@@ -9,7 +9,7 @@ const STEPS = ['역할 선택', '약관 동의', '정보 입력', '신청 완료
 export default function Register() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
-  const [role, setRole] = useState(null); // 'dealer' or 'call_team'
+  const [role, setRole] = useState(null); // 'dealer', 'call_team', or 'online_team'
   const [agree1, setAgree1] = useState(false);
   const [agree2, setAgree2] = useState(false);
   const [agree3, setAgree3] = useState(false);
@@ -20,7 +20,7 @@ export default function Register() {
   const [form, setForm] = useState({
     name: '', username: '', password: '', passwordConfirm: '', phone: '',
     dealer_name: '', region: '', referral_code: '',
-    team: '', employee_id: '',
+    team: '', employee_id: '', meta_ad_account: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
@@ -44,11 +44,12 @@ export default function Register() {
 
   const checkDuplicate = async () => {
     if (!form.username) return;
-    const [dealers, callTeam] = await Promise.all([
+    const [dealers, callTeam, onlineTeam] = await Promise.all([
       base44.entities.DealerInfo.filter({ username: form.username }, '', 1),
       base44.entities.CallTeamMember.filter({ username: form.username }, '', 1),
+      base44.entities.OnlineTeamMember.filter({ username: form.username }, '', 1),
     ]);
-    if (dealers.length > 0 || callTeam.length > 0) {
+    if (dealers.length > 0 || callTeam.length > 0 || onlineTeam.length > 0) {
       setDuplicateError('이미 사용 중인 아이디입니다.');
       return false;
     }
@@ -92,7 +93,7 @@ export default function Register() {
           agreed_terms: true,
           agreed_at: now,
         });
-      } else {
+      } else if (role === 'call_team') {
         await base44.entities.CallTeamMember.create({
           name: form.name,
           username: form.username,
@@ -104,6 +105,17 @@ export default function Register() {
           status: 'pending',
           agreed_terms: true,
           agreed_at: now,
+        });
+      } else if (role === 'online_team') {
+        await base44.entities.OnlineTeamMember.create({
+          name: form.name,
+          username: form.username,
+          password: form.password,
+          phone: form.phone,
+          team: form.team,
+          meta_ad_account: form.meta_ad_account,
+          agreed_terms: true,
+          status: 'pending',
         });
       }
       setStep(4);
@@ -154,7 +166,8 @@ export default function Register() {
           {step === 1 && (
             <div className="space-y-4">
               <h2 className="text-sm font-bold text-white mb-6">어떤 역할로 가입하시겠어요?</h2>
-              <div className="grid grid-cols-2 gap-3">
+              <div className="space-y-3">
+                <div className="grid grid-cols-2 gap-3">
                 <button onClick={() => setRole('dealer')}
                   className={`p-4 rounded-xl border-2 transition-all text-center ${
                     role === 'dealer'
@@ -174,8 +187,19 @@ export default function Register() {
                   <p className="text-2xl mb-2">📞</p>
                   <p className="text-xs font-semibold text-white mb-1">콜영업팀</p>
                   <p className="text-[9px] text-gray-500">전화 영업 · 고객 발굴 · 리드 관리</p>
-                </button>
-              </div>
+                  </button>
+                  </div>
+                  <button onClick={() => setRole('online_team')}
+                  className={`p-4 rounded-xl border-2 transition-all text-center ${
+                    role === 'online_team'
+                      ? 'border-purple-500 bg-purple-500/10'
+                      : 'border-white/10 bg-white/5 hover:border-white/20'
+                  }`}>
+                  <p className="text-2xl mb-2">💻</p>
+                  <p className="text-xs font-semibold text-white mb-1">온라인팀</p>
+                  <p className="text-[9px] text-gray-500">온라인 광고·DB생성·콜팀/대리점 연결</p>
+                  </button>
+                  </div>
               <button onClick={handleStep1Next} disabled={!role}
                 className="w-full mt-6 py-2.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl text-sm font-semibold hover:bg-blue-500/30 disabled:opacity-40 disabled:cursor-not-allowed transition-all">
                 다음
@@ -233,7 +257,56 @@ export default function Register() {
           {step === 3 && (
             <div className="space-y-4">
               <h2 className="text-sm font-bold text-white mb-4">정보 입력</h2>
-              {role === 'dealer' ? (
+              {role === 'online_team' ? (
+                <>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">아이디 <span className="text-red-400">*</span></label>
+                      <input value={form.username} onChange={handleForm('username')} placeholder="영문/숫자"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                      {duplicateError && <p className="text-[10px] text-red-400 mt-1">{duplicateError}</p>}
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">비밀번호 <span className="text-red-400">*</span></label>
+                      <div className="relative">
+                        <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleForm('password')}
+                          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600 pr-9" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">비밀번호 확인 <span className="text-red-400">*</span></label>
+                      <div className="relative">
+                        <input type={showPasswordConfirm ? 'text' : 'password'} value={form.passwordConfirm} onChange={handleForm('passwordConfirm')}
+                          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600 pr-9" />
+                        <button type="button" onClick={() => setShowPasswordConfirm(!showPasswordConfirm)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                          {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">이름 <span className="text-red-400">*</span></label>
+                      <input value={form.name} onChange={handleForm('name')} placeholder="홍길동"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">연락처 <span className="text-red-400">*</span></label>
+                      <input value={form.phone} onChange={handleForm('phone')} placeholder="010-1234-5678"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">팀</label>
+                      <input value={form.team} onChange={handleForm('team')} placeholder="선택사항"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">메타 광고 계정</label>
+                      <input value={form.meta_ad_account} onChange={handleForm('meta_ad_account')} placeholder="선택사항"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                </>
+              ) : role === 'dealer' ? (
                 <>
                     <div>
                       <label className="text-xs text-gray-400 block mb-1">아이디 <span className="text-red-400">*</span></label>
@@ -287,7 +360,7 @@ export default function Register() {
                         className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
                     </div>
                 </>
-              ) : (
+              ) : role === 'call_team' ? (
                 <>
                     <div>
                       <label className="text-xs text-gray-400 block mb-1">아이디 <span className="text-red-400">*</span></label>
@@ -336,7 +409,7 @@ export default function Register() {
                         className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
                     </div>
                 </>
-              )}
+                ) : null}
 
               <div className="flex gap-2 mt-6">
                 <button onClick={handleBack}
@@ -345,7 +418,7 @@ export default function Register() {
                 </button>
                 <button onClick={handleStep3Submit} disabled={saving}
                   className="flex-1 py-2.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-sm font-semibold hover:bg-emerald-500/30 disabled:opacity-40 transition-all">
-                  {saving ? '신청 중...' : role === 'dealer' ? '대리점 가입 신청' : '콜팀 가입 신청'}
+                  {saving ? '신청 중...' : role === 'dealer' ? '대리점 가입 신청' : role === 'call_team' ? '콜팀 가입 신청' : '온라인팀 가입 신청'}
                 </button>
               </div>
             </div>

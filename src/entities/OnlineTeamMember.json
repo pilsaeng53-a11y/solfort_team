@@ -1,0 +1,46 @@
+{
+  "name": "OnlineTeamMember",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "이름"
+    },
+    "username": {
+      "type": "string",
+      "title": "아이디"
+    },
+    "password": {
+      "type": "string",
+      "title": "비밀번호"
+    },
+    "phone": {
+      "type": "string",
+      "title": "연락처"
+    },
+    "team": {
+      "type": "string",
+      "title": "팀"
+    },
+    "meta_ad_account": {
+      "type": "string",
+      "title": "메타 광고 계정"
+    },
+    "agreed_terms": {
+      "type": "boolean",
+      "title": "약관 동의",
+      "default": false
+    },
+    "status": {
+      "type": "string",
+      "title": "상태",
+      "default": "pending"
+    }
+  },
+  "required": [
+    "name",
+    "username",
+    "password",
+    "phone"
+  ]
+}
