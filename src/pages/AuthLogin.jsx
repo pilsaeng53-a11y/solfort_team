@@ -119,6 +119,9 @@ export default function AuthLogin() {
               회원가입
             </button>
           </div>
+          <div className="mt-4 pt-4 border-t border-white/[0.06] text-center">
+            <p className="text-xs text-gray-500">계정이 없으신가요? <button onClick={() => navigate('/register')} className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">회원가입</button></p>
+          </div>
         </div>
       </div>
     </div>
