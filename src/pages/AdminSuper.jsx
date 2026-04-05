@@ -10,6 +10,7 @@ import MemberManagementPanel from "../components/MemberManagementPanel";
 import SettlementPanel from "../components/SettlementPanel";
 import SalesOrderPanel from "../components/SalesOrderPanel";
 import DealerDetailModal from "../components/DealerDetailModal";
+import ContentManagementPanel from "../components/ContentManagementPanel";
 
 const API = "https://solfort-js.onrender.com";
 const today = new Date().toISOString().split("T")[0];
@@ -37,7 +38,7 @@ export default function AdminSuper() {
       {/* Category Selector */}
       <div className="px-4 pt-3 pb-0 border-b border-white/[0.06]">
         <div className="flex gap-2 mb-3">
-          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"]].map(([k, l]) => (
+          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["content", "📋 콘텐츠 관리"]].map(([k, l]) => (
             <button key={k} onClick={() => setCategory(k)}
               className={`px-4 py-2 rounded-t-lg text-xs font-semibold transition-all ${category === k ? "bg-purple-500/20 text-purple-400 border-t border-x border-purple-500/30 border-b-0" : "bg-white/5 text-gray-400 hover:text-white"}`}>
               {l}
@@ -97,6 +98,7 @@ export default function AdminSuper() {
             {callTab === 3 && <CallOrgChart />}
           </>
         )}
+        {category === "content" && <ContentManagementPanel />}
       </div>
     </div>
   );

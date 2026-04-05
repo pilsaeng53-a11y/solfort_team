@@ -1,0 +1,50 @@
+{
+  "name": "AcademyContent",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "\uc81c\ubaa9"
+    },
+    "description": {
+      "type": "string",
+      "title": "\uc124\uba85"
+    },
+    "category": {
+      "type": "string",
+      "title": "\uce74\ud14c\uace0\ub9ac",
+      "enum": [
+        "required",
+        "guide",
+        "advanced"
+      ],
+      "default": "guide"
+    },
+    "content_url": {
+      "type": "string",
+      "title": "\ub9c1\ud06c/\ub0b4\uc6a9"
+    },
+    "is_required": {
+      "type": "boolean",
+      "title": "\ud544\uc218 \ud56d\ubaa9",
+      "default": false
+    },
+    "order_num": {
+      "type": "number",
+      "title": "\uc815\ub82c \uc21c\uc11c",
+      "default": 0
+    },
+    "is_published": {
+      "type": "boolean",
+      "title": "\ubc1c\ud589 \uc5ec\ubd80",
+      "default": true
+    },
+    "created_at": {
+      "type": "string",
+      "title": "\uc791\uc131\uc77c\uc2dc"
+    }
+  },
+  "required": [
+    "title"
+  ]
+}
