@@ -1,7 +1,9 @@
 import { BrowserRouter as Router, Route, Routes, useLocation, Navigate } from 'react-router-dom';
+import { useState, useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClientInstance } from '@/lib/query-client';
 import { Toaster } from "@/components/ui/toaster";
+import { base44 } from '@/api/base44Client';
 import BottomNav from '@/components/BottomNav';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Auth } from '@/lib/auth';
@@ -37,6 +39,36 @@ const HIDE_NAV = ['/', '/call', '/admin/dealer', '/admin/call', '/admin/super', 
 const AppContent = () => {
   const location = useLocation();
   const showNav = !HIDE_NAV.includes(location.pathname);
+  const [showWelcome, setShowWelcome] = useState(false);
+  const [user, setUser] = useState(null);
+
+  useEffect(() => {
+    const checkWelcome = async () => {
+      try {
+        const currentUser = await base44.auth.me();
+        if (currentUser && currentUser.role !== 'super_admin') {
+          const dealers = await base44.entities.DealerInfo.list();
+          const dealer = dealers.find(d => d.id === currentUser.user_id || d.username === currentUser.username);
+          if (dealer && dealer.status === 'active') {
+            const welcomeKey = 'sf_welcome_' + (currentUser.user_id || dealer.id);
+            if (!localStorage.getItem(welcomeKey)) {
+              setUser(currentUser);
+              setShowWelcome(true);
+            }
+          }
+        }
+      } catch (e) { }
+    };
+    checkWelcome();
+  }, [location]);
+
+  const handleWelcomeClose = () => {
+    if (user) {
+      const welcomeKey = 'sf_welcome_' + (user.user_id || user.id);
+      localStorage.setItem(welcomeKey, 'true');
+    }
+    setShowWelcome(false);
+  };
   return (
     <>
       <div className={showNav ? "pb-20" : ""}>
@@ -79,6 +111,21 @@ const AppContent = () => {
         </Routes>
       </div>
       {showNav && <BottomNav />}
+      {showWelcome && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-[#0a0c15] border border-emerald-500/30 rounded-2xl p-6 max-w-sm text-center space-y-4">
+            <p className="text-2xl">🎉</p>
+            <h2 className="text-lg font-bold text-white">가입이 승인되었습니다!</h2>
+            <p className="text-sm text-gray-400">SolFort 서비스를 이용하실 수 있습니다.</p>
+            <button
+              onClick={handleWelcomeClose}
+              className="w-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 py-2.5 rounded-xl font-semibold hover:bg-emerald-500/30 transition-all"
+            >
+              시작하기
+            </button>
+          </div>
+        </div>
+      )}
     </>
   );
 };
