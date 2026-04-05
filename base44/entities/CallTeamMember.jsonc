@@ -35,19 +35,6 @@
       "type": "string",
       "title": "\uc0c1\ud0dc",
       "default": "pending"
-    },
-    "region_focus": {
-      "type": "string",
-      "title": "\uc8fc\ub825 \uc9c0\uc5ed (\ucf64\ub9c8 \uad6c\ubd84)"
-    },
-    "agreed_terms": {
-      "type": "boolean",
-      "title": "\uc57d\uad00 \ub3d9\uc758 \uc5ec\ubd80",
-      "default": false
-    },
-    "agreed_at": {
-      "type": "string",
-      "title": "\uc57d\uad00 \ub3d9\uc758 \uc2dc\uac04"
     }
   },
   "required": [

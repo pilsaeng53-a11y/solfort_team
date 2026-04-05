@@ -49,15 +49,12 @@ export default function CallDashboard() {
   const yellowToday = todayTaggedLeads.filter(l => l.color_tag === "yellow").length;
   const redToday = todayTaggedLeads.filter(l => l.color_tag === "red").length;
   const noneToday = todayTaggedLeads.filter(l => !l.color_tag).length;
-  const todayConverted = leads.filter(l => l.status === "계약완료" && (l.converted_at || "").startsWith(today));
+  const todayConverted = leads.filter(l => l.status === "매출전환" && (l.converted_at || "").startsWith(today));
   const totalLeads = leads.length;
-  const interestLeads = leads.filter(l => l.status === "관심");
-  const allConverted = leads.filter(l => l.status === "계약완료");
+  const interestLeads = leads.filter(l => l.status === "관심있음");
+  const allConverted = leads.filter(l => l.status === "매출전환");
   const conversionRate = totalLeads > 0 ? ((allConverted.length / totalLeads) * 100).toFixed(1) : "0.0";
-  const todayCallbacks = leads.filter(l => l.next_call_date === today && l.status !== "계약완료");
-  const overdueDispatches = logs.length > 0 ? 0 : 0; // SLA 초과는 MeetingDispatchPanel에서 추적
-  const needFollowup = leads.filter(l => l.status === "관심" && (l.created_at || "").split("T")[0] < new Date(Date.now() - 3 * 24 * 60 * 60 * 1000).toISOString().split("T")[0]);
-  const newLeads = leads.filter(l => (l.created_at || "").startsWith(today));
+  const todayCallbacks = leads.filter(l => l.next_call_date === today && l.status !== "매출전환");
 
   if (loading) return <><CallNav /><Loader /></>;
 
@@ -107,36 +104,6 @@ export default function CallDashboard() {
             </SFCard>
           ))}
         </div>
-
-        {/* 오늘 할일 */}
-        {(todayCallbacks.length > 0 || needFollowup.length > 0 || newLeads.length > 0) && (
-          <SFCard className="border border-orange-500/20">
-            <div className="flex items-center gap-2 mb-3">
-              <span className="text-xl">📋</span>
-              <h3 className="text-sm font-semibold text-orange-400">오늘 할일</h3>
-            </div>
-            <div className="grid grid-cols-3 gap-2">
-              {todayCallbacks.length > 0 && (
-                <div className="bg-orange-500/10 border border-orange-500/20 rounded-lg p-2 text-center cursor-pointer hover:bg-orange-500/20 transition-all">
-                  <p className="text-lg font-bold text-orange-400">⏰</p>
-                  <p className="text-[10px] text-orange-400 font-medium mt-1">재콜 {todayCallbacks.length}</p>
-                </div>
-              )}
-              {needFollowup.length > 0 && (
-                <div className="bg-yellow-500/10 border border-yellow-500/20 rounded-lg p-2 text-center cursor-pointer hover:bg-yellow-500/20 transition-all">
-                  <p className="text-lg font-bold text-yellow-400">💤</p>
-                  <p className="text-[10px] text-yellow-400 font-medium mt-1">팔로업 {needFollowup.length}</p>
-                </div>
-              )}
-              {newLeads.length > 0 && (
-                <div className="bg-emerald-500/10 border border-emerald-500/20 rounded-lg p-2 text-center cursor-pointer hover:bg-emerald-500/20 transition-all">
-                  <p className="text-lg font-bold text-emerald-400">🆕</p>
-                  <p className="text-[10px] text-emerald-400 font-medium mt-1">신규 {newLeads.length}</p>
-                </div>
-              )}
-            </div>
-          </SFCard>
-        )}
 
         {/* 오늘 재콜 예정 */}
         {todayCallbacks.length > 0 && (

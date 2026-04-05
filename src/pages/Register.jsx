@@ -26,11 +26,7 @@ export default function Register() {
   const [success, setSuccess] = useState(false);
   const [showPw, setShowPw] = useState(false);
   const [showConfirm, setShowConfirm] = useState(false);
-  const [usernameStatus, setUsernameStatus] = useState(null);
-  const [agree1, setAgree1] = useState(false);
-  const [agree2, setAgree2] = useState(false);
-  const [agree3, setAgree3] = useState(false);
-  const [agree4, setAgree4] = useState(false);
+  const [usernameStatus, setUsernameStatus] = useState(null); // null | 'checking' | 'available' | 'taken'
 
   useEffect(() => { document.title = "SolFort - 회원가입"; }, []);
 
@@ -79,20 +75,17 @@ export default function Register() {
     if (err) { setError(err); return; }
     setError("");
     setLoading(true);
-    const now = new Date().toISOString();
     if (role === "dealer") {
       await base44.entities.DealerInfo.create({
         dealer_name: form.dealer_name, owner_name: form.owner_name, phone: form.phone,
         region: form.region, grade: "GREEN", username: form.username, password: form.password,
         role: "dealer", status: "pending", referral_code: form.referral_code || "",
-        agreed_terms: true, agreed_at: now,
       });
     } else {
       await base44.entities.CallTeamMember.create({
         username: form.username, password: form.password, name: form.name,
         phone: form.phone, team: form.team, employee_id: form.employee_id || "",
         role: "call_team", status: "pending",
-        agreed_terms: true, agreed_at: now,
       });
     }
     setLoading(false);
@@ -100,7 +93,6 @@ export default function Register() {
   };
 
   const accentBtn = role === "call_team" ? "bg-emerald-600 hover:bg-emerald-500 text-white border-0" : "sf-gradient-btn text-white border-0";
-  const allAgreed = agree1 && agree2 && agree3 && agree4;
 
   if (success) {
     return (
@@ -145,16 +137,6 @@ export default function Register() {
           </div>
         </div>
 
-        {/* Step indicator */}
-        {step >= 1 && (
-          <div className="flex items-center justify-between text-xs">
-            <div className={`flex-1 text-center pb-2 border-b-2 ${step === 1 ? "border-white text-white" : step > 1 ? "border-emerald-500 text-emerald-400" : "border-gray-600 text-gray-600"}`}>① 역할 선택</div>
-            <div className={`flex-1 text-center pb-2 border-b-2 ${step === 2 ? "border-white text-white" : step > 2 ? "border-emerald-500 text-emerald-400" : "border-gray-600 text-gray-600"}`}>② 약관 동의</div>
-            <div className={`flex-1 text-center pb-2 border-b-2 ${step === 3 ? "border-white text-white" : step > 3 ? "border-emerald-500 text-emerald-400" : "border-gray-600 text-gray-600"}`}>③ 정보 입력</div>
-            <div className={`flex-1 text-center pb-2 border-b-2 ${step === 4 ? "border-white text-white" : "border-gray-600 text-gray-600"}`}>④ 완료</div>
-          </div>
-        )}
-
         {step === 1 && (
           <div className="space-y-3">
             <p className="text-xs text-gray-500 text-center">가입 유형을 선택하세요</p>
@@ -163,8 +145,8 @@ export default function Register() {
               <div className="flex items-start gap-4">
                 <div className="h-12 w-12 rounded-xl bg-blue-500/20 flex items-center justify-center text-2xl shrink-0">🏪</div>
                 <div>
-                  <p className="text-white font-semibold group-hover:text-blue-400 transition-colors">대리점</p>
-                  <p className="text-xs text-gray-500 mt-1">오프라인 미팅 · 현장 응대 · 고객 계약</p>
+                  <p className="text-white font-semibold group-hover:text-blue-400 transition-colors">대리점 가입</p>
+                  <p className="text-xs text-gray-500 mt-1">SOL Fort 공식 대리점으로 등록</p>
                 </div>
               </div>
             </button>
@@ -173,8 +155,8 @@ export default function Register() {
               <div className="flex items-start gap-4">
                 <div className="h-12 w-12 rounded-xl bg-emerald-500/20 flex items-center justify-center text-2xl shrink-0">📞</div>
                 <div>
-                  <p className="text-white font-semibold group-hover:text-emerald-400 transition-colors">콜영업팀</p>
-                  <p className="text-xs text-gray-500 mt-1">전화 영업 · 고객 발굴 · 리드 관리</p>
+                  <p className="text-white font-semibold group-hover:text-emerald-400 transition-colors">콜영업팀 가입</p>
+                  <p className="text-xs text-gray-500 mt-1">콜영업팀 직원으로 등록</p>
                 </div>
               </div>
             </button>
@@ -182,111 +164,11 @@ export default function Register() {
         )}
 
         {step === 2 && (
-          <div className="sf-card rounded-2xl p-6 space-y-4">
-            <div className="flex items-center gap-2 mb-2">
+          <div className="sf-card rounded-2xl p-6 space-y-3">
+            <div className="flex items-center gap-2 mb-1">
               <button onClick={() => setStep(1)} className="text-gray-500 hover:text-white text-xs">← 뒤로</button>
               <span className="text-xs text-gray-500">|</span>
               <span className="text-xs text-gray-400">{role === "dealer" ? "🏪 대리점 가입" : "📞 콜영업팀 가입"}</span>
-            </div>
-
-            <div>
-              <h3 className="text-sm font-semibold text-white">서비스 이용 약관 동의</h3>
-              <p className="text-xs text-gray-500 mt-1">아래 내용을 반드시 읽고 동의해주세요</p>
-            </div>
-
-            <div className={`border rounded-xl p-4 max-h-64 overflow-y-auto text-xs text-gray-300 leading-relaxed space-y-3 ${allAgreed ? "border-emerald-500/50" : "border-red-500/30"}`}>
-              <div>
-                <p className="font-semibold text-white mb-2">【SolFort 서비스 이용 주의사항】</p>
-              </div>
-
-              <div>
-                <p className="font-semibold text-white mb-1">■ 본 서비스의 성격</p>
-                <p>SolFort 앱은 영업 활동을 지원하는 내부 관리 도구입니다.
-고객 관리, 매출 기록, 일정 관리 등 업무 효율화를 위한
-소프트웨어 서비스를 제공합니다.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold text-white mb-1">■ 유사수신행위 금지</p>
-                <p>「유사수신행위의 규제에 관한 법률」에 따라,
-인가 없이 불특정 다수로부터 자금을 수신하거나
-원금 또는 이자의 지급을 약정하는 행위는 엄격히 금지됩니다.
-본 서비스를 이용한 유사수신행위 발생 시,
-해당 영업 행위를 한 당사자(가입자 본인 또는 소속 지점)가
-전적으로 법적 책임을 집니다.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold text-white mb-1">■ 고객 기망행위 금지</p>
-                <p>허위 사실 고지, 과장된 수익 약속, 사실과 다른 설명 등
-고객을 기망하는 영업 행위는 민·형사상 처벌 대상이 됩니다.
-이로 인한 모든 법적 분쟁 및 피해는
-해당 영업을 진행한 지점 또는 본인이 전적으로 책임지며,
-SolFort 플랫폼은 어떠한 책임도 지지 않습니다.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold text-white mb-1">■ 고객 정보 고지 의무</p>
-                <p>계약 체결 전 고객에게 계약서상 모든 조건, 리스크, 의무사항을
-충분히 설명하고 인지시킬 책임은 해당 영업 담당자에게 있습니다.
-고객이 계약 내용을 충분히 인지하지 못한 상태에서
-계약이 체결되어 발생하는 모든 민사 및 형사상 분쟁, 손해배상,
-법적 책임은 해당 영업 담당자 본인에게 귀속됩니다.
-SolFort 플랫폼은 이에 대한 어떠한 책임도 지지 않습니다.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold text-white mb-1">■ 서비스 제공자의 책임 한계</p>
-                <p>SolFort는 영업 활동을 돕는 도구(Tool)를 제공할 뿐이며,
-실제 영업 과정에서 발생하는 모든 법적·재무적 책임은
-해당 영업 행위 당사자에게 있습니다.
-플랫폼 제공자는 개별 영업 내용에 대해 책임지지 않습니다.</p>
-              </div>
-
-              <div>
-                <p className="font-semibold text-white mb-1">■ 동의 효력</p>
-                <p>본 약관에 동의하고 가입 신청 시,
-위 모든 내용을 충분히 이해하고 동의한 것으로 간주됩니다.</p>
-              </div>
-            </div>
-
-            <div className="space-y-2.5">
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={agree1} onChange={e => setAgree1(e.target.checked)} className="mt-1.5 w-4 h-4" />
-                <span className="text-sm text-gray-300"><span className="text-red-400 text-xs">[필수]</span> 위 주의사항을 모두 읽고 충분히 이해하였습니다.</span>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={agree2} onChange={e => setAgree2(e.target.checked)} className="mt-1.5 w-4 h-4" />
-                <span className="text-sm text-gray-300"><span className="text-red-400 text-xs">[필수]</span> 유사수신행위 및 고객 기망행위로 인한 법적 책임은 본인 또는 소속 지점에 있음을 인정합니다.</span>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={agree3} onChange={e => setAgree3(e.target.checked)} className="mt-1.5 w-4 h-4" />
-                <span className="text-sm text-gray-300"><span className="text-red-400 text-xs">[필수]</span> SolFort는 영업 지원 도구임을 이해하며, 플랫폼 제공자는 개별 영업에 대한 책임이 없음에 동의합니다.</span>
-              </label>
-
-              <label className="flex items-start gap-3 cursor-pointer">
-                <input type="checkbox" checked={agree4} onChange={e => setAgree4(e.target.checked)} className="mt-1.5 w-4 h-4" />
-                <span className="text-sm text-gray-300"><span className="text-red-400 text-xs">[필수]</span> 고객에게 계약서상 모든 사항을 충분히 인지시키지 못하여 발생하는 모든 민사 및 형사상 책임은 본인에게 있음을 충분히 인지하였습니다.</span>
-              </label>
-            </div>
-
-            <Button onClick={() => setStep(3)} disabled={!allAgreed}
-              className={`w-full rounded-xl h-12 font-semibold ${allAgreed ? accentBtn : "opacity-40 cursor-not-allowed bg-gray-600 text-white border-0"}`}>
-              다음 (약관 동의 완료)
-            </Button>
-          </div>
-        )}
-
-        {step === 3 && (
-          <div className="sf-card rounded-2xl p-6 space-y-3">
-            <div className="flex items-center gap-2 mb-1">
-              <button onClick={() => setStep(2)} className="text-gray-500 hover:text-white text-xs">← 뒤로</button>
-              <span className="text-xs text-gray-500">|</span>
-              <span className={`text-xs px-2 py-0.5 rounded-full ${role === "dealer" ? "bg-blue-500/20 text-blue-400" : "bg-emerald-500/20 text-emerald-400"}`}>
-                {role === "dealer" ? "🏪 대리점 가입" : "📞 콜영업팀 가입"}
-              </span>
             </div>
 
             {/* Username with dupe check */}
