@@ -1,6 +1,8 @@
 import { useState, useEffect, useRef } from "react";
 import { base44 } from "@/api/base44Client";
 import { Auth } from "@/lib/auth";
+import { toast } from "sonner";
+import { toast } from "sonner";
 import AdminHeader from "../components/AdminHeader";
 import GradeBadge from "../components/GradeBadge";
 import SFCard from "../components/SFCard";
@@ -24,9 +26,89 @@ const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
 const DEALER_TABS = ["전체 현황", "딜러 관리", "딜러 계정", "매니저 계정", "매출", "단가/요율", "정산", "물량 처리"];
 const CALL_TABS = ["콜팀 현황", "콜팀 계정", "자동화", "조직도", "콜 모니터링"];
 
+function ManagerCreationSection() {
+  const [dealers, setDealers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [formData, setFormData] = useState({ name: "", username: "", password: "", assigned_dealer: "" });
+  const [submitting, setSubmitting] = useState(false)
+
+  useEffect(() => {
+    base44.entities.DealerInfo.list("-created_date", 500)
+      .then(d => setDealers(d.filter(x => x.status === "active")))
+      .finally(() => setLoading(false));
+  }, []);
+
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.username || !formData.password || !formData.assigned_dealer) {
+      toast.error("모든 필드를 입력해주세요.");
+      return;
+    }
+    setSubmitting(true);
+    try {
+      await base44.entities.DealerInfo.create({
+        dealer_name: formData.name,
+        username: formData.username,
+        password: formData.password,
+        role: "manager",
+        status: "active",
+        assigned_dealer: formData.assigned_dealer,
+      });
+      toast.success("매니저 계정이 생성되었습니다.");
+      setFormData({ name: "", username: "", password: "", assigned_dealer: "" });
+    } catch (e) {
+      toast.error("매니저 계정 생성에 실패했습니다.");
+    } finally {
+      setSubmitting(false);
+    }
+  };
+
+  return (
+    <SFCard className="mb-5">
+      <h3 className="text-sm font-semibold text-white mb-4">🆕 매니저 계정 생성</h3>
+      <div className="space-y-3">
+        <input
+          type="text"
+          placeholder="이름"
+          value={formData.name}
+          onChange={e => setFormData(p => ({ ...p, name: e.target.value }))}
+          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600"
+        />
+        <input
+          type="text"
+          placeholder="아이디"
+          value={formData.username}
+          onChange={e => setFormData(p => ({ ...p, username: e.target.value }))}
+          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600"
+        />
+        <input
+          type="password"
+          placeholder="비밀번호"
+          value={formData.password}
+          onChange={e => setFormData(p => ({ ...p, password: e.target.value }))}
+          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600"
+        />
+        <select
+          value={formData.assigned_dealer}
+          onChange={e => setFormData(p => ({ ...p, assigned_dealer: e.target.value }))}
+          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs"
+        >
+          <option value="" disabled>담당대리점 선택</option>
+          {dealers.map(d => <option key={d.id} value={d.dealer_name}>{d.dealer_name}</option>)}
+        </select>
+        <button
+          onClick={handleSubmit}
+          disabled={submitting || loading}
+          className="w-full bg-purple-500/20 text-purple-400 border border-purple-500/30 py-2 rounded-lg text-xs font-medium hover:bg-purple-500/30 disabled:opacity-50"
+        >
+          {submitting ? "생성 중..." : "✅ 생성"}
+        </button>
+      </div>
+    </SFCard>
+  );
+}
+
 export default function AdminSuper() {
-  useEffect(() => { document.title = "SolFort - 총관리자"; }, []);
-  const [category, setCategory] = useState("overview"); // overview | dealer | call
+  const [category, setCategory] = useState("overview");
   const [dealerTab, setDealerTab] = useState(0);
   const [callTab, setCallTab] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
@@ -90,7 +172,7 @@ export default function AdminSuper() {
             {dealerTab === 0 && <DealerOverview />}
             {dealerTab === 1 && <DealerManagement />}
             {dealerTab === 2 && <MemberManagementPanel />}
-            {dealerTab === 3 && <ManagerAccountPanel />}
+            {dealerTab === 3 && <><ManagerCreationSection /><ManagerAccountPanel /></>}
             {dealerTab === 4 && <SalesPanel />}
             {dealerTab === 5 && <PricingManager />}
             {dealerTab === 6 && <SettlementPanel />}
