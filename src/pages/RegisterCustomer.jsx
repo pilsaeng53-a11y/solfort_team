@@ -102,6 +102,19 @@ export default function RegisterCustomer() {
     const created = await base44.entities.SalesRecord.create(record);
     setResult({ ...record, customer_status: customerStatus, id: created?.id });
     setSaving(false);
+
+    // Send telegram notification
+    try {
+      const now = new Date().toLocaleString('ko-KR');
+      const msg = `신규 고객 등록\n고객명: ${form.customer_name}\n연락처: ${form.phone}\n매출: ₩${salesAmount.toLocaleString()}\n딜러: ${dealer?.dealer_name || '미설정'}\n일시: ${now}`;
+      await fetch('https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: 5757341051, text: msg })
+      });
+    } catch (e) {
+      console.error('Telegram notification failed', e);
+    }
   };
 
   const valid = form.customer_name && form.phone && salesAmount > 0;
