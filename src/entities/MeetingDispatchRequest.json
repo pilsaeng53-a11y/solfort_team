@@ -1,0 +1,41 @@
+{
+  "name": "MeetingDispatchRequest",
+  "type": "object",
+  "properties": {
+    "caller_name": {
+      "type": "string",
+      "title": "콜팀원 이름"
+    },
+    "caller_username": {
+      "type": "string",
+      "title": "콜팀원 아이디"
+    },
+    "target_dealer_name": {
+      "type": "string",
+      "title": "대상 대리점명"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "고객명"
+    },
+    "customer_phone": {
+      "type": "string",
+      "title": "고객 연락처"
+    },
+    "memo": {
+      "type": "string",
+      "title": "메모"
+    },
+    "status": {
+      "type": "string",
+      "title": "상태",
+      "enum": ["pending", "accepted", "rejected", "completed"],
+      "default": "pending"
+    },
+    "requested_at": {
+      "type": "string",
+      "title": "요청 시간"
+    }
+  },
+  "required": ["caller_name", "caller_username", "target_dealer_name", "customer_name", "customer_phone"]
+}

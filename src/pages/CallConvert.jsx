@@ -7,6 +7,12 @@ import SFCard from "@/components/SFCard";
 import { TrendingUp, CheckCircle } from "lucide-react";
 
 const today = new Date().toISOString().split("T")[0];
+const STATUS_BADGE = {
+  pending: "bg-yellow-500/20 text-yellow-400",
+  accepted: "bg-emerald-500/20 text-emerald-400",
+  rejected: "bg-red-500/20 text-red-400",
+  completed: "bg-blue-500/20 text-blue-400",
+};
 
 function Loader() {
   return <div className="flex justify-center py-20"><div className="w-7 h-7 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" /></div>;
@@ -16,6 +22,7 @@ export default function CallConvert() {
   const navigate = useNavigate();
   const { state } = useLocation();
   const me = Auth.getDealerName();
+  const currentUser = Auth.getCurrentUser();
 
   const [leads, setLeads] = useState([]);
   const [dealers, setDealers] = useState([]);
@@ -23,6 +30,9 @@ export default function CallConvert() {
   const [loading, setLoading] = useState(true);
   const [saving, setSaving] = useState(false);
   const [done, setDone] = useState(false);
+  const [dispatchForm, setDispatchForm] = useState({ target_dealer_id: "", customer_name: "", customer_phone: "", memo: "" });
+  const [dispatchRequests, setDispatchRequests] = useState([]);
+  const [submittingDispatch, setSubmittingDispatch] = useState(false);
 
   const [selectedLeadId, setSelectedLeadId] = useState(state?.lead?.id || "");
   const [form, setForm] = useState({
@@ -40,15 +50,17 @@ export default function CallConvert() {
       base44.entities.CallLead.filter({ status: "관심있음" }, "-created_date", 200),
       base44.entities.DealerInfo.filter({ status: "active" }, "dealer_name", 200),
       base44.entities.SystemSettings.list("setting_key", 50),
-    ]).then(([l, d, ss]) => {
+      base44.entities.MeetingDispatchRequest.filter({ caller_username: currentUser?.username }, "-created_date", 100),
+    ]).then(([l, d, ss, dr]) => {
       setLeads(l);
       setDealers(d);
+      setDispatchRequests(dr);
       const sm = {};
       ss.forEach(s => { sm[s.setting_key] = s.setting_value; });
       setSettings(sm);
       setLoading(false);
     });
-  }, []);
+  }, [currentUser?.username]);
 
   const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
@@ -70,6 +82,35 @@ export default function CallConvert() {
   const usdtAmt = sofPrice > 0 && usdtRate > 0 ? salesKrw / usdtRate : 0;
   const baseQty = sofPrice > 0 ? usdtAmt / sofPrice : 0;
   const finalQty = baseQty * (1 + promoPct / 100);
+
+  const submitDispatch = async () => {
+    if (!dispatchForm.target_dealer_id || !dispatchForm.customer_name || !dispatchForm.customer_phone) return;
+    setSubmittingDispatch(true);
+    try {
+      const targetDealer = dealers.find(d => d.id === dispatchForm.target_dealer_id);
+      const newRequest = await base44.entities.MeetingDispatchRequest.create({
+        caller_name: currentUser?.full_name || me,
+        caller_username: currentUser?.username || me,
+        target_dealer_name: targetDealer?.dealer_name || "",
+        customer_name: dispatchForm.customer_name,
+        customer_phone: dispatchForm.customer_phone,
+        memo: dispatchForm.memo,
+        status: "pending",
+        requested_at: new Date().toISOString(),
+      });
+      setDispatchRequests(prev => [newRequest, ...prev]);
+      setDispatchForm({ target_dealer_id: "", customer_name: "", customer_phone: "", memo: "" });
+      const botToken = "8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8";
+      const chatId = "5757341051";
+      const msg = `[${currentUser?.full_name || me}]→[${targetDealer?.dealer_name}] 파견요청: ${dispatchForm.customer_name} ${dispatchForm.customer_phone}`;
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: msg }),
+      }).catch(() => {});
+    } catch (e) {}
+    setSubmittingDispatch(false);
+  };
 
   const submit = async () => {
     if (!form.customer_name || !form.phone || !salesKrw || !form.dealer_name) return;
@@ -120,12 +161,70 @@ export default function CallConvert() {
     <div className="min-h-screen bg-[#080a12]">
       <CallNav />
       <div className="p-4 md:p-6 space-y-5 max-w-2xl mx-auto">
+        {/* 파견 요청 섹션 */}
+        <SFCard className="space-y-4 border border-purple-500/20">
+          <h2 className="text-sm font-semibold text-purple-400">📤 파견 요청</h2>
+          <div className="grid grid-cols-1 gap-3">
+            <div>
+              <label className="text-[10px] text-gray-400">대상 대리점 *</label>
+              <select value={dispatchForm.target_dealer_id} onChange={e => setDispatchForm(p => ({ ...p, target_dealer_id: e.target.value }))}
+                className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs">
+                <option value="">-- 대리점 선택 --</option>
+                {dealers.map(d => <option key={d.id} value={d.id}>{d.dealer_name}</option>)}
+              </select>
+            </div>
+            <div className="grid grid-cols-2 gap-3">
+              <div>
+                <label className="text-[10px] text-gray-400">고객명 *</label>
+                <input value={dispatchForm.customer_name} onChange={e => setDispatchForm(p => ({ ...p, customer_name: e.target.value }))}
+                  className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400">연락처 *</label>
+                <input value={dispatchForm.customer_phone} onChange={e => setDispatchForm(p => ({ ...p, customer_phone: e.target.value }))}
+                  className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+              </div>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-400">메모</label>
+              <textarea value={dispatchForm.memo} onChange={e => setDispatchForm(p => ({ ...p, memo: e.target.value }))} rows={2}
+                className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs resize-none" />
+            </div>
+            <button onClick={submitDispatch} disabled={submittingDispatch || !dispatchForm.target_dealer_id || !dispatchForm.customer_name || !dispatchForm.customer_phone}
+              className="w-full py-2.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-xs font-semibold hover:bg-purple-500/30 disabled:opacity-40 transition-all">
+              {submittingDispatch ? "전송 중..." : "파견 요청"}
+            </button>
+          </div>
+        </SFCard>
+
+        {/* 파견 요청 목록 */}
+        {dispatchRequests.length > 0 && (
+          <SFCard className="space-y-3">
+            <h3 className="text-xs font-semibold text-gray-400">내 파견 요청 ({dispatchRequests.length})</h3>
+            <div className="space-y-2 max-h-48 overflow-y-auto">
+              {dispatchRequests.map(r => (
+                <div key={r.id} className="flex items-start justify-between gap-2 border-l-2 border-purple-500/30 pl-2.5 py-1.5 text-xs">
+                  <div className="flex-1 min-w-0">
+                    <p className="text-white font-medium">{r.customer_name} ({r.customer_phone})</p>
+                    <p className="text-[10px] text-gray-500">{r.target_dealer_name}</p>
+                    {r.memo && <p className="text-[10px] text-gray-600 mt-0.5">{r.memo}</p>}
+                  </div>
+                  <span className={`px-2 py-0.5 rounded-full text-[9px] font-medium shrink-0 whitespace-nowrap ${STATUS_BADGE[r.status] || "bg-gray-500/20 text-gray-400"}`}>
+                    {r.status === "pending" ? "대기" : r.status === "accepted" ? "수락" : r.status === "rejected" ? "거절" : "완료"}
+                  </span>
+                </div>
+              ))}
+            </div>
+          </SFCard>
+        )}
+
         <div className="flex items-center gap-2">
           <TrendingUp className="h-5 w-5 text-emerald-400" />
           <h1 className="text-lg font-bold text-white">매출 연결</h1>
         </div>
         <p className="text-xs text-gray-500 -mt-2">관심 고객을 실제 매출로 등록합니다</p>
 
+        {/* 매출 연결 섹션 */}
         <SFCard className="space-y-4">
           <h3 className="text-sm font-semibold text-white">① 고객 선택</h3>
           <div>
@@ -191,3 +290,13 @@ export default function CallConvert() {
     </div>
   );
 }
+
+// Auth helper
+Auth.getCurrentUser = function() {
+  try {
+    const stored = localStorage.getItem('_auth_user');
+    return stored ? JSON.parse(stored) : null;
+  } catch {
+    return null;
+  }
+};
