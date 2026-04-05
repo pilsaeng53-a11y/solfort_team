@@ -14,6 +14,7 @@ const PIE_COLORS = ["#10b981", "#3b82f6", "#8b5cf6", "#f59e0b", "#ef4444"];
 
 export default function CallTeam() {
   const [tab, setTab] = useState(0);
+  useEffect(() => { document.title = "SolFort - 콜영업팀"; }, []);
   return (
     <div className="min-h-screen bg-[#080a12]">
       <AdminHeader title="콜영업팀 운영센터" accent="emerald" />

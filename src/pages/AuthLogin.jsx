@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Auth } from "@/lib/auth";
 import { base44 } from "@/api/base44Client";
@@ -7,6 +7,7 @@ import { Input } from "@/components/ui/input";
 import SFLogo from "../components/SFLogo";
 
 export default function AuthLogin() {
+  useEffect(() => { document.title = "SolFort - 로그인"; }, []);
   const navigate = useNavigate();
   const [username, setUsername] = useState("");
   const [password, setPassword] = useState("");

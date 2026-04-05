@@ -23,6 +23,7 @@ const DEALER_TABS = ["전체 현황", "딜러 관리", "딜러 계정", "매출"
 const CALL_TABS = ["콜팀 현황", "콜팀 계정", "자동화", "조직도"];
 
 export default function AdminSuper() {
+  useEffect(() => { document.title = "SolFort - 총관리자"; }, []);
   const [category, setCategory] = useState("overview"); // overview | dealer | call
   const [dealerTab, setDealerTab] = useState(0);
   const [callTab, setCallTab] = useState(0);

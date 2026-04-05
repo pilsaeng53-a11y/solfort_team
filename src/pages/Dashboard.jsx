@@ -13,6 +13,7 @@ import useDealer from "../lib/useDealer";
 import { UserPlus, FileText, Trophy, Send, TrendingUp, Users, DollarSign } from "lucide-react";
 
 export default function Dashboard() {
+  useEffect(() => { document.title = "SolFort - 대시보드"; }, []);
   const navigate = useNavigate();
   const { rate, source, loading: rateLoading, fetchRate } = useMarketData(30000);
   const { dealer, loading: dealerLoading } = useDealer();

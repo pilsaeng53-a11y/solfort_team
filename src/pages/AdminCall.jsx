@@ -15,6 +15,7 @@ const COMMISSION_RATES = { GREEN: 10, PURPLE: 30, GOLD: 40, PLATINUM: 50 };
 
 export default function AdminCall() {
   const [tab, setTab] = useState(0);
+  useEffect(() => { document.title = "SolFort - 콜팀관리자"; }, []);
   return (
     <div className="min-h-screen bg-[#080a12]">
       <AdminHeader title="콜팀 관리자" accent="emerald" />

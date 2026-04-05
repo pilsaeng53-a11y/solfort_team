@@ -13,6 +13,7 @@ const today = new Date().toISOString().split("T")[0];
 
 export default function AdminDealer() {
   const [tab, setTab] = useState(0);
+  useEffect(() => { document.title = "SolFort - 딜러관리자"; }, []);
   return (
     <div className="min-h-screen bg-[#080a12]">
       <AdminHeader title="딜러 관리자" accent="blue" />
