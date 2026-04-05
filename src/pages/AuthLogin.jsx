@@ -90,9 +90,12 @@ export default function AuthLogin() {
       localStorage.setItem('sf_session_id', dealer.id);
       localStorage.removeItem(FAIL_KEY);
       localStorage.removeItem(LOCK_KEY);
-      Auth.login({ token: 'dealer_' + dealer.id, role: dealer.role || 'dealer', dealer_name: dealer.dealer_name, user_id: dealer.id });
+      Auth.login({ token: 'dealer_' + dealer.id, role: dealer.role || 'dealer', dealer_name: dealer.dealer_name, user_id: dealer.id, region_scope: dealer.region_scope || '' });
       if (dealer.role === 'manager') {
         localStorage.setItem('sf_assigned_dealer', dealer.assigned_dealer || '');
+      }
+      if (dealer.region_scope) {
+        localStorage.setItem('sf_region_scope', dealer.region_scope);
       }
       navigate(Auth.getHomeRoute());
       setLoading(false);

@@ -91,6 +91,14 @@
     "assigned_dealer": {
       "type": "string",
       "title": "\ub2f4\ub2f9 \ub300\ub9ac\uc810"
+    },
+    "region_scope": {
+      "type": "string",
+      "title": "\ub2f4\ub2f9 \uc9c0\uc5ed"
+    },
+    "agreed_contract_version": {
+      "type": "string",
+      "title": "\ub3d9\uc758\ud55c \uacc4\uc57d\uc11c \ubc84\uc804"
     }
   },
   "required": [

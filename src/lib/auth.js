@@ -3,6 +3,7 @@ export const Auth = {
   getRole: () => localStorage.getItem('sf_role'),
   getDealerName: () => localStorage.getItem('sf_dealer_name'),
   getAssignedDealer: () => localStorage.getItem('sf_assigned_dealer') || '',
+  getRegionScope: () => localStorage.getItem('sf_region_scope') || '',
   getUserId: () => localStorage.getItem('sf_user_id'),
   isLoggedIn: () => !!localStorage.getItem('sf_token'),
   isDealer: () => localStorage.getItem('sf_role') === 'dealer',
@@ -27,9 +28,10 @@ export const Auth = {
     localStorage.setItem('sf_role', data.role);
     localStorage.setItem('sf_dealer_name', data.dealer_name || '');
     localStorage.setItem('sf_user_id', data.user_id || '');
+    if (data.region_scope) localStorage.setItem('sf_region_scope', data.region_scope);
   },
   logout: () => {
-    ['sf_token','sf_role','sf_dealer_name','sf_user_id'].forEach(k => localStorage.removeItem(k));
+    ['sf_token','sf_role','sf_dealer_name','sf_user_id','sf_region_scope','sf_assigned_dealer'].forEach(k => localStorage.removeItem(k));
     window.location.href = '/';
   },
   headers: () => ({

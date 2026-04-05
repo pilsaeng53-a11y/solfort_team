@@ -1,0 +1,39 @@
+{
+  "name": "ContractVersion",
+  "type": "object",
+  "properties": {
+    "version": {
+      "type": "string",
+      "title": "\ubc84\uc804"
+    },
+    "title": {
+      "type": "string",
+      "title": "\uc81c\ubaa9"
+    },
+    "file_url": {
+      "type": "string",
+      "title": "\ud30c\uc77c URL"
+    },
+    "is_current": {
+      "type": "boolean",
+      "title": "\ud604\uc7ac \ubc84\uc804",
+      "default": false
+    },
+    "change_summary": {
+      "type": "string",
+      "title": "\ubcc0\uacbd \ub0b4\uc6a9"
+    },
+    "created_by": {
+      "type": "string",
+      "title": "\ub4f1\ub85d\uc790"
+    },
+    "created_at": {
+      "type": "string",
+      "title": "\ub4f1\ub85d\uc77c"
+    }
+  },
+  "required": [
+    "version",
+    "title"
+  ]
+}

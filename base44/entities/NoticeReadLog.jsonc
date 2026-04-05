@@ -1,0 +1,30 @@
+{
+  "name": "NoticeReadLog",
+  "type": "object",
+  "properties": {
+    "notice_id": {
+      "type": "string",
+      "title": "\uacf5\uc9c0\uc0ac\ud56d ID"
+    },
+    "reader_name": {
+      "type": "string",
+      "title": "\uc77d\uc740 \uc0ac\uc6a9\uc790\uba85"
+    },
+    "reader_username": {
+      "type": "string",
+      "title": "\uc77d\uc740 \uc0ac\uc6a9\uc790 \uc544\uc774\ub514"
+    },
+    "reader_role": {
+      "type": "string",
+      "title": "\uc5ed\ud560"
+    },
+    "read_at": {
+      "type": "string",
+      "title": "\uc77d\uc740 \uc2dc\uac04"
+    }
+  },
+  "required": [
+    "notice_id",
+    "reader_username"
+  ]
+}

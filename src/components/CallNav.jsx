@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Auth } from "@/lib/auth";
 import SFLogo from "./SFLogo";
+import AttendanceWidget from "./AttendanceWidget";
 import { LogOut } from "lucide-react";
 
 const NAV_ITEMS = [
@@ -43,6 +44,7 @@ export default function CallNav() {
         </div>
         <div className="flex items-center gap-3">
           <span className="hidden md:block text-[10px] text-gray-500">{fmt}</span>
+          <AttendanceWidget />
           <button
             onClick={Auth.logout}
             className="flex items-center gap-1 text-[10px] text-red-400 bg-red-500/10 px-2.5 py-1.5 rounded-lg hover:bg-red-500/20 transition-all"

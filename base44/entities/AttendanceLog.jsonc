@@ -1,0 +1,40 @@
+{
+  "name": "AttendanceLog",
+  "type": "object",
+  "properties": {
+    "member_name": {
+      "type": "string",
+      "title": "\uc774\ub984"
+    },
+    "username": {
+      "type": "string",
+      "title": "\uc544\uc774\ub514"
+    },
+    "check_in_at": {
+      "type": "string",
+      "title": "\ucd9c\uadfc \uc2dc\uac04"
+    },
+    "check_out_at": {
+      "type": "string",
+      "title": "\ud1f4\uadfc \uc2dc\uac04"
+    },
+    "work_date": {
+      "type": "string",
+      "title": "\uadfc\ubb34\uc77c"
+    },
+    "status": {
+      "type": "string",
+      "title": "\uc0c1\ud0dc",
+      "enum": [
+        "working",
+        "off"
+      ],
+      "default": "working"
+    }
+  },
+  "required": [
+    "member_name",
+    "username",
+    "work_date"
+  ]
+}

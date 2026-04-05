@@ -6,7 +6,6 @@ import { Auth } from "@/lib/auth";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
 import { Plus, X, ChevronDown } from "lucide-react";
-import { useState, useEffect } from "react";
 
 const STATUS_OPTS = ["신규", "연락됨", "관심있음", "거절", "매출전환"];
 const COLOR_FILTERS = [
