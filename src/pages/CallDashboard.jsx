@@ -104,7 +104,7 @@ export default function CallDashboard() {
               <div className="flex gap-2">
                 <button onClick={() => navigate("/call/logs")}
                   className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/30 transition-all whitespace-nowrap">
-                  콜 기록
+                  콜기록추가
                 </button>
                 <button onClick={() => {
                   const tomorrow = new Date();
@@ -112,7 +112,7 @@ export default function CallDashboard() {
                   updateUrgentDate(urgentLead.id, tomorrow.toISOString().split('T')[0]);
                 }}
                   className="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2.5 py-1.5 rounded-lg hover:bg-yellow-500/30 transition-all">
-                  내일로
+                  다음으로미루기
                 </button>
               </div>
             </div>
@@ -131,7 +131,7 @@ export default function CallDashboard() {
                   <div className="flex items-center justify-between mt-1.5">
                     <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">{l.status}</span>
                     <button onClick={() => navigate("/call/logs")}
-                      className="text-[10px] text-blue-400 hover:text-blue-300">콜기록</button>
+                      className="text-[10px] text-blue-400 hover:text-blue-300">콜기록추가</button>
                   </div>
                 </div>
               ))}
@@ -209,7 +209,7 @@ export default function CallDashboard() {
                     onClick={() => navigate("/call/logs")}
                     className="shrink-0 text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1 rounded-lg hover:bg-emerald-500/30 transition-all"
                   >
-                    콜 기록 추가
+                    콜기록추가
                   </button>
                 </div>
               ))}
