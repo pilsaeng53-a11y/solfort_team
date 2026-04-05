@@ -5,7 +5,6 @@ import AdminHeader from "../components/AdminHeader";
 import GradeBadge from "../components/GradeBadge";
 import StatusBadge from "../components/StatusBadge";
 import SFCard from "../components/SFCard";
-import { useState, useRef, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const API = "https://solfort-js.onrender.com";

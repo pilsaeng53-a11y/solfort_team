@@ -5,7 +5,6 @@ import moment from "moment";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
 import { Star, Phone } from "lucide-react";
-import { useState, useEffect } from "react";
 
 const INTEREST_ORDER = { 높음: 0, 중간: 1, 낮음: 2 };
 const INTEREST_STYLE = {
