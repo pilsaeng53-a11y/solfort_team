@@ -33,6 +33,7 @@ import AdminCall from './pages/AdminCall';
 import AdminSuper from './pages/AdminSuper';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import ManagerPage from './pages/ManagerPage';
+import OnlineDirector from './pages/OnlineDirector';
 import Register from './pages/Register';
 import InitAdmin from './pages/InitAdmin';
 
@@ -109,6 +110,7 @@ const AppContent = () => {
           <Route path="/admin/call" element={<ProtectedRoute roles={['call_admin','super_admin']}><AdminCall /></ProtectedRoute>} />
           <Route path="/admin/super" element={<ProtectedRoute roles={['super_admin']}><AdminSuper /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute roles={['super_admin','dealer_admin','call_admin']}><AnalyticsDashboard /></ProtectedRoute>} />
+          <Route path="/online-director" element={<ProtectedRoute roles={['super_admin','online_director']}><OnlineDirector /></ProtectedRoute>} />
           <Route path="/manager" element={<ProtectedRoute roles={['manager']}><ManagerPage /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
