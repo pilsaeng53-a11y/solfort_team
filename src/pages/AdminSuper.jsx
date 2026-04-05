@@ -14,6 +14,7 @@ import DealerDetailModal from "../components/DealerDetailModal";
 import ContentManagementPanel from "../components/ContentManagementPanel";
 import AnomalyPanel from "../components/AnomalyPanel";
 import SystemLogPanel from "../components/SystemLogPanel";
+import AnalyticsDashboard from "../components/AnalyticsDashboard";
 import { Logger } from "../lib/logger";
 
 const API = "https://solfort-js.onrender.com";
@@ -43,7 +44,7 @@ export default function AdminSuper() {
       {/* Category Selector */}
       <div className="px-4 pt-3 pb-0 border-b border-white/[0.06]">
         <div className="flex gap-2 mb-3">
-          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["content", "📋 콘텐츠 관리"], ["anomaly", "🔍 이상 감지"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
+          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["content", "📋 콘텐츠 관리"], ["anomaly", "🔍 이상 감지"], ["analytics", "📊 분석 대시보드"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
             <button key={k} onClick={() => setCategory(k)}
               className={`px-4 py-2 rounded-t-lg text-xs font-semibold transition-all ${category === k ? "bg-purple-500/20 text-purple-400 border-t border-x border-purple-500/30 border-b-0" : "bg-white/5 text-gray-400 hover:text-white"}`}>
               {l}
@@ -107,6 +108,7 @@ export default function AdminSuper() {
         )}
         {category === "content" && <ContentManagementPanel />}
         {category === "anomaly" && <AnomalyPanel />}
+        {category === "analytics" && <AnalyticsDashboard />}
         {category === "syslog" && <SystemLogPanel />}
       </div>
     </div>
