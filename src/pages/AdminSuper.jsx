@@ -17,6 +17,7 @@ import AnomalyPanel from "../components/AnomalyPanel";
 import SystemLogPanel from "../components/SystemLogPanel";
 import AnalyticsDashboard from "../components/AnalyticsDashboard";
 import { Logger } from "../lib/logger";
+import { useNavigate } from "react-router-dom";
 
 const API = "https://solfort-js.onrender.com";
 const today = new Date().toISOString().split("T")[0];
@@ -24,6 +25,7 @@ const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
 
 const DEALER_TABS = ["전체 현황", "딜러 관리", "딜러 계정", "매니저 계정", "매출", "단가/요율", "정산", "물량 처리"];
 const CALL_TABS = ["콜팀 현황", "콜팀 계정", "자동화", "조직도", "콜 모니터링"];
+const ONLINE_TABS = ["온라인팀"];
 
 function ManagerCreationSection() {
   const [dealers, setDealers] = useState([]);
@@ -107,9 +109,11 @@ function ManagerCreationSection() {
 }
 
 export default function AdminSuper() {
+  const navigate = useNavigate();
   const [category, setCategory] = useState("overview");
   const [dealerTab, setDealerTab] = useState(0);
   const [callTab, setCallTab] = useState(0);
+  const [onlineTab, setOnlineTab] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
 
   useEffect(() => {
@@ -124,13 +128,18 @@ export default function AdminSuper() {
 
       {/* Category Selector */}
       <div className="px-4 pt-3 pb-0 border-b border-white/[0.06]">
-        <div className="flex gap-2 mb-3">
-          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["merged", "👥 전체 가입자 통합"], ["content", "📋 콘텐츠 관리"], ["anomaly", "🔍 이상 감지"], ["analytics", "📊 분석 대시보드"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
+        <div className="flex gap-2 mb-3 items-center">
+          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["online", "💻 온라인팀 관리"], ["merged", "👥 전체 가입자 통합"], ["content", "📋 콘텐츠 관리"], ["anomaly", "🔍 이상 감지"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
             <button key={k} onClick={() => setCategory(k)}
               className={`px-4 py-2 rounded-t-lg text-xs font-semibold transition-all ${category === k ? "bg-purple-500/20 text-purple-400 border-t border-x border-purple-500/30 border-b-0" : "bg-white/5 text-gray-400 hover:text-white"}`}>
               {l}
             </button>
           ))}
+          {/* Shortcut buttons */}
+          <button onClick={() => navigate("/analytics")}
+            className="ml-auto px-3 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs hover:bg-blue-500/30 transition-all">📊 분석 대시보드</button>
+          <button onClick={() => navigate("/online-director")}
+            className="px-3 py-1.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-xs hover:bg-purple-500/30 transition-all">💻 온라인팀 관리</button>
           {/* Pending badge */}
           {pendingOrders > 0 && (
             <button onClick={() => { setCategory("dealer"); setDealerTab(6); }}
@@ -162,6 +171,16 @@ export default function AdminSuper() {
             ))}
           </div>
         )}
+        {category === "online" && (
+          <div className="flex overflow-x-auto gap-1 pb-3">
+            {ONLINE_TABS.map((t, i) => (
+              <button key={i} onClick={() => setOnlineTab(i)}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${onlineTab === i ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-white/5 text-gray-400"}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
       </div>
 
       <div className="max-w-5xl mx-auto px-4 py-5">
@@ -188,9 +207,13 @@ export default function AdminSuper() {
             {callTab === 4 && <CallAutomationLive />}
           </>
         )}
+        {category === "online" && (
+          <>
+            {onlineTab === 0 && <OnlineTeamPanel />}
+          </>
+        )}
         {category === "content" && <ContentManagementPanel />}
         {category === "anomaly" && <AnomalyPanel />}
-        {category === "analytics" && <AnalyticsDashboard />}
         {category === "syslog" && <SystemLogPanel />}
       </div>
     </div>
@@ -1137,6 +1160,106 @@ const RESULT_BADGE_CALL = {
   관심없음: "bg-red-500/20 text-red-400", 관심있음: "bg-emerald-500/20 text-emerald-400",
   재콜필요: "bg-yellow-500/20 text-yellow-400", 매출전환: "bg-purple-500/20 text-purple-400",
 };
+
+/* ── 온라인팀 패널 ── */
+function OnlineTeamPanel() {
+  const [members, setMembers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [updating, setUpdating] = useState(null);
+
+  useEffect(() => {
+    base44.entities.OnlineTeamMember.list("-created_date", 200).then(setMembers).finally(() => setLoading(false));
+  }, []);
+
+  const updateMember = async (id, data) => {
+    setUpdating(id);
+    await base44.entities.OnlineTeamMember.update(id, data);
+    setMembers(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
+    setUpdating(null);
+  };
+
+  if (loading) return <Loader />;
+
+  const pending = members.filter(m => m.status === "pending");
+
+  return (
+    <div className="space-y-8">
+      {pending.length > 0 && (
+        <div>
+          <div className="flex items-center gap-2 mb-3">
+            <h3 className="text-sm font-semibold text-white">승인 대기</h3>
+            <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">{pending.length}건</span>
+          </div>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                {["가입일", "이름", "아이디", "연락처", "메타 계정", "처리"].map(h => (
+                  <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {pending.map(m => (
+                  <tr key={m.id} className="border-b border-white/[0.04]">
+                    <td className="py-3 px-2 text-gray-500">{m.created_date?.split("T")[0]}</td>
+                    <td className="py-3 px-2 text-white font-medium">{m.name}</td>
+                    <td className="py-3 px-2 text-gray-500">{m.username}</td>
+                    <td className="py-3 px-2 text-gray-400">{m.phone || "-"}</td>
+                    <td className="py-3 px-2 text-gray-300 max-w-[150px] truncate">{m.meta_ad_account || "-"}</td>
+                    <td className="py-3 px-2">
+                      <div className="flex gap-1.5">
+                        <button onClick={() => updateMember(m.id, { status: "active" })} disabled={updating === m.id}
+                          className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[10px] hover:bg-emerald-500/30 disabled:opacity-50">✅ 승인</button>
+                        <button onClick={() => updateMember(m.id, { status: "rejected" })} disabled={updating === m.id}
+                          className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-[10px] hover:bg-red-500/30 disabled:opacity-50">❌ 거절</button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      <div>
+        <h3 className="text-sm font-semibold text-white mb-3">전체 온라인팀 계정</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+              {["이름", "아이디", "연락처", "메타 계정", "상태", "가입일", "액션"].map(h => (
+                <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {members.map(m => (
+                <tr key={m.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                  <td className="py-3 px-2 text-white font-medium">{m.name}</td>
+                  <td className="py-3 px-2 text-gray-500">{m.username}</td>
+                  <td className="py-3 px-2 text-gray-400">{m.phone || "-"}</td>
+                  <td className="py-3 px-2 text-gray-300 max-w-[150px] truncate">{m.meta_ad_account || "-"}</td>
+                  <td className="py-3 px-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${m.status === "active" ? "bg-emerald-500/20 text-emerald-400" : "bg-yellow-500/20 text-yellow-400"}`}>
+                      {m.status === "active" ? "활성" : "대기"}
+                    </span>
+                  </td>
+                  <td className="py-3 px-2 text-gray-500">{m.created_date?.split("T")[0]}</td>
+                  <td className="py-3 px-2">
+                    <div className="flex gap-1">
+                      <button onClick={() => updateMember(m.id, { status: m.status === "active" ? "suspended" : "active" })} disabled={updating === m.id}
+                        className={`px-2 py-1 rounded text-[10px] disabled:opacity-50 ${m.status === "active" ? "bg-red-500/20 text-red-400 hover:bg-red-500/30" : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"}`}>
+                        {m.status === "active" ? "퇴출" : "복구"}
+                      </button>
+                    </div>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  );
+}
 
 function CallAutomationLive() {
   const [leads, setLeads] = useState([]);
