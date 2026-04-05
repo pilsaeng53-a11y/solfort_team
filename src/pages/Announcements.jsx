@@ -32,7 +32,32 @@ export default function Announcements() {
     }).finally(() => setLoading(false));
   }, []);
 
-  const toggle = (id) => setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+  const toggle = async (id) => {
+    const isOpening = !expanded[id];
+    setExpanded(prev => ({ ...prev, [id]: !prev[id] }));
+    
+    if (isOpening) {
+      try {
+        const username = Auth.getDealerName();
+        const role = Auth.getRole();
+        const existing = await base44.entities.NoticeReadLog.filter({
+          notice_id: id,
+          reader_username: username,
+        });
+        if (!existing || existing.length === 0) {
+          await base44.entities.NoticeReadLog.create({
+            notice_id: id,
+            reader_name: Auth.getDealerName(),
+            reader_username: username,
+            reader_role: role,
+            read_at: new Date().toISOString(),
+          });
+        }
+      } catch (e) {
+        console.error("Failed to log notice read:", e);
+      }
+    }
+  };
 
   const pinnedNotices = notices.filter(n => n.is_pinned);
   const regularNotices = notices.filter(n => !n.is_pinned);
