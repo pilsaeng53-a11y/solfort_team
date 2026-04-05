@@ -38,7 +38,7 @@ export default function AuthLogin() {
     const admins = await base44.entities.SuperAdmin.list();
     const admin = admins.find(a => a.username === username && a.password === password && a.status === 'active');
     if (admin) {
-      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+       const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
       localStorage.setItem('sf_session_token', sessionToken);
       localStorage.setItem('sf_session_id', admin.id);
       localStorage.removeItem(FAIL_KEY);
@@ -85,8 +85,8 @@ export default function AuthLogin() {
         setLoading(false);
         return;
       }
-      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2, 9);
-      await base44.entities.DealerInfo.update(dealer.id, { session_token: sessionToken, last_login_at: new Date().toISOString() });
+      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
+       await base44.entities.DealerInfo.update(dealer.id, { session_token: sessionToken, last_login_at: new Date().toISOString() });
       localStorage.setItem('sf_session_token', sessionToken);
       localStorage.setItem('sf_session_id', dealer.id);
       localStorage.removeItem(FAIL_KEY);
@@ -138,8 +138,8 @@ export default function AuthLogin() {
         setLoading(false);
         return;
       }
-      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2, 9);
-      await base44.entities.CallTeamMember.update(member.id, { session_token: sessionToken, last_login_at: new Date().toISOString() });
+      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
+       await base44.entities.CallTeamMember.update(member.id, { session_token: sessionToken, last_login_at: new Date().toISOString() });
       localStorage.setItem('sf_session_token', sessionToken);
       localStorage.setItem('sf_session_id', member.id);
       localStorage.removeItem(FAIL_KEY);
