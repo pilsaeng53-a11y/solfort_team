@@ -1,5 +1,4 @@
 import { useState } from "react";
-import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Auth } from "@/lib/auth";
 import { base44 } from "@/api/base44Client";
@@ -109,12 +108,18 @@ export default function AuthLogin() {
           >
             {loading ? "로그인 중..." : "로그인"}
           </Button>
+          <div className="border-t border-white/[0.06] pt-4 text-center">
+            <span className="text-sm text-gray-500">계정이 없으신가요? </span>
+            <button
+              type="button"
+              onClick={() => navigate('/register')}
+              className="text-sm text-blue-400 hover:text-blue-300 underline"
+            >
+              회원가입
+            </button>
+          </div>
         </div>
       </div>
-      <p className="text-center text-xs text-gray-600">
-        계정이 없으신가요?{" "}
-        <Link to="/register" className="text-gray-400 hover:text-white underline">회원가입</Link>
-      </p>
     </div>
   );
 }
