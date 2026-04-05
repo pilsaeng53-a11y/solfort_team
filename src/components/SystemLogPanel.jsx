@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import React from "react";
 import { base44 } from "@/api/base44Client";
 import SFCard from "./SFCard";
 
@@ -36,6 +37,14 @@ const monthStart = `${new Date().getFullYear()}-${String(new Date().getMonth() +
 
 const PAGE_SIZE = 50;
 
+const ROLE_FILTERS = [
+  ["all", "전체"],
+  ["super_admin", "최고관리자"],
+  ["manager", "매니저"],
+  ["dealer", "대리점"],
+  ["call_team", "콜팀"],
+];
+
 function Loader() {
   return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" /></div>;
 }
@@ -44,11 +53,13 @@ export default function SystemLogPanel() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [typeFilter, setTypeFilter] = useState("all");
+  const [roleFilter, setRoleFilter] = useState("all");
   const [search, setSearch] = useState("");
   const [dateMode, setDateMode] = useState("month"); // today | week | month | custom
   const [startDate, setStartDate] = useState(monthStart);
   const [endDate, setEndDate] = useState(today);
   const [page, setPage] = useState(0);
+  const [expandedGroup, setExpandedGroup] = useState(null);
 
   useEffect(() => {
     base44.entities.SystemLog.list("-created_at", 2000).then(setLogs).finally(() => setLoading(false));
@@ -67,18 +78,50 @@ export default function SystemLogPanel() {
     const d = (l.created_at || "").split("T")[0];
     const inRange = d >= rangeStart && d <= rangeEnd;
     const matchType = typeFilter === "all" || l.log_type === typeFilter;
+    const matchRole = roleFilter === "all" || l.actor_role === roleFilter;
     const q = search.toLowerCase();
     const matchSearch = !q || l.actor?.toLowerCase().includes(q) || l.target?.toLowerCase().includes(q) || l.action?.toLowerCase().includes(q);
-    return inRange && matchType && matchSearch;
+    return inRange && matchType && matchRole && matchSearch;
   });
 
-  const paged = filtered.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
-  const totalPages = Math.ceil(filtered.length / PAGE_SIZE);
+  const groupedLogins = {};
+  const displayRows = [];
+  filtered.forEach(l => {
+    if (l.log_type === "login") {
+      const day = (l.created_at || "").split("T")[0];
+      const key = `${l.actor}::${day}`;
+      if (!groupedLogins[key]) {
+        groupedLogins[key] = { count: 0, first: l, last: l, entries: [] };
+      }
+      groupedLogins[key].count++;
+      groupedLogins[key].last = l;
+      groupedLogins[key].entries.push(l);
+    } else {
+      displayRows.push(l);
+    }
+  });
+  Object.entries(groupedLogins).forEach(([key, group]) => {
+    displayRows.unshift({ ...group.last, isGroup: true, groupKey: key, groupCount: group.count, groupEntries: group.entries });
+  });
+  displayRows.sort((a, b) => (b.created_at || "").localeCompare(a.created_at || ""));
+
+  const paged = displayRows.slice(page * PAGE_SIZE, (page + 1) * PAGE_SIZE);
+  const totalPages = Math.ceil(displayRows.length / PAGE_SIZE);
 
   if (loading) return <Loader />;
 
   return (
     <div className="space-y-4">
+      {/* Role filter */}
+      <div className="flex overflow-x-auto gap-1 pb-1">
+        {ROLE_FILTERS.map(([v, l]) => (
+          <button key={v} onClick={() => { setRoleFilter(v); setPage(0); }}
+            className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${roleFilter === v ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 text-gray-400"}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+
       {/* Type filter */}
       <div className="flex overflow-x-auto gap-1 pb-1">
         {LOG_TYPES.map(([v, l]) => (
@@ -110,37 +153,70 @@ export default function SystemLogPanel() {
           className="ml-auto bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-xs placeholder:text-gray-600 w-48" />
       </div>
 
-      <p className="text-xs text-gray-600">{filtered.length}건 조회됨</p>
+      <p className="text-xs text-gray-600">{displayRows.length}건 조회됨</p>
 
       {/* Table */}
       <div className="overflow-x-auto">
         <table className="w-full text-xs">
           <thead>
             <tr className="text-gray-500 border-b border-white/[0.06]">
-              {["일시", "유형", "수행자", "역할", "대상", "내용", "변경전", "변경후"].map(h => (
+              {["일시", "유형", "수행자", "역할", "대상", "내용", "IP주소", "변경전", "변경후"].map(h => (
                 <th key={h} className="text-left py-3 px-2 font-medium whitespace-nowrap">{h}</th>
               ))}
             </tr>
           </thead>
           <tbody>
             {paged.length === 0 ? (
-              <tr><td colSpan={8} className="py-8 text-center text-gray-600">로그 없음</td></tr>
-            ) : paged.map((l, i) => (
-              <tr key={l.id || i} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
-                <td className="py-2.5 px-2 text-gray-500 whitespace-nowrap">{l.created_at?.replace("T", " ").substring(0, 16)}</td>
-                <td className="py-2.5 px-2">
-                  <span className={`px-2 py-0.5 rounded-full text-[10px] whitespace-nowrap ${TYPE_BADGE[l.log_type] || "bg-white/10 text-gray-400"}`}>
-                    {TYPE_LABELS[l.log_type] || l.log_type}
-                  </span>
-                </td>
-                <td className="py-2.5 px-2 text-white">{l.actor}</td>
-                <td className="py-2.5 px-2 text-gray-500">{l.actor_role}</td>
-                <td className="py-2.5 px-2 text-gray-300 max-w-[120px] truncate">{l.target}</td>
-                <td className="py-2.5 px-2 text-gray-400 max-w-[150px] truncate">{l.action}</td>
-                <td className="py-2.5 px-2 text-gray-600 max-w-[80px] truncate">{l.before_value || "-"}</td>
-                <td className="py-2.5 px-2 text-emerald-400 max-w-[80px] truncate">{l.after_value || "-"}</td>
-              </tr>
-            ))}
+              <tr><td colSpan={9} className="py-8 text-center text-gray-600">로그 없음</td></tr>
+            ) : paged.map((l, i) => {
+              if (l.isGroup) {
+                const isExpanded = expandedGroup === l.groupKey;
+                return (
+                  <React.Fragment key={l.groupKey}>
+                    <tr onClick={() => setExpandedGroup(isExpanded ? null : l.groupKey)} className="border-b border-white/[0.04] hover:bg-white/[0.02] cursor-pointer bg-blue-500/5">
+                      <td className="py-2.5 px-2 text-gray-500 whitespace-nowrap">{l.created_at?.replace("T", " ").substring(0, 16)}</td>
+                      <td className="py-2.5 px-2">
+                        <span className="px-2 py-0.5 rounded-full text-[10px] whitespace-nowrap bg-blue-500/20 text-blue-400">
+                          로그인
+                        </span>
+                      </td>
+                      <td className="py-2.5 px-2 text-white font-medium">{l.actor}</td>
+                      <td className="py-2.5 px-2 text-gray-500">{l.actor_role}</td>
+                      <td colSpan={5} className="py-2.5 px-2 text-gray-500 flex items-center gap-2">
+                        {isExpanded ? "▼" : "▶"} <span className="bg-blue-500/30 text-blue-300 px-2 py-0.5 rounded text-[10px] font-medium">{l.groupCount}회</span> 중복 로그인
+                      </td>
+                    </tr>
+                    {isExpanded && l.groupEntries.map((entry, idx) => (
+                      <tr key={`${l.groupKey}-${idx}`} className="border-b border-white/[0.04] bg-white/[0.01]">
+                        <td className="py-2.5 px-2 text-gray-500 whitespace-nowrap text-[10px]">{entry.created_at?.replace("T", " ").substring(0, 16)}</td>
+                        <td className="py-2.5 px-2"></td>
+                        <td className="py-2.5 px-2 text-gray-500 text-[10px]"></td>
+                        <td className="py-2.5 px-2 text-gray-600 text-[10px]"></td>
+                        <td colSpan={4} className="py-2.5 px-2 text-gray-500 text-[10px]"></td>
+                        <td className="py-2.5 px-2 text-gray-600 text-[10px]">{entry.ip_address || "-"}</td>
+                      </tr>
+                    ))}
+                  </React.Fragment>
+                );
+              }
+              return (
+                <tr key={l.id || i} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                  <td className="py-2.5 px-2 text-gray-500 whitespace-nowrap">{l.created_at?.replace("T", " ").substring(0, 16)}</td>
+                  <td className="py-2.5 px-2">
+                    <span className={`px-2 py-0.5 rounded-full text-[10px] whitespace-nowrap ${TYPE_BADGE[l.log_type] || "bg-white/10 text-gray-400"}`}>
+                      {TYPE_LABELS[l.log_type] || l.log_type}
+                    </span>
+                  </td>
+                  <td className="py-2.5 px-2 text-white">{l.actor}</td>
+                  <td className="py-2.5 px-2 text-gray-500">{l.actor_role}</td>
+                  <td className="py-2.5 px-2 text-gray-300 max-w-[120px] truncate">{l.target}</td>
+                  <td className="py-2.5 px-2 text-gray-400 max-w-[150px] truncate">{l.action}</td>
+                  <td className="py-2.5 px-2 text-gray-600 max-w-[100px] truncate">{l.ip_address || "-"}</td>
+                  <td className="py-2.5 px-2 text-gray-600 max-w-[80px] truncate">{l.before_value || "-"}</td>
+                  <td className="py-2.5 px-2 text-emerald-400 max-w-[80px] truncate">{l.after_value || "-"}</td>
+                </tr>
+              );
+            })}
           </tbody>
         </table>
       </div>
