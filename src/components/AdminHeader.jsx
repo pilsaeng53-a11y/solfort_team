@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { Auth } from "@/lib/auth";
 import SFLogo from "./SFLogo";
+import NotificationCenter from "./NotificationCenter";
 import { LogOut } from "lucide-react";
 
 export default function AdminHeader({ title, accent = "blue" }) {
@@ -31,13 +32,16 @@ export default function AdminHeader({ title, accent = "blue" }) {
           <p className="text-[10px] text-gray-500">{fmt}</p>
         </div>
       </div>
-      <button
-        onClick={Auth.logout}
-        className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-all"
-      >
-        <LogOut className="h-3.5 w-3.5" />
-        로그아웃
-      </button>
+      <div className="flex items-center gap-3">
+        <NotificationCenter />
+        <button
+          onClick={Auth.logout}
+          className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-all"
+        >
+          <LogOut className="h-3.5 w-3.5" />
+          로그아웃
+        </button>
+      </div>
     </div>
   );
 }
