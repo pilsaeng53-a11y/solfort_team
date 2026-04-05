@@ -125,7 +125,7 @@ export default function AdminSuper() {
       {/* Category Selector */}
       <div className="px-4 pt-3 pb-0 border-b border-white/[0.06]">
         <div className="flex gap-2 mb-3">
-          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["content", "📋 콘텐츠 관리"], ["anomaly", "🔍 이상 감지"], ["analytics", "📊 분석 대시보드"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
+          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["merged", "👥 전체 가입자 통합"], ["content", "📋 콘텐츠 관리"], ["anomaly", "🔍 이상 감지"], ["analytics", "📊 분석 대시보드"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
             <button key={k} onClick={() => setCategory(k)}
               className={`px-4 py-2 rounded-t-lg text-xs font-semibold transition-all ${category === k ? "bg-purple-500/20 text-purple-400 border-t border-x border-purple-500/30 border-b-0" : "bg-white/5 text-gray-400 hover:text-white"}`}>
               {l}
@@ -166,6 +166,7 @@ export default function AdminSuper() {
 
       <div className="max-w-5xl mx-auto px-4 py-5">
         {category === "overview" && <OverviewPanel onGoOrders={() => { setCategory("dealer"); setDealerTab(6); }} />}
+        {category === "merged" && <MergedUsersPanel />}
         {category === "dealer" && (
           <>
             {dealerTab === 0 && <DealerOverview />}
@@ -972,6 +973,157 @@ function CallOrgChart() {
 
 function Loader() {
   return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" /></div>;
+}
+
+function MergedUsersPanel() {
+  const [users, setUsers] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [typeFilter, setTypeFilter] = useState('all');
+  const [statusFilter, setStatusFilter] = useState('all');
+  const [search, setSearch] = useState('');
+  const [selectedUser, setSelectedUser] = useState(null);
+
+  useEffect(() => {
+    (async () => {
+      const [dealers, callMembers] = await Promise.all([
+        base44.entities.DealerInfo.list('-created_date', 500),
+        base44.entities.CallTeamMember.list('-created_date', 500),
+      ]);
+
+      const mergedUsers = [
+        ...dealers.map(d => ({
+          ...d,
+          _type: 'dealer',
+          _typeLabel: '대리점',
+          _icon: '🏪',
+          _name: d.dealer_name,
+          _username: d.username,
+          _phone: d.phone,
+          _role: d.role || 'dealer',
+        })),
+        ...callMembers.map(c => ({
+          ...c,
+          _type: 'call_team',
+          _typeLabel: '콜팀',
+          _icon: '📞',
+          _name: c.name,
+          _username: c.username,
+          _phone: c.phone,
+          _role: c.role || 'call_team',
+        })),
+      ].sort((a, b) => new Date(b.created_date) - new Date(a.created_date));
+
+      setUsers(mergedUsers);
+      setLoading(false);
+    })();
+  }, []);
+
+  const filtered = users.filter(u => {
+    const typeMatch = typeFilter === 'all' || u._type === typeFilter || (typeFilter === 'manager' && u._role === 'manager');
+    const statusMatch = statusFilter === 'all' || u.status === statusFilter;
+    const q = search.toLowerCase();
+    const searchMatch = !q || u._name?.toLowerCase().includes(q) || u._username?.toLowerCase().includes(q) || u._phone?.includes(q);
+    return typeMatch && statusMatch && searchMatch;
+  });
+
+  const getRoleIcon = (type, role) => {
+    if (type === 'dealer' && role === 'manager') return '🔑';
+    if (type === 'dealer') return '🏪';
+    if (type === 'call_team') return '📞';
+    return '👤';
+  };
+
+  if (loading) return <Loader />;
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-2 flex-wrap items-end">
+        <div className="flex gap-1">
+          {['all', 'dealer', 'call_team', 'manager'].map(t => (
+            <button key={t} onClick={() => setTypeFilter(t)}
+              className={`px-3 py-2 rounded-lg text-xs transition-all ${typeFilter === t ? 'bg-purple-500/20 text-purple-400 border border-purple-500/30' : 'bg-white/5 text-gray-400'}` }>
+              {t === 'all' ? '전체' : t === 'dealer' ? '대리점' : t === 'call_team' ? '콜팀' : '매니저'}
+            </button>
+          ))}
+        </div>
+        <select value={statusFilter} onChange={e => setStatusFilter(e.target.value)}
+          className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs">
+          <option value="all">상태: 전체</option>
+          <option value="active">활성</option>
+          <option value="pending">대기</option>
+          <option value="suspended">정지</option>
+        </select>
+        <input value={search} onChange={e => setSearch(e.target.value)} placeholder="이름/아이디/연락처 검색"
+          className="flex-1 min-w-48 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+      </div>
+
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+            {['구분', '이름', '아이디', '연락처', '역할', '상태', '가입일', '약관동의'].map(h => (
+              <th key={h} className="text-left py-3 px-2 font-medium whitespace-nowrap">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {filtered.map(u => (
+              <tr key={u.id} onClick={() => setSelectedUser(u)} className="border-b border-white/[0.04] hover:bg-white/[0.02] cursor-pointer">
+                <td className="py-3 px-2"><span className="text-lg">{getRoleIcon(u._type, u._role)}</span></td>
+                <td className="py-3 px-2 text-white font-medium">{u._name}</td>
+                <td className="py-3 px-2 text-gray-500">{u._username}</td>
+                <td className="py-3 px-2 text-gray-400">{u._phone}</td>
+                <td className="py-3 px-2 text-gray-400">{u._role}</td>
+                <td className="py-3 px-2">
+                  <span className={`px-2 py-0.5 rounded-full text-[10px] ${u.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : u.status === 'pending' ? 'bg-yellow-500/20 text-yellow-400' : 'bg-red-500/20 text-red-400'}` }>
+                    {u.status === 'active' ? '활성' : u.status === 'pending' ? '대기' : '정지'}
+                  </span>
+                </td>
+                <td className="py-3 px-2 text-gray-500">{u.created_date?.split('T')[0]}</td>
+                <td className="py-3 px-2 text-center">{u.agreed_contract_version ? '✅' : '❌'}</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+
+      {selectedUser && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <SFCard className="max-w-lg max-h-96 overflow-y-auto">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-bold text-white">{selectedUser._name}</h2>
+              <button onClick={() => setSelectedUser(null)} className="text-gray-400 hover:text-white">✕</button>
+            </div>
+            <div className="space-y-3 text-sm">
+              {[
+                ['구분', `${selectedUser._icon} ${selectedUser._typeLabel}`],
+                ['이름', selectedUser._name],
+                ['아이디', selectedUser._username],
+                ['연락처', selectedUser._phone],
+                ['역할', selectedUser._role],
+                ['상태', selectedUser.status],
+                ['가입일', selectedUser.created_date?.split('T')[0]],
+                ['약관동의', selectedUser.agreed_contract_version ? '✅' : '❌'],
+                ...(selectedUser._type === 'dealer' ? [
+                  ['대리점주', selectedUser.owner_name],
+                  ['지역', selectedUser.region || '-'],
+                  ['등급', selectedUser.grade || '-'],
+                  ['추천코드', selectedUser.referral_code || '-'],
+                ] : []),
+                ...(selectedUser._type === 'call_team' ? [
+                  ['소속팀', selectedUser.team || '-'],
+                  ['사원번호', selectedUser.employee_id || '-'],
+                ] : []),
+              ].map(([k, v]) => (
+                <div key={k} className="flex justify-between border-b border-white/10 pb-2">
+                  <span className="text-gray-400">{k}</span>
+                  <span className="text-white font-medium">{v}</span>
+                </div>
+              ))}
+            </div>
+          </SFCard>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ── 콜 모니터링 ── */
