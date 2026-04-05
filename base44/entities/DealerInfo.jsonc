@@ -79,6 +79,18 @@
     "referrer_name": {
       "type": "string",
       "title": "\ucd94\ucc9c\uc778 \ub300\ub9ac\uc810\uba85"
+    },
+    "session_token": {
+      "type": "string",
+      "title": "\uc138\uc158 \ud1a0\ud070"
+    },
+    "last_login_at": {
+      "type": "string",
+      "title": "\ub9c8\uc9c0\ub9c9 \ub85c\uadf8\uc778"
+    },
+    "assigned_dealer": {
+      "type": "string",
+      "title": "\ub2f4\ub2f9 \ub300\ub9ac\uc810"
     }
   },
   "required": [

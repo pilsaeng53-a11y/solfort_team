@@ -35,6 +35,14 @@
       "type": "string",
       "title": "\uc0c1\ud0dc",
       "default": "pending"
+    },
+    "session_token": {
+      "type": "string",
+      "title": "\uc138\uc158 \ud1a0\ud070"
+    },
+    "last_login_at": {
+      "type": "string",
+      "title": "\ub9c8\uc9c0\ub9c9 \ub85c\uadf8\uc778"
     }
   },
   "required": [

@@ -15,10 +15,22 @@ export default function AuthLogin() {
   const [loading, setLoading] = useState(false);
 
   const handleLogin = async () => {
+    const LOCK_KEY = 'sf_login_lock';
+    const FAIL_KEY = 'sf_login_fails';
+
     if (!username || !password) {
       setError("아이디와 비밀번호를 입력하세요");
       return;
     }
+
+    // Check login lockout
+    const lockUntil = localStorage.getItem(LOCK_KEY);
+    if (lockUntil && Date.now() < parseInt(lockUntil)) {
+      const mins = Math.ceil((parseInt(lockUntil) - Date.now()) / 60000);
+      setError(`로그인이 잠겼습니다. ${mins}분 후 다시 시도하세요.`);
+      return;
+    }
+
     setLoading(true);
     setError("");
 
@@ -26,6 +38,11 @@ export default function AuthLogin() {
     const admins = await base44.entities.SuperAdmin.list();
     const admin = admins.find(a => a.username === username && a.password === password && a.status === 'active');
     if (admin) {
+      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+      localStorage.setItem('sf_session_token', sessionToken);
+      localStorage.setItem('sf_session_id', admin.id);
+      localStorage.removeItem(FAIL_KEY);
+      localStorage.removeItem(LOCK_KEY);
       Auth.login({ token: 'admin_' + admin.id, role: 'super_admin', dealer_name: admin.name, user_id: admin.id });
       navigate(Auth.getHomeRoute());
       setLoading(false);
@@ -34,8 +51,32 @@ export default function AuthLogin() {
 
     // 2. DealerInfo 체크
     const dealers = await base44.entities.DealerInfo.list();
-    const dealer = dealers.find(d => d.username === username && d.password === password && d.status === 'active');
+    const dealer = dealers.find(d => d.username === username && d.password === password);
     if (dealer) {
+      if (dealer.status === 'dormant') {
+        setError('휴면 계정입니다. 관리자에게 문의하세요.');
+        setLoading(false);
+        return;
+      }
+      if (dealer.status !== 'active') {
+        const fails = parseInt(localStorage.getItem(FAIL_KEY) || '0') + 1;
+        localStorage.setItem(FAIL_KEY, String(fails));
+        if (fails >= 5) {
+          localStorage.setItem(LOCK_KEY, String(Date.now() + 10 * 60 * 1000));
+          localStorage.removeItem(FAIL_KEY);
+          setError('로그인 5회 실패. 10분간 잠금됩니다.');
+        } else {
+          setError(`아이디 또는 비밀번호가 올바르지 않습니다. (${fails}/5)`);
+        }
+        setLoading(false);
+        return;
+      }
+      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+      await base44.entities.DealerInfo.update(dealer.id, { session_token: sessionToken, last_login_at: new Date().toISOString() });
+      localStorage.setItem('sf_session_token', sessionToken);
+      localStorage.setItem('sf_session_id', dealer.id);
+      localStorage.removeItem(FAIL_KEY);
+      localStorage.removeItem(LOCK_KEY);
       Auth.login({ token: 'dealer_' + dealer.id, role: dealer.role || 'dealer', dealer_name: dealer.dealer_name, user_id: dealer.id });
       if (dealer.role === 'manager') {
         localStorage.setItem('sf_assigned_dealer', dealer.assigned_dealer || '');
@@ -47,15 +88,48 @@ export default function AuthLogin() {
 
     // 3. CallTeamMember 체크
     const callMembers = await base44.entities.CallTeamMember.list();
-    const member = callMembers.find(m => m.username === username && m.password === password && m.status === 'active');
+    const member = callMembers.find(m => m.username === username && m.password === password);
     if (member) {
+      if (member.status === 'dormant') {
+        setError('휴면 계정입니다. 관리자에게 문의하세요.');
+        setLoading(false);
+        return;
+      }
+      if (member.status !== 'active') {
+        const fails = parseInt(localStorage.getItem(FAIL_KEY) || '0') + 1;
+        localStorage.setItem(FAIL_KEY, String(fails));
+        if (fails >= 5) {
+          localStorage.setItem(LOCK_KEY, String(Date.now() + 10 * 60 * 1000));
+          localStorage.removeItem(FAIL_KEY);
+          setError('로그인 5회 실패. 10분간 잠금됩니다.');
+        } else {
+          setError(`아이디 또는 비밀번호가 올바르지 않습니다. (${fails}/5)`);
+        }
+        setLoading(false);
+        return;
+      }
+      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2, 9);
+      await base44.entities.CallTeamMember.update(member.id, { session_token: sessionToken, last_login_at: new Date().toISOString() });
+      localStorage.setItem('sf_session_token', sessionToken);
+      localStorage.setItem('sf_session_id', member.id);
+      localStorage.removeItem(FAIL_KEY);
+      localStorage.removeItem(LOCK_KEY);
       Auth.login({ token: 'call_' + member.id, role: member.role || 'call_team', dealer_name: member.name, user_id: member.id });
       navigate(Auth.getHomeRoute());
       setLoading(false);
       return;
     }
 
-    setError("아이디 또는 비밀번호가 올바르지 않습니다");
+    // Login failure
+    const fails = parseInt(localStorage.getItem(FAIL_KEY) || '0') + 1;
+    localStorage.setItem(FAIL_KEY, String(fails));
+    if (fails >= 5) {
+      localStorage.setItem(LOCK_KEY, String(Date.now() + 10 * 60 * 1000));
+      localStorage.removeItem(FAIL_KEY);
+      setError('로그인 5회 실패. 10분간 잠금됩니다.');
+    } else {
+      setError(`아이디 또는 비밀번호가 올바르지 않습니다. (${fails}/5)`);
+    }
     setLoading(false);
   };
 
