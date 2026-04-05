@@ -5,6 +5,7 @@ import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SFLogo from "../components/SFLogo";
+import { toast } from "sonner";
 
 export default function AuthLogin() {
   useEffect(() => { document.title = "SolFort - 로그인"; }, []);
@@ -13,6 +14,18 @@ export default function AuthLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+
+  const getRoleLabel = (role, extraData) => {
+    const roleMap = {
+      'super_admin': '최고관리자',
+      'dealer_admin': '딜러관리자',
+      'call_admin': '콜관리자',
+      'dealer': extraData?.grade ? `${extraData.grade}등급 딜러` : '딜러',
+      'call_team': '콜팀',
+      'manager': '매니저'
+    };
+    return roleMap[role] || role;
+  };
 
   const handleLogin = async () => {
     const LOCK_KEY = 'sf_login_lock';
@@ -49,6 +62,7 @@ export default function AuthLogin() {
       localStorage.removeItem(FAIL_KEY);
       localStorage.removeItem(LOCK_KEY);
       Auth.login({ token: 'admin_' + admin.id, role: 'super_admin', dealer_name: admin.name, user_id: admin.id });
+      toast(`환영합니다, ${getRoleLabel('super_admin')} ${admin.name}님!`);
       try {
         const ipRes = await fetch('https://api.ipify.org?format=json');
         const { ip } = await ipRes.json();
@@ -97,6 +111,7 @@ export default function AuthLogin() {
       localStorage.removeItem(FAIL_KEY);
       localStorage.removeItem(LOCK_KEY);
       Auth.login({ token: 'dealer_' + dealer.id, role: dealer.role || 'dealer', dealer_name: dealer.dealer_name, user_id: dealer.id, region_scope: dealer.region_scope || '' });
+      toast(`환영합니다, ${getRoleLabel(dealer.role || 'dealer', { grade: dealer.grade })} ${dealer.dealer_name}님!`);
       if (dealer.role === 'manager') {
         localStorage.setItem('sf_assigned_dealer', dealer.assigned_dealer || '');
       }
@@ -150,6 +165,7 @@ export default function AuthLogin() {
       localStorage.removeItem(FAIL_KEY);
       localStorage.removeItem(LOCK_KEY);
       Auth.login({ token: 'call_' + member.id, role: member.role || 'call_team', dealer_name: member.name, user_id: member.id });
+      toast(`환영합니다, ${getRoleLabel(member.role || 'call_team')} ${member.name}님!`);
       try {
         const ipRes = await fetch('https://api.ipify.org?format=json');
         const { ip } = await ipRes.json();
