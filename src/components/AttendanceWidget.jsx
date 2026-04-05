@@ -27,7 +27,6 @@ export default function AttendanceWidget() {
   const checkIn = async () => {
     setProcessing(true);
     const now = new Date().toISOString();
-    const time = new Date().toLocaleTimeString("ko-KR", { hour: "2-digit", minute: "2-digit" });
     try {
       const rec = await base44.entities.AttendanceLog.create({
         member_name: Auth.getDealerName(),
@@ -38,11 +37,14 @@ export default function AttendanceWidget() {
       });
       setRecord(rec);
       // Telegram notification
-      fetch("https://solfort-js.onrender.com/telegram/send", {
+      const botToken = "8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8";
+      const chatId = "5757341051";
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `📍 [${Auth.getDealerName()}] 출근\n시간: ${time}`,
+          chat_id: chatId,
+          text: `[${Auth.getDealerName()}] 출근`,
         }),
       }).catch(() => {});
     } catch {}
@@ -61,11 +63,14 @@ export default function AttendanceWidget() {
       });
       setRecord({ ...record, check_out_at: now, status: "off" });
       // Telegram notification
-      fetch("https://solfort-js.onrender.com/telegram/send", {
+      const botToken = "8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8";
+      const chatId = "5757341051";
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
         method: "POST",
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({
-          message: `🏠 [${Auth.getDealerName()}] 퇴근\n근무시간: ${hours}시간`,
+          chat_id: chatId,
+          text: `[${Auth.getDealerName()}] 퇴근 근무${hours}시간`,
         }),
       }).catch(() => {});
     } catch {}
@@ -93,11 +98,11 @@ export default function AttendanceWidget() {
     });
     return (
       <div className="flex items-center gap-2">
-        <span className="text-[10px] text-emerald-400">✅ 출근 중 {inTime}~</span>
+        <span className="text-[10px] text-emerald-400">✅ 출근중 {inTime}~</span>
         <button
           onClick={checkOut}
           disabled={processing}
-          className="text-[10px] bg-gray-500/20 text-gray-400 border border-gray-500/30 px-2.5 py-1 rounded-lg hover:bg-gray-500/30 disabled:opacity-50"
+          className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded-lg hover:bg-red-500/30 disabled:opacity-50"
         >
           퇴근
         </button>
