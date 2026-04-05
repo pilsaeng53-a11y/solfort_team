@@ -27,6 +27,7 @@ import CallScripts from './pages/CallScripts';
 import CallQueuePage from './pages/CallQueuePage';
 import CallAI from './pages/CallAI';
 import CalendarView from './pages/CalendarView';
+import CallCompetition from './pages/CallCompetition';
 import AdminDealer from './pages/AdminDealer';
 import AdminCall from './pages/AdminCall';
 import AdminSuper from './pages/AdminSuper';
@@ -99,6 +100,7 @@ const AppContent = () => {
             <Route path="/call/scripts" element={<CallScripts />} />
             <Route path="/call/queue" element={<CallQueuePage />} />
             <Route path="/call/ai" element={<CallAI />} />
+            <Route path="/call/competition" element={<CallCompetition />} />
           </Route>
 
           {/* 관리자 및 매니저 */}

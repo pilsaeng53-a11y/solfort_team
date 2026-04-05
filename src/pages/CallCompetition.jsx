@@ -170,4 +170,25 @@ export default function CallCompetition() {
           </div>
         </div>
 
-        {/* 연속매출 스트릭 */}\n        <div>\n          <h2 className=\"text-sm font-semibold text-white mb-3\">🔥 연속매출 스트릭</h2>\n          <div className=\"p-6 rounded-lg bg-white/[0.03] border border-white/[0.06] text-center space-y-2\">\n            <div className={`text-4xl font-bold ${streakBadge.color}`}>\n              {streakBadge.icon} {streakBadge.label}\n            </div>\n            <p className=\"text-xs text-gray-500\">현재 {streak}일 연속 매출</p>\n          </div>\n        </div>\n      </div>\n    </div>\n  );\n}\n\nfunction Loader() {\n  return (\n    <div className=\"min-h-screen bg-[#080a12] flex items-center justify-center\">\n      <div className=\"w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin\" />\n    </div>\n  );\n}\n
+        {/* 연속매출 스트릭 */}
+        <div>
+          <h2 className="text-sm font-semibold text-white mb-3">🔥 연속매출 스트릭</h2>
+          <div className="p-6 rounded-lg bg-white/[0.03] border border-white/[0.06] text-center space-y-2">
+            <div className={`text-4xl font-bold ${streakBadge.color}`}>
+              {streakBadge.icon} {streakBadge.label}
+            </div>
+            <p className="text-xs text-gray-500">현재 {streak}일 연속 매출</p>
+          </div>
+        </div>
+      </div>
+    </div>
+  );
+}
+
+function Loader() {
+  return (
+    <div className="min-h-screen bg-[#080a12] flex items-center justify-center">
+      <div className="w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" />
+    </div>
+  );
+}
