@@ -38,7 +38,12 @@ export default function AuthLogin() {
     const admins = await base44.entities.SuperAdmin.list();
     const admin = admins.find(a => a.username === username && a.password === password && a.status === 'active');
     if (admin) {
-       const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
+      if (admin.status === 'dormant') {
+        setError('휴면 계정입니다. 관리자에게 문의하세요.');
+        setLoading(false);
+        return;
+      }
+      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
       localStorage.setItem('sf_session_token', sessionToken);
       localStorage.setItem('sf_session_id', admin.id);
       localStorage.removeItem(FAIL_KEY);
