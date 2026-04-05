@@ -1,0 +1,39 @@
+{
+  "name": "DealerPricing",
+  "type": "object",
+  "properties": {
+    "dealer_id": {
+      "type": "string",
+      "title": "\ub51c\ub7ec ID"
+    },
+    "dealer_name": {
+      "type": "string",
+      "title": "\ub300\ub9ac\uc810\uba85"
+    },
+    "custom_sof_price": {
+      "type": "number",
+      "title": "\uac1c\ubcc4 SOF \ub2e8\uac00"
+    },
+    "promo_400_allowed": {
+      "type": "boolean",
+      "title": "400% \ud5c8\uc6a9",
+      "default": false
+    },
+    "custom_promo_pct": {
+      "type": "number",
+      "title": "\uac1c\ubcc4 \ud504\ub85c\ubaa8\uc158 \ubc30\uc728"
+    },
+    "note": {
+      "type": "string",
+      "title": "\uba54\ubaa8"
+    },
+    "updated_at": {
+      "type": "string",
+      "title": "\ubcc0\uacbd\uc77c\uc2dc"
+    }
+  },
+  "required": [
+    "dealer_id",
+    "dealer_name"
+  ]
+}

@@ -1,4 +1,4 @@
-import { useState } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import SFCard from "../components/SFCard";
@@ -19,10 +19,31 @@ export default function RegisterCustomer() {
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
 
-  const settings = JSON.parse(localStorage.getItem("sf_settings") || '{"rateMode":"auto","manualRate":1500,"tokenPrice":3.2,"promotionPct":300}');
-  const currentRate = settings.rateMode === "manual" ? settings.manualRate : (rate || 1500);
-  const tokenPrice = settings.tokenPrice || 3.2;
-  const promotionPct = settings.promotionPct || 300;
+  const [tokenPrice, setTokenPrice] = useState(3.2);
+  const [promotionPct, setPromotionPct] = useState(300);
+  const [currentRate, setCurrentRate] = useState(rate || 1500);
+
+  useEffect(() => {
+    (async () => {
+      const dealerName = localStorage.getItem("sf_dealer_name");
+      const [sysSettings, pricingList] = await Promise.all([
+        base44.entities.SystemSettings.list(),
+        base44.entities.DealerPricing.list(),
+      ]);
+      const sofPrice = parseFloat(sysSettings.find(s => s.setting_key === "sof_price")?.setting_value || "3.2");
+      const autoRate = sysSettings.find(s => s.setting_key === "usdt_rate_auto")?.setting_value === "true";
+      const manualRate = parseFloat(sysSettings.find(s => s.setting_key === "usdt_rate_manual")?.setting_value || "1500");
+      const promoDefault = parseFloat(sysSettings.find(s => s.setting_key === "promo_default")?.setting_value || "300");
+
+      const dealerPricing = pricingList.find(p => p.dealer_name === dealerName);
+      const effectivePrice = dealerPricing?.custom_sof_price || sofPrice;
+      const effectivePromo = dealerPricing?.custom_promo_pct || promoDefault;
+
+      setTokenPrice(effectivePrice);
+      setPromotionPct(effectivePromo);
+      if (!autoRate) setCurrentRate(manualRate);
+    })();
+  }, []);
 
   const salesAmount = parseFloat(form.sales_amount) || 0;
   const usdtAmount = salesAmount / currentRate;

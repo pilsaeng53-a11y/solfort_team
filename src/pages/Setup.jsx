@@ -1,4 +1,5 @@
 import { useState, useEffect } from "react";
+import { base44 } from "@/api/base44Client";
 import { useNavigate } from "react-router-dom";
 import SFLogo from "../components/SFLogo";
 import SFCard from "../components/SFCard";
@@ -21,17 +22,22 @@ export default function Setup() {
   });
   const [saving, setSaving] = useState(false);
 
-  // Settings state
-  const [settings, setSettings] = useState(() => {
-    const saved = localStorage.getItem("sf_settings");
-    return saved ? JSON.parse(saved) : { rateMode: "auto", manualRate: 1500, tokenPrice: 3.2, promotionPct: 300 };
-  });
+  // Settings state (loaded from SystemSettings entity)
+  const [settings, setSettings] = useState({ rateMode: "auto", manualRate: 1500, tokenPrice: 3.2, promotionPct: 300 });
 
-  const updateSetting = (key, value) => {
-    const next = { ...settings, [key]: value };
-    setSettings(next);
-    localStorage.setItem("sf_settings", JSON.stringify(next));
-  };
+  useEffect(() => {
+    base44.entities.SystemSettings.list().then(list => {
+      if (list.length > 0) {
+        const autoRate = list.find(s => s.setting_key === "usdt_rate_auto")?.setting_value === "true";
+        const manualRate = parseFloat(list.find(s => s.setting_key === "usdt_rate_manual")?.setting_value || "1500");
+        const tokenPrice = parseFloat(list.find(s => s.setting_key === "sof_price")?.setting_value || "3.2");
+        const promotionPct = parseFloat(list.find(s => s.setting_key === "promo_default")?.setting_value || "300");
+        setSettings({ rateMode: autoRate ? "auto" : "manual", manualRate, tokenPrice, promotionPct });
+      }
+    });
+  }, []);
+
+  const updateSetting = (key, value) => setSettings(p => ({ ...p, [key]: value }));
 
   const currentRate = settings.rateMode === "manual" ? settings.manualRate : (rate || 1500);
   const previewUsdt = 1000000 / currentRate;
