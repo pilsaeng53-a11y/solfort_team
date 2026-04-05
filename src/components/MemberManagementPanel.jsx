@@ -168,6 +168,20 @@ function AllAccountsPanel() {
   const [callMembers, setCallMembers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [updating, setUpdating] = useState(null);
+  const [statusFilter, setStatusFilter] = useState("all");
+
+  const sendTelegram = async (name) => {
+    try {
+      const msg = `[회원 관리] ${name}`;
+      const botToken = "8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8";
+      const chatId = "5757341051";
+      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: msg })
+      });
+    } catch (e) { console.error("Telegram failed:", e); }
+  };
 
   useEffect(() => {
     (async () => {
@@ -196,6 +210,9 @@ function AllAccountsPanel() {
   const dCount = (s) => dealers.filter(d => d.status === s).length;
   const cCount = (s) => callMembers.filter(m => m.status === s).length;
 
+  const filteredDealers = statusFilter === "all" ? dealers : dealers.filter(d => d.status === statusFilter);
+  const filteredCalls = statusFilter === "all" ? callMembers : callMembers.filter(m => m.status === statusFilter);
+
   if (loading) return <Loader />;
 
   return (
@@ -220,6 +237,16 @@ function AllAccountsPanel() {
         </SFCard>
       </div>
 
+      {/* 상태 필터 */}
+      <div className="flex gap-2 flex-wrap">
+        {[["all", "전체"], ["active", "활성"], ["pending", "대기"], ["suspended", "정지"], ["dormant", "퇴출"]].map(([v, l]) => (
+          <button key={v} onClick={() => setStatusFilter(v)}
+            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${statusFilter === v ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-white/5 text-gray-400"}`}>
+            {l}
+          </button>
+        ))}
+      </div>
+
       {/* 전체 딜러 테이블 */}
       <div>
         <h3 className="text-sm font-semibold text-white mb-3">전체 딜러</h3>
@@ -231,7 +258,7 @@ function AllAccountsPanel() {
               ))}
             </tr></thead>
             <tbody>
-              {dealers.map(d => (
+              {filteredDealers.map(d => (
                 <tr key={d.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                   <td className="py-3 px-2 text-white font-medium">{d.dealer_name}</td>
                   <td className="py-3 px-2 text-gray-300">{d.owner_name}</td>
@@ -254,8 +281,20 @@ function AllAccountsPanel() {
                   </td>
                   <td className="py-3 px-2">
                     <div className="flex gap-1">
+                      {d.status === "pending" && (
+                        <button onClick={() => { updateDealer(d.id, { status: "active" }); sendTelegram(`승인: ${d.dealer_name}`); }} disabled={updating === d.id}
+                          className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[10px] hover:bg-emerald-500/30 disabled:opacity-50">
+                          ✅ 승인
+                        </button>
+                      )}
+                      {d.status === "active" && (
+                        <button onClick={() => { updateDealer(d.id, { status: "dormant" }); sendTelegram(`퇴출: ${d.dealer_name}`); }} disabled={updating === d.id}
+                          className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-[10px] hover:bg-red-500/30 disabled:opacity-50">
+                          퇴출
+                        </button>
+                      )}
                       <button onClick={() => updateDealer(d.id, { status: d.status === "active" ? "suspended" : "active" })} disabled={updating === d.id}
-                        className={`px-2 py-1 rounded text-[10px] transition-all disabled:opacity-50 ${d.status === "active" ? "bg-red-500/20 text-red-400 hover:bg-red-500/30" : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"}`}>
+                        className={`px-2 py-1 rounded text-[10px] transition-all disabled:opacity-50 ${d.status === "active" ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30" : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"}`}>
                         {d.status === "active" ? "정지" : "활성화"}
                       </button>
                       <button onClick={() => updateDealer(d.id, { password: "0000" })} disabled={updating === d.id}
@@ -264,12 +303,12 @@ function AllAccountsPanel() {
                       </button>
                     </div>
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  </tr>
+                  ))}
+                  </tbody>
+                  </table>
+                  </div>
+                  </div>
 
       {/* 전체 콜팀 테이블 */}
       <div>
@@ -282,7 +321,7 @@ function AllAccountsPanel() {
               ))}
             </tr></thead>
             <tbody>
-              {callMembers.map(m => (
+              {filteredCalls.map(m => (
                 <tr key={m.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                   <td className="py-3 px-2 text-white font-medium">{m.name}</td>
                   <td className="py-3 px-2 text-gray-500">{m.username}</td>
@@ -297,17 +336,31 @@ function AllAccountsPanel() {
                   </td>
                   <td className="py-3 px-2 text-gray-500">{m.created_date?.split("T")[0]}</td>
                   <td className="py-3 px-2">
-                    <button onClick={() => updateCall(m.id, { status: m.status === "active" ? "suspended" : "active" })} disabled={updating === m.id}
-                      className={`px-2 py-1 rounded text-[10px] transition-all disabled:opacity-50 ${m.status === "active" ? "bg-red-500/20 text-red-400 hover:bg-red-500/30" : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"}`}>
-                      {m.status === "active" ? "정지" : "활성화"}
-                    </button>
+                    <div className="flex gap-1">
+                      {m.status === "pending" && (
+                        <button onClick={() => { updateCall(m.id, { status: "active" }); sendTelegram(`승인: ${m.name}`); }} disabled={updating === m.id}
+                          className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[10px] hover:bg-emerald-500/30 disabled:opacity-50">
+                          ✅ 승인
+                        </button>
+                      )}
+                      {m.status === "active" && (
+                        <button onClick={() => { updateCall(m.id, { status: "dormant" }); sendTelegram(`퇴출: ${m.name}`); }} disabled={updating === m.id}
+                          className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-[10px] hover:bg-red-500/30 disabled:opacity-50">
+                          퇴출
+                        </button>
+                      )}
+                      <button onClick={() => updateCall(m.id, { status: m.status === "active" ? "suspended" : "active" })} disabled={updating === m.id}
+                        className={`px-2 py-1 rounded text-[10px] transition-all disabled:opacity-50 ${m.status === "active" ? "bg-orange-500/20 text-orange-400 hover:bg-orange-500/30" : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"}`}>
+                        {m.status === "active" ? "정지" : "활성화"}
+                      </button>
+                    </div>
                   </td>
-                </tr>
-              ))}
-            </tbody>
-          </table>
-        </div>
-      </div>
+                  </tr>
+                  ))}
+                  </tbody>
+                  </table>
+                  </div>
+                  </div>
     </div>
   );
 }
