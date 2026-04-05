@@ -8,7 +8,7 @@ import SFCard from "../components/SFCard";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const API = "https://solfort-js.onrender.com";
-const TABS = ["전체 현황", "콜팀 계정 관리", "자동화", "리포트"];
+const TABS = ["전체 현황", "콜팀 계정 관리", "자동화", "리포트", "콜팀 리드 현황"];
 const today = new Date().toISOString().split("T")[0];
 const PERIOD_OPTIONS = [{ key: "today", label: "오늘" }, { key: "week", label: "이번주" }, { key: "month", label: "이번달" }, { key: "custom", label: "직접입력" }];
 const COMMISSION_RATES = { GREEN: 10, PURPLE: 30, GOLD: 40, PLATINUM: 50 };
@@ -32,6 +32,7 @@ export default function AdminCall() {
         {tab === 1 && <CallAccountPanel />}
         {tab === 2 && <AutomationPanel />}
         {tab === 3 && <ReportPanel accent="emerald" />}
+        {tab === 4 && <CallLeadMonitor />}
       </div>
     </div>
   );
@@ -682,4 +683,241 @@ export function ReportPanel({ accent = "emerald" }) {
 
 function Loader() {
   return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" /></div>;
+}
+
+const STATUS_BADGE_CL = {
+  신규: "bg-gray-500/20 text-gray-400", 연락됨: "bg-blue-500/20 text-blue-400",
+  관심있음: "bg-emerald-500/20 text-emerald-400", 거절: "bg-red-500/20 text-red-400",
+  매출전환: "bg-purple-500/20 text-purple-400",
+};
+const RESULT_BADGE_CL = {
+  미응답: "bg-gray-500/20 text-gray-400", 연결됨: "bg-blue-500/20 text-blue-400",
+  관심없음: "bg-red-500/20 text-red-400", 관심있음: "bg-emerald-500/20 text-emerald-400",
+  재콜필요: "bg-yellow-500/20 text-yellow-400", 매출전환: "bg-purple-500/20 text-purple-400",
+};
+
+/* ── 탭 5: 콜팀 리드 현황 ── */
+function CallLeadMonitor() {
+  const [leads, setLeads] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [members, setMembers] = useState([]);
+  const [scripts, setScripts] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [section, setSection] = useState(0);
+  const [search, setSearch] = useState("");
+  const [assignFilter, setAssignFilter] = useState("전체");
+  const [reassigning, setReassigning] = useState(null);
+  const [scriptForm, setScriptForm] = useState({ title: "", category: "신규고객", content: "", tips: "" });
+  const [showScriptForm, setShowScriptForm] = useState(false);
+  const [savingScript, setSavingScript] = useState(false);
+  const timerRef = useRef(null);
+
+  const load = () => Promise.all([
+    base44.entities.CallLead.list("-created_date", 500),
+    base44.entities.CallLog.list("-called_at", 200),
+    base44.entities.CallTeamMember.filter({ status: "active" }, "-created_date", 100),
+    base44.entities.CallScript.list("order_num", 100),
+  ]).then(([l, lg, m, s]) => { setLeads(l); setLogs(lg); setMembers(m); setScripts(s); setLoading(false); });
+
+  useEffect(() => { load(); timerRef.current = setInterval(load, 30000); return () => clearInterval(timerRef.current); }, []);
+
+  const reassign = async (leadId, username) => {
+    setReassigning(leadId);
+    await base44.entities.CallLead.update(leadId, { assigned_to: username });
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, assigned_to: username } : l));
+    setReassigning(null);
+  };
+
+  const deleteScript = async (id) => {
+    await base44.entities.CallScript.delete(id);
+    setScripts(prev => prev.filter(s => s.id !== id));
+  };
+
+  const saveScript = async () => {
+    if (!scriptForm.title || !scriptForm.content) return;
+    setSavingScript(true);
+    const created = await base44.entities.CallScript.create({ ...scriptForm, is_active: true, order_num: scripts.length, created_at: new Date().toISOString() });
+    setScripts(prev => [...prev, created]);
+    setScriptForm({ title: "", category: "신규고객", content: "", tips: "" });
+    setShowScriptForm(false); setSavingScript(false);
+  };
+
+  if (loading) return <Loader />;
+
+  // 팀원별 실적
+  const memberStats = members.map(m => {
+    const myLogs = logs.filter(l => l.called_by === m.username && (l.called_at || "").startsWith(today));
+    return {
+      ...m,
+      todayCalls: myLogs.length,
+      connected: myLogs.filter(l => l.call_result === "연결됨").length,
+      interest: myLogs.filter(l => l.call_result === "관심있음").length,
+      converted: leads.filter(l => l.assigned_to === m.username && l.status === "매출전환" && (l.converted_at || "").startsWith(today)).length,
+    };
+  }).sort((a, b) => b.todayCalls - a.todayCalls);
+
+  // 리드 필터
+  const filteredLeads = leads.filter(l => {
+    const q = search.toLowerCase();
+    const ms = !q || l.name?.toLowerCase().includes(q) || l.phone?.includes(q);
+    const mf = assignFilter === "전체" || l.assigned_to === assignFilter;
+    return ms && mf;
+  });
+
+  const CATS = ["신규고객", "망설이는고객", "비교고객", "리크루팅"];
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1.5 flex-wrap">
+        {["팀원 실적", "전체 리드 관리", "스크립트 관리"].map((t, i) => (
+          <button key={i} onClick={() => setSection(i)}
+            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${section === i ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 text-gray-400"}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {/* 팀원별 실적 */}
+      {section === 0 && (
+        <div className="space-y-4">
+          <p className="text-xs text-gray-500">오늘 기준 · 30초 자동 갱신</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                {["순위", "이름", "아이디", "소속팀", "오늘 콜", "연결", "관심", "전환"].map(h => (
+                  <th key={h} className="text-left py-3 px-2 font-medium whitespace-nowrap">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {memberStats.map((m, i) => (
+                  <tr key={m.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                    <td className="py-3 px-2 text-gray-500 font-bold">{i + 1}</td>
+                    <td className="py-3 px-2 text-white font-medium">{m.name}</td>
+                    <td className="py-3 px-2 text-gray-500">{m.username}</td>
+                    <td className="py-3 px-2 text-gray-400">{m.team || "-"}</td>
+                    <td className="py-3 px-2 text-blue-400 font-bold">{m.todayCalls}</td>
+                    <td className="py-3 px-2 text-emerald-400">{m.connected}</td>
+                    <td className="py-3 px-2 text-yellow-400">{m.interest}</td>
+                    <td className="py-3 px-2 text-purple-400 font-bold">{m.converted}</td>
+                  </tr>
+                ))}
+                {members.length === 0 && <tr><td colSpan={8} className="py-10 text-center text-gray-600">활성 콜팀원 없음</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 전체 리드 관리 */}
+      {section === 1 && (
+        <div className="space-y-3">
+          <div className="flex gap-2 flex-wrap">
+            <input value={search} onChange={e => setSearch(e.target.value)} placeholder="이름 / 연락처 검색"
+              className="flex-1 min-w-48 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+            <select value={assignFilter} onChange={e => setAssignFilter(e.target.value)}
+              className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs">
+              <option value="전체">전체 담당자</option>
+              {members.map(m => <option key={m.id} value={m.username}>{m.name} ({m.username})</option>)}
+            </select>
+          </div>
+          <p className="text-xs text-gray-600">{filteredLeads.length}건</p>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                {["등록일", "고객명", "연락처", "담당자", "상태", "관심도", "재배정"].map(h => (
+                  <th key={h} className="text-left py-3 px-2 font-medium whitespace-nowrap">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {filteredLeads.slice(0, 100).map(l => (
+                  <tr key={l.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                    <td className="py-2.5 px-2 text-gray-500 whitespace-nowrap">{(l.created_at || l.created_date || "").split("T")[0]}</td>
+                    <td className="py-2.5 px-2 text-white font-medium">{l.name}</td>
+                    <td className="py-2.5 px-2 text-gray-400">{l.phone}</td>
+                    <td className="py-2.5 px-2 text-blue-400">{l.assigned_to || "-"}</td>
+                    <td className="py-2.5 px-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] ${STATUS_BADGE_CL[l.status] || "bg-white/5 text-gray-400"}`}>{l.status === "new" ? "신규" : l.status}</span>
+                    </td>
+                    <td className="py-2.5 px-2 text-gray-400">{l.interest_level || "-"}</td>
+                    <td className="py-2.5 px-2">
+                      <select value={l.assigned_to || ""} onChange={e => reassign(l.id, e.target.value)}
+                        disabled={reassigning === l.id}
+                        className="bg-white/5 border border-white/10 text-white rounded px-2 py-1 text-[10px] disabled:opacity-50">
+                        <option value="">미배정</option>
+                        {members.map(m => <option key={m.id} value={m.username}>{m.name}</option>)}
+                      </select>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+
+      {/* 스크립트 관리 */}
+      {section === 2 && (
+        <div className="space-y-4">
+          <div className="flex items-center justify-between">
+            <h3 className="text-sm font-semibold text-white">콜 스크립트 관리</h3>
+            <button onClick={() => setShowScriptForm(p => !p)}
+              className="text-xs bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-3 py-1.5 rounded-lg hover:bg-emerald-500/30 transition-all">
+              + 스크립트 추가
+            </button>
+          </div>
+          {showScriptForm && (
+            <SFCard className="border border-emerald-500/20 space-y-3">
+              <div className="grid grid-cols-2 gap-3">
+                <div>
+                  <label className="text-[10px] text-gray-400">제목 *</label>
+                  <input value={scriptForm.title} onChange={e => setScriptForm(p => ({ ...p, title: e.target.value }))}
+                    className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400">카테고리</label>
+                  <select value={scriptForm.category} onChange={e => setScriptForm(p => ({ ...p, category: e.target.value }))}
+                    className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs">
+                    {CATS.map(c => <option key={c}>{c}</option>)}
+                  </select>
+                </div>
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400">내용 *</label>
+                <textarea value={scriptForm.content} onChange={e => setScriptForm(p => ({ ...p, content: e.target.value }))} rows={4}
+                  className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs resize-none" />
+              </div>
+              <div>
+                <label className="text-[10px] text-gray-400">팁</label>
+                <input value={scriptForm.tips} onChange={e => setScriptForm(p => ({ ...p, tips: e.target.value }))}
+                  className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+              </div>
+              <div className="flex gap-2">
+                <button onClick={saveScript} disabled={savingScript}
+                  className="px-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs disabled:opacity-40">{savingScript ? "저장 중..." : "저장"}</button>
+                <button onClick={() => setShowScriptForm(false)} className="px-4 py-2 bg-white/5 text-gray-400 rounded-lg text-xs">취소</button>
+              </div>
+            </SFCard>
+          )}
+          <div className="space-y-2">
+            {scripts.length === 0 && <p className="text-xs text-gray-600 text-center py-8">스크립트 없음</p>}
+            {scripts.map(s => (
+              <SFCard key={s.id}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm font-bold text-white">{s.title}</span>
+                      <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded-full">{s.category}</span>
+                    </div>
+                    <p className="text-xs text-gray-500 mt-1 line-clamp-2">{s.content}</p>
+                    {s.tips && <p className="text-[10px] text-yellow-400 mt-1">💡 {s.tips}</p>}
+                  </div>
+                  <button onClick={() => deleteScript(s.id)} className="text-gray-600 hover:text-red-400 transition-all text-[10px] shrink-0">삭제</button>
+                </div>
+              </SFCard>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
