@@ -31,6 +31,7 @@ import CallCompetition from './pages/CallCompetition';
 import AdminDealer from './pages/AdminDealer';
 import AdminCall from './pages/AdminCall';
 import AdminSuper from './pages/AdminSuper';
+import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import ManagerPage from './pages/ManagerPage';
 import Register from './pages/Register';
 import InitAdmin from './pages/InitAdmin';
@@ -107,6 +108,7 @@ const AppContent = () => {
           <Route path="/admin/dealer" element={<ProtectedRoute roles={['dealer_admin','super_admin']}><AdminDealer /></ProtectedRoute>} />
           <Route path="/admin/call" element={<ProtectedRoute roles={['call_admin','super_admin']}><AdminCall /></ProtectedRoute>} />
           <Route path="/admin/super" element={<ProtectedRoute roles={['super_admin']}><AdminSuper /></ProtectedRoute>} />
+          <Route path="/analytics" element={<ProtectedRoute roles={['super_admin','dealer_admin','call_admin']}><AnalyticsDashboard /></ProtectedRoute>} />
           <Route path="/manager" element={<ProtectedRoute roles={['manager']}><ManagerPage /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
