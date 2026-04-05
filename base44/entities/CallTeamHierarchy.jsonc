@@ -1,0 +1,44 @@
+{
+  "name": "CallTeamHierarchy",
+  "type": "object",
+  "properties": {
+    "member_id": {
+      "type": "string",
+      "title": "\ucf5c\ud300\uc6d0 ID"
+    },
+    "member_name": {
+      "type": "string",
+      "title": "\uc774\ub984"
+    },
+    "username": {
+      "type": "string",
+      "title": "\uc544\uc774\ub514"
+    },
+    "position": {
+      "type": "string",
+      "title": "\uc9c1\ucc45",
+      "enum": [
+        "leader",
+        "member"
+      ],
+      "default": "member"
+    },
+    "team_name": {
+      "type": "string",
+      "title": "\ud300\uba85"
+    },
+    "parent_id": {
+      "type": "string",
+      "title": "\uc0c1\uc704 \ud300\uc7a5 ID"
+    },
+    "status": {
+      "type": "string",
+      "title": "\uc0c1\ud0dc",
+      "default": "active"
+    }
+  },
+  "required": [
+    "member_name",
+    "team_name"
+  ]
+}

@@ -62,6 +62,23 @@
     "referral_code": {
       "type": "string",
       "title": "\ucd94\ucc9c \ucf54\ub4dc"
+    },
+    "parent_dealer_id": {
+      "type": "string",
+      "title": "\uc0c1\uc704 \ub300\ub9ac\uc810 ID"
+    },
+    "parent_dealer_name": {
+      "type": "string",
+      "title": "\uc0c1\uc704 \ub300\ub9ac\uc810\uba85"
+    },
+    "is_independent": {
+      "type": "boolean",
+      "title": "\ub3c5\ub9bd \uc5ec\ubd80",
+      "default": true
+    },
+    "referrer_name": {
+      "type": "string",
+      "title": "\ucd94\ucc9c\uc778 \ub300\ub9ac\uc810\uba85"
     }
   },
   "required": [

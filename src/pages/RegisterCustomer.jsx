@@ -18,6 +18,8 @@ export default function RegisterCustomer() {
   const [form, setForm] = useState({ customer_name: "", phone: "", wallet_address: "", sales_amount: "" });
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
+  const [orderSubmitted, setOrderSubmitted] = useState(false);
+  const [submittingOrder, setSubmittingOrder] = useState(false);
 
   const [tokenPrice, setTokenPrice] = useState(3.2);
   const [promotionPct, setPromotionPct] = useState(300);
@@ -93,8 +95,8 @@ export default function RegisterCustomer() {
       sale_date: today,
     };
 
-    await base44.entities.SalesRecord.create(record);
-    setResult({ ...record, customer_status: customerStatus });
+    const created = await base44.entities.SalesRecord.create(record);
+    setResult({ ...record, customer_status: customerStatus, id: created?.id });
     setSaving(false);
   };
 
@@ -125,7 +127,31 @@ export default function RegisterCustomer() {
                 </div>
               ))}
             </div>
-            <Button onClick={() => navigate("/dashboard")} className="w-full sf-gradient-btn rounded-xl text-white border-0 h-12 mt-4">
+            <button
+              onClick={async () => {
+                if (orderSubmitted) return;
+                setSubmittingOrder(true);
+                await base44.entities.SalesOrder.create({
+                  dealer_name: result.dealer_name,
+                  sales_record_id: result.id || "",
+                  customer_name: result.customer_name,
+                  sales_amount: result.sales_amount,
+                  quantity: result.final_quantity,
+                  status: "pending",
+                  requested_at: new Date().toISOString(),
+                });
+                setOrderSubmitted(true);
+                setSubmittingOrder(false);
+              }}
+              disabled={orderSubmitted || submittingOrder}
+              className={`w-full py-3 rounded-xl text-sm font-semibold transition-all border ${orderSubmitted ? "bg-white/5 text-gray-500 border-white/10 cursor-not-allowed" : "bg-blue-500/20 text-blue-400 border-blue-500/30 hover:bg-blue-500/30"}`}
+            >
+              {submittingOrder ? "신청 중..." : orderSubmitted ? "✅ 신청완료 (처리중)" : "📦 물량 처리 신청"}
+            </button>
+            {orderSubmitted && (
+              <p className="text-xs text-gray-500 text-center">물량 처리 신청이 완료되었습니다. 관리자 검토 후 처리됩니다.</p>
+            )}
+            <Button onClick={() => navigate("/dashboard")} className="w-full sf-gradient-btn rounded-xl text-white border-0 h-12 mt-2">
               대시보드로 이동
             </Button>
           </div>

@@ -1,0 +1,54 @@
+{
+  "name": "SalesOrder",
+  "type": "object",
+  "properties": {
+    "dealer_name": {
+      "type": "string",
+      "title": "\ub300\ub9ac\uc810\uba85"
+    },
+    "sales_record_id": {
+      "type": "string",
+      "title": "\ub9e4\ucd9c \ub808\ucf54\ub4dc ID"
+    },
+    "customer_name": {
+      "type": "string",
+      "title": "\uace0\uac1d\uba85"
+    },
+    "sales_amount": {
+      "type": "number",
+      "title": "\ub9e4\ucd9c\uae08\uc561"
+    },
+    "quantity": {
+      "type": "number",
+      "title": "SOF \uc218\ub7c9"
+    },
+    "status": {
+      "type": "string",
+      "title": "\uc0c1\ud0dc",
+      "default": "pending"
+    },
+    "request_note": {
+      "type": "string",
+      "title": "\ub51c\ub7ec \uc2e0\uccad \uba54\ubaa8"
+    },
+    "admin_note": {
+      "type": "string",
+      "title": "\uad00\ub9ac\uc790 \ucc98\ub9ac \uba54\ubaa8"
+    },
+    "requested_at": {
+      "type": "string",
+      "title": "\uc2e0\uccad\uc77c\uc2dc"
+    },
+    "processed_at": {
+      "type": "string",
+      "title": "\ucc98\ub9ac\uc77c\uc2dc"
+    },
+    "processed_by": {
+      "type": "string",
+      "title": "\ucc98\ub9ac\uc790"
+    }
+  },
+  "required": [
+    "dealer_name"
+  ]
+}

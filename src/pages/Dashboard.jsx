@@ -18,6 +18,7 @@ export default function Dashboard() {
   const { dealer, loading: dealerLoading } = useDealer();
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [orders, setOrders] = useState([]);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -36,6 +37,14 @@ export default function Dashboard() {
       setLoading(false);
     }
   };
+
+  useEffect(() => {
+    if (dealer?.dealer_name) {
+      base44.entities.SalesOrder.list("-created_date", 100)
+        .then(all => setOrders(all.filter(o => o.dealer_name === dealer.dealer_name)))
+        .catch(() => setOrders([]));
+    }
+  }, [dealer]);
 
   const todayRecords = records.filter((r) => r.sale_date === today);
   const todaySales = todayRecords.reduce((sum, r) => sum + (r.sales_amount || 0), 0);
@@ -196,6 +205,32 @@ export default function Dashboard() {
             </div>
           )}
         </SFCard>
+
+        {/* Orders Section */}
+        {orders.length > 0 && (
+          <SFCard>
+            <p className="text-xs text-gray-500 mb-3">📦 나의 물량 처리 현황</p>
+            <div className="space-y-2">
+              {orders.slice(0, 10).map(o => {
+                const st = o.status === "approved" ? { emoji: "🟢", label: "처리완료", color: "text-emerald-400" }
+                  : o.status === "rejected" ? { emoji: "🔴", label: "반려", color: "text-red-400" }
+                  : { emoji: "🟡", label: "처리중", color: "text-yellow-400" };
+                return (
+                  <div key={o.id} className="flex items-start justify-between py-2 border-b border-white/[0.04] last:border-0">
+                    <div className="flex-1">
+                      <p className="text-sm text-white font-medium">{o.customer_name}</p>
+                      <p className="text-[10px] text-gray-500">{o.requested_at?.split("T")[0]} · ₩{(o.sales_amount||0).toLocaleString()} · {o.quantity?.toFixed(1)} SOF</p>
+                      {o.status === "rejected" && o.admin_note && (
+                        <p className="text-[10px] text-red-400 mt-0.5">반려 사유: {o.admin_note}</p>
+                      )}
+                    </div>
+                    <span className={`text-xs font-medium ${st.color}`}>{st.emoji} {st.label}</span>
+                  </div>
+                );
+              })}
+            </div>
+          </SFCard>
+        )}
       </div>
     </div>
   );
