@@ -5,10 +5,12 @@ import AdminHeader from "../components/AdminHeader";
 import GradeBadge from "../components/GradeBadge";
 import StatusBadge from "../components/StatusBadge";
 import SFCard from "../components/SFCard";
+import { useState, useRef, useEffect } from "react";
+import { useState, useRef, useEffect } from "react";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const API = "https://solfort-js.onrender.com";
-const TABS = ["전체 현황", "콜팀 계정 관리", "자동화", "리포트", "콜팀 리드 현황"];
+const TABS = ["전체 현황", "콜팀 계정 관리", "자동화", "리포트", "콜팀 리드 현황", "이상 알림"];
 const today = new Date().toISOString().split("T")[0];
 const PERIOD_OPTIONS = [{ key: "today", label: "오늘" }, { key: "week", label: "이번주" }, { key: "month", label: "이번달" }, { key: "custom", label: "직접입력" }];
 const COMMISSION_RATES = { GREEN: 10, PURPLE: 30, GOLD: 40, PLATINUM: 50 };
@@ -33,6 +35,7 @@ export default function AdminCall() {
         {tab === 2 && <AutomationPanel />}
         {tab === 3 && <ReportPanel accent="emerald" />}
         {tab === 4 && <CallLeadMonitor />}
+        {tab === 5 && <AnomalyAlerts />}
       </div>
     </div>
   );
@@ -683,6 +686,149 @@ export function ReportPanel({ accent = "emerald" }) {
 
 function Loader() {
   return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" /></div>;
+}
+
+/* ── 탭 6: 이상 알림 ── */
+function AnomalyAlerts() {
+  const [dealers, setDealers] = useState([]);
+  const [callMembers, setCallMembers] = useState([]);
+  const [records, setRecords] = useState([]);
+  const [logs, setLogs] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [section, setSection] = useState(0);
+
+  useEffect(() => {
+    Promise.all([
+      base44.entities.DealerInfo.filter({ status: "active" }, "-created_date", 200),
+      base44.entities.CallTeamMember.filter({ status: "active" }, "-created_date", 200),
+      base44.entities.SalesRecord.list("-created_date", 3000),
+      base44.entities.CallLog.list("-called_at", 500),
+    ]).then(([d, c, r, l]) => { setDealers(d); setCallMembers(c); setRecords(r); setLogs(l); setLoading(false); });
+  }, []);
+
+  if (loading) return <Loader />;
+
+  const threeDaysAgo = new Date();
+  threeDaysAgo.setDate(threeDaysAgo.getDate() - 3);
+  const threeDaysAgoStr = threeDaysAgo.toISOString().split('T')[0];
+
+  const twoDaysAgo = new Date();
+  twoDaysAgo.setDate(twoDaysAgo.getDate() - 2);
+  const twoDaysAgoStr = twoDaysAgo.toISOString().split('T')[0];
+
+  // Inactive dealers
+  const inactiveDealers = dealers.map(d => {
+    const lastSale = records
+      .filter(r => r.dealer_name === d.dealer_name)
+      .sort((a, b) => (b.sale_date || "").localeCompare(a.sale_date || ""))[0];
+    const lastDate = lastSale?.sale_date || "";
+    const daysAgo = lastDate ? Math.floor((new Date() - new Date(lastDate)) / 86400000) : 999;
+    return { ...d, lastDate, daysAgo };
+  }).filter(d => d.daysAgo >= 3).sort((a, b) => b.daysAgo - a.daysAgo);
+
+  // Inactive call members
+  const inactiveMembers = callMembers.map(m => {
+    const lastLog = logs
+      .filter(l => l.called_by === m.username)
+      .sort((a, b) => (b.called_at || "").localeCompare(a.called_at || ""))[0];
+    const lastDate = lastLog?.called_at?.split('T')[0] || "";
+    const daysAgo = lastDate ? Math.floor((new Date() - new Date(lastDate)) / 86400000) : 999;
+    return { ...m, lastDate, daysAgo };
+  }).filter(m => m.daysAgo >= 2).sort((a, b) => b.daysAgo - a.daysAgo);
+
+  const sendTelegramAlert = async (type, name) => {
+    try {
+      const msg = type === "dealer" 
+        ? `📢 [${name}]님, 최근 3일간 매출 기록이 없습니다. 확인 부탁드립니다.`
+        : `📢 [${name}]님, 최근 2일간 콜 기록이 없습니다. 활동 재개 부탁드립니다.`;
+      // Telegram API call would go here
+      alert(`Telegram: ${msg}`);
+    } catch (e) {
+      alert(`알림 전송 실패: ${e.message}`);
+    }
+  };
+
+  return (
+    <div className="space-y-4">
+      <div className="flex gap-1.5">
+        {["딜러 미활동", "콜팀 미활동"].map((t, i) => (
+          <button key={i} onClick={() => setSection(i)}
+            className={`px-4 py-2 rounded-lg text-xs font-medium transition-all ${section === i ? "bg-red-500/20 text-red-400 border border-red-500/30" : "bg-white/5 text-gray-400"}`}>
+            {t}
+          </button>
+        ))}
+      </div>
+
+      {section === 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-white mb-3">딜러 미활동 (3일 이상)</h3>
+          {inactiveDealers.length === 0 ? (
+            <p className="text-xs text-gray-600 py-6 text-center">미활동 딜러 없음</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                  {["대리점명", "마지막매출일", "경과일수", "액션"].map(h => (
+                    <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {inactiveDealers.map(d => (
+                    <tr key={d.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                      <td className="py-3 px-2 text-white font-medium">{d.dealer_name}</td>
+                      <td className="py-3 px-2 text-gray-500">{d.lastDate || "-"}</td>
+                      <td className="py-3 px-2 text-red-400 font-bold">{d.daysAgo}일</td>
+                      <td className="py-3 px-2">
+                        <button onClick={() => sendTelegramAlert("dealer", d.dealer_name)}
+                          className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded hover:bg-red-500/30 transition-all">
+                          📢 텔레그램
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+
+      {section === 1 && (
+        <div>
+          <h3 className="text-sm font-semibold text-white mb-3">콜팀 미활동 (2일 이상)</h3>
+          {inactiveMembers.length === 0 ? (
+            <p className="text-xs text-gray-600 py-6 text-center">미활동 콜팀원 없음</p>
+          ) : (
+            <div className="overflow-x-auto">
+              <table className="w-full text-xs">
+                <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                  {["이름", "아이디", "마지막콜일", "경과일수", "액션"].map(h => (
+                    <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>
+                  ))}
+                </tr></thead>
+                <tbody>
+                  {inactiveMembers.map(m => (
+                    <tr key={m.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                      <td className="py-3 px-2 text-white font-medium">{m.name}</td>
+                      <td className="py-3 px-2 text-gray-500">{m.username}</td>
+                      <td className="py-3 px-2 text-gray-500">{m.lastDate || "-"}</td>
+                      <td className="py-3 px-2 text-red-400 font-bold">{m.daysAgo}일</td>
+                      <td className="py-3 px-2">
+                        <button onClick={() => sendTelegramAlert("member", m.name)}
+                          className="text-[10px] bg-red-500/20 text-red-400 border border-red-500/30 px-2.5 py-1 rounded hover:bg-red-500/30 transition-all">
+                          📢 텔레그램
+                        </button>
+                      </td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+            </div>
+          )}
+        </div>
+      )}
+    </div>
+  );
 }
 
 const STATUS_BADGE_CL = {

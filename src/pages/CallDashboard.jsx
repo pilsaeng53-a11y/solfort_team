@@ -20,7 +20,7 @@ const RESULT_BADGE = {
 function Loader() {
   return (
     <div className="flex justify-center py-20">
-      <div className="w-7 h-7 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" />
+      <div className="w-7 h-7 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin"/>
     </div>
   );
 }
@@ -30,6 +30,7 @@ export default function CallDashboard() {
   const [leads, setLeads] = useState([]);
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [sales, setSales] = useState([]);
 
   useEffect(() => {
     document.title = "SolFort - 콜 대시보드";
@@ -40,8 +41,10 @@ export default function CallDashboard() {
     Promise.all([
       base44.entities.CallLead.list("-created_date", 500),
       base44.entities.CallLog.list("-called_at", 100),
-    ]).then(([l, lg]) => { setLeads(l); setLogs(lg); setLoading(false); });
+      base44.entities.SalesRecord.list("-created_date", 1000),
+    ]).then(([l, lg, s]) => { setLeads(l); setLogs(lg); setSales(s); setLoading(false); });
 
+  const thisMonth = today.slice(0, 7);
   const todayLogs = logs.filter(l => (l.called_at || "").startsWith(today));
   const todayConnected = todayLogs.filter(l => l.call_result === "연결됨");
   const todayTaggedLeads = leads.filter(l => (l.created_at || "").startsWith(today));
@@ -55,13 +58,87 @@ export default function CallDashboard() {
   const allConverted = leads.filter(l => l.status === "매출전환");
   const conversionRate = totalLeads > 0 ? ((allConverted.length / totalLeads) * 100).toFixed(1) : "0.0";
   const todayCallbacks = leads.filter(l => l.next_call_date === today && l.status !== "매출전환");
+  
+  // Feature 1: Today briefing
+  const bookmarkedLeads = leads.filter(l => l.is_bookmarked);
+  const todayRecalls = todayCallbacks.length;
+  const monthSales = sales.filter(s => s.sale_date?.startsWith(thisMonth)).reduce((a, s) => a + (s.sales_amount || 0), 0);
+  
+  // Feature 4: Urgent call
+  const urgentLead = leads
+    .filter(l => l.status === "재콜예정" && l.next_call_date)
+    .sort((a, b) => new Date(a.next_call_date) - new Date(b.next_call_date))[0];
+  
+  const updateUrgentDate = async (leadId, newDate) => {
+    await base44.entities.CallLead.update(leadId, { next_call_date: newDate });
+    setLeads(prev => prev.map(l => l.id === leadId ? { ...l, next_call_date: newDate } : l));
+  };
 
-  if (loading) return <><CallNav /><Loader /></>;
+  if (loading) return <><CallNav /><Loader/></>;
 
   return (
     <div className="min-h-screen bg-[#080a12]">
-      <CallNav />
+      <CallNav/>
       <div className="p-4 md:p-6 space-y-5 max-w-5xl mx-auto">
+        {/* Feature 1: Today Briefing */}
+        <SFCard className="bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-500/20 rounded-xl p-4">
+          <div className="flex items-center justify-between text-xs text-gray-300">
+            <div className="flex items-center gap-4">
+              <div>오늘 재콜: <span className="font-bold text-emerald-400 text-sm">{todayRecalls}명</span></div>
+              <div>즐겨찾기: <span className="font-bold text-yellow-400 text-sm">{bookmarkedLeads.length}명</span></div>
+              <div>오늘 콜: <span className="font-bold text-blue-400 text-sm">{todayLogs.length}건</span></div>
+              <div>이달 매출: <span className="font-bold text-purple-400 text-sm">₩{(monthSales / 10000).toFixed(0)}만</span></div>
+            </div>
+          </div>
+        </SFCard>
+
+        {/* Feature 4: Urgent Call Alert */}
+        {urgentLead && (
+          <SFCard className="border border-red-500/20 bg-red-500/5">
+            <div className="flex items-center justify-between">
+              <div>
+                <p className="text-xs text-red-400 font-semibold">⚡ 지금 바로 연락하세요!</p>
+                <p className="text-sm font-bold text-white mt-1">{urgentLead.name}</p>
+                <p className="text-xs text-gray-400 mt-0.5">{urgentLead.phone} · 📅 {urgentLead.next_call_date}</p>
+              </div>
+              <div className="flex gap-2">
+                <button onClick={() => navigate("/call/logs")}
+                  className="text-[10px] bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/30 transition-all whitespace-nowrap">
+                  콜 기록
+                </button>
+                <button onClick={() => {
+                  const tomorrow = new Date();
+                  tomorrow.setDate(tomorrow.getDate() + 1);
+                  updateUrgentDate(urgentLead.id, tomorrow.toISOString().split('T')[0]);
+                }}
+                  className="text-[10px] bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 px-2.5 py-1.5 rounded-lg hover:bg-yellow-500/30 transition-all">
+                  내일로
+                </button>
+              </div>
+            </div>
+          </SFCard>
+        )}
+
+        {/* Feature 1: Bookmarked leads */}
+        {bookmarkedLeads.length > 0 && (
+          <SFCard className="border border-yellow-500/20">
+            <h3 className="text-sm font-semibold text-yellow-400 mb-3">⭐ 즐겨찾기 고객 ({bookmarkedLeads.length}명)</h3>
+            <div className="grid grid-cols-2 gap-2 md:grid-cols-3">
+              {bookmarkedLeads.slice(0, 6).map(l => (
+                <div key={l.id} className="bg-white/5 border border-white/10 rounded-lg p-2.5">
+                  <p className="text-xs font-semibold text-white truncate">{l.name}</p>
+                  <p className="text-[10px] text-gray-500 mt-0.5">{l.phone}</p>
+                  <div className="flex items-center justify-between mt-1.5">
+                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">{l.status}</span>
+                    <button onClick={() => navigate("/call/logs")}
+                      className="text-[10px] text-blue-400 hover:text-blue-300">콜기록</button>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </SFCard>
+        )}
+        
         {/* KPI 카드 */}
         <div>
           <div className="flex items-center justify-between mb-3">

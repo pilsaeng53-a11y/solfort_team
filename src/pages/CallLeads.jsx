@@ -1,10 +1,12 @@
 import { useState, useEffect } from "react";
+import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
 import { Auth } from "@/lib/auth";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
 import { Plus, X, ChevronDown } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const STATUS_OPTS = ["신규", "연락됨", "관심있음", "거절", "매출전환"];
 const COLOR_FILTERS = [
@@ -29,7 +31,8 @@ const INTEREST_STYLE = {
   낮음: { badge: "bg-gray-500/20 text-gray-400", icon: "" },
 };
 
-const EMPTY = { name: "", phone: "", source: "cold_call", interest_amount: "", interest_level: "중간", memo: "" };
+const EMPTY = { name: "", phone: "", source: "cold_call", interest_amount: "", interest_level: "중간", memo: "", tags: "" };
+const PRESET_TAGS = ["#투자경험", "#고액관심", "#재통화약속", "#VIP", "#신중", "#빠른결정"];
 
 function Loader() {
   return <div className="flex justify-center py-20"><div className="w-7 h-7 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" /></div>;
@@ -47,6 +50,7 @@ export default function CallLeads() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [openStatus, setOpenStatus] = useState(null);
+  const [tagFilter, setTagFilter] = useState("");
 
   useEffect(() => {
     document.title = "SolFort - 고객 리드";
@@ -75,12 +79,29 @@ export default function CallLeads() {
     setOpenStatus(null);
   };
 
+  const toggleBookmark = async (id, isBookmarked) => {
+    await base44.entities.CallLead.update(id, { is_bookmarked: !isBookmarked });
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, is_bookmarked: !isBookmarked } : l));
+  };
+
+  const toggleTag = (tag) => {
+    const tags = (form.tags || "").split(",").filter(Boolean);
+    if (tags.includes(tag)) {
+      form.tags = tags.filter(t => t !== tag).join(",");
+    } else {
+      tags.push(tag);
+      form.tags = tags.join(",");
+    }
+    setForm({ ...form });
+  };
+
   const filtered = leads.filter(l => {
     const q = search.toLowerCase();
     const matchS = !q || l.name?.toLowerCase().includes(q) || l.phone?.includes(q);
     const matchT = tab === "전체" || l.status === tab;
     const matchC = colorFilter === "전체" || (colorFilter === "none" ? !l.color_tag : l.color_tag === colorFilter);
-    return matchS && matchT && matchC;
+    const matchTag = !tagFilter || (l.tags || "").includes(tagFilter);
+    return matchS && matchT && matchC && matchTag;
   });
 
   if (loading) return <><CallNav /><Loader /></>;
@@ -113,6 +134,16 @@ export default function CallLeads() {
             </button>
           ))}
         </div>
+        
+        <div className="flex flex-wrap gap-1.5">
+          <span className="text-[10px] text-gray-500 self-center">태그:</span>
+          {["", ...PRESET_TAGS].map(t => (
+            <button key={t} onClick={() => setTagFilter(t)}
+              className={`px-2.5 py-1 rounded-lg text-[10px] transition-all ${tagFilter === t ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 text-gray-400 hover:text-gray-200"}`}>
+              {t || "전체"}
+            </button>
+          ))}
+        </div>
 
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="이름 또는 연락처 검색"
           className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-600" />
@@ -124,7 +155,7 @@ export default function CallLeads() {
             const borderCls = COLOR_BORDER[lead.color_tag] || "border-l-4 border-transparent";
             return (
               <SFCard key={lead.id} className={borderCls}>
-                <div className="flex items-start gap-3">
+                <div className="flex items-start gap-3" >
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold text-white">{lead.name}</span>
@@ -135,6 +166,13 @@ export default function CallLeads() {
                       )}
                     </div>
                     <p className="text-xs text-gray-400 mt-1">{lead.phone}</p>
+                    {lead.tags && (
+                      <div className="flex flex-wrap gap-1 mt-1.5">
+                        {lead.tags.split(",").filter(Boolean).map(tag => (
+                          <span key={tag} className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded">{tag}</span>
+                        ))}
+                      </div>
+                    )}
                     <div className="flex flex-wrap gap-3 mt-1.5 text-[10px] text-gray-500">
                       {lead.interest_amount > 0 && <span className="text-emerald-400">₩{Number(lead.interest_amount).toLocaleString()}</span>}
                       {lead.next_call_date && <span className="text-yellow-400">📅 {lead.next_call_date}</span>}
@@ -142,6 +180,10 @@ export default function CallLeads() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => toggleBookmark(lead.id, lead.is_bookmarked)}
+                      className={`text-lg transition-all ${lead.is_bookmarked ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}>
+                      ⭐
+                    </button>
                     <button onClick={() => navigate("/call/logs")}
                       className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all whitespace-nowrap">
                       콜 기록 추가
@@ -205,9 +247,25 @@ export default function CallLeads() {
                 <input type="number" value={form.interest_amount} onChange={set("interest_amount")} placeholder="0" className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
               </div>
               <div>
-                <label className="text-[10px] text-gray-400">메모</label>
-                <textarea value={form.memo} onChange={set("memo")} rows={2} className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs resize-none" />
-              </div>
+                 <label className="text-[10px] text-gray-400">메모</label>
+                 <textarea value={form.memo} onChange={set("memo")} rows={2} className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs resize-none" />
+               </div>
+               <div>
+                 <label className="text-[10px] text-gray-400">고객 태그</label>
+                 <div className="flex flex-wrap gap-1.5 mt-1">
+                   {PRESET_TAGS.map(tag => {
+                     const isSelected = (form.tags || "").includes(tag);
+                     return (
+                       <button key={tag} onClick={() => toggleTag(tag)} type="button"
+                         className={`text-[10px] px-2 py-0.5 rounded transition-all ${
+                           isSelected ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10"
+                         }`}>
+                         {tag}
+                       </button>
+                     );
+                   })}
+                 </div>
+               </div>
             </div>
             <div className="flex gap-2 p-5 pt-0">
               <button onClick={save} disabled={saving || !form.name || !form.phone}

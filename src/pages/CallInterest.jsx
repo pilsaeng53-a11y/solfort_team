@@ -5,6 +5,7 @@ import moment from "moment";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
 import { Star, Phone } from "lucide-react";
+import { useState, useEffect } from "react";
 
 const INTEREST_ORDER = { 높음: 0, 중간: 1, 낮음: 2 };
 const INTEREST_STYLE = {
@@ -42,6 +43,11 @@ export default function CallInterest() {
 
   const filtered = leads.filter(l => levelFilter === "전체" || l.interest_level === levelFilter);
   const totalAmount = filtered.reduce((a, l) => a + (l.interest_amount || 0), 0);
+
+  const toggleBookmark = async (id, isBookmarked) => {
+    await base44.entities.CallLead.update(id, { is_bookmarked: !isBookmarked });
+    setLeads(prev => prev.map(l => l.id === id ? { ...l, is_bookmarked: !isBookmarked } : l));
+  };
 
   const openTimeline = async (lead) => {
     setTimelineModal(lead);
@@ -121,6 +127,10 @@ export default function CallInterest() {
                     </p>
                     {lead.memo && <p className="text-[10px] text-gray-600 mt-1 truncate">{lead.memo}</p>}
                   </div>
+                  <button onClick={() => toggleBookmark(lead.id, lead.is_bookmarked)}
+                    className={`text-lg transition-all shrink-0 ${lead.is_bookmarked ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}>
+                    ⭐
+                  </button>
                 </div>
                 <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.06]">
                   <button onClick={() => openTimeline(lead)}

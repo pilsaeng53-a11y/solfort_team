@@ -37,7 +37,7 @@
     },
     "next_call_date": {
       "type": "string",
-      "title": "\ub2e4\uc74c \ucf5c \uc608\uc815\uc77c"
+      "title": "\ub2e4\uc74c \ucd5c \uc608\uc815\uc77c"
     },
     "assigned_to": {
       "type": "string",
@@ -79,6 +79,16 @@
     "queue_index": {
       "type": "number",
       "title": "\ud050 \ub0b4 \uc21c\ubc88"
+    },
+    "is_bookmarked": {
+      "type": "boolean",
+      "title": "\uc990\uaca8\ucc3e\uae30",
+      "default": false
+    },
+    "tags": {
+      "type": "string",
+      "title": "\uace0\uac1d \ud0dc\uadf8",
+      "default": ""
     }
   },
   "required": [
