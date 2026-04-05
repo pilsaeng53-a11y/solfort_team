@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import moment from "moment";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
 import { Star, Phone } from "lucide-react";
@@ -21,6 +22,9 @@ export default function CallInterest() {
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
   const [levelFilter, setLevelFilter] = useState("전체");
+  const [timelineModal, setTimelineModal] = useState(null);
+  const [timeline, setTimeline] = useState([]);
+  const [loadingTimeline, setLoadingTimeline] = useState(false);
 
   useEffect(() => {
     document.title = "SolFort - 관심 고객";
@@ -38,6 +42,27 @@ export default function CallInterest() {
 
   const filtered = leads.filter(l => levelFilter === "전체" || l.interest_level === levelFilter);
   const totalAmount = filtered.reduce((a, l) => a + (l.interest_amount || 0), 0);
+
+  const openTimeline = async (lead) => {
+    setTimelineModal(lead);
+    setLoadingTimeline(true);
+    try {
+      const [logs, memos] = await Promise.all([
+        base44.entities.CallLog.list("-called_at", 500),
+        base44.entities.FollowupMemo?.list?.("-created_date", 500) || Promise.resolve([])
+      ]);
+      const leadLogs = logs.filter(l => l.lead_id === lead.id);
+      const leadMemos = memos.filter(m => m.lead_id === lead.id);
+      const events = [
+        ...leadLogs.map(l => ({ type: 'call', icon: '📞', color: 'blue', date: l.called_at, text: l.call_result + (l.memo ? ' - ' + l.memo : ''), by: l.called_by })),
+        ...leadMemos.map(m => ({ type: 'memo', icon: '💬', color: 'gray', date: m.created_at, text: m.memo, by: m.created_by }))
+      ].sort((a, b) => new Date(b.date) - new Date(a.date));
+      setTimeline(events);
+    } catch (e) {
+      setTimeline([]);
+    }
+    setLoadingTimeline(false);
+  };
 
   if (loading) return <><CallNav /><Loader /></>;
 
@@ -98,6 +123,10 @@ export default function CallInterest() {
                   </div>
                 </div>
                 <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.06]">
+                  <button onClick={() => openTimeline(lead)}
+                    className="flex-1 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-[10px] hover:bg-blue-500/30 transition-all">
+                    전체 이력
+                  </button>
                   <button onClick={() => navigate("/call/logs")}
                     className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-white/5 text-gray-400 rounded-lg text-[10px] hover:bg-white/10 transition-all">
                     <Phone className="h-3 w-3" /> 콜 기록
@@ -112,6 +141,38 @@ export default function CallInterest() {
           })}
         </div>
       </div>
+
+      {timelineModal && (
+        <div className="fixed inset-0 z-50 flex items-center justify-center bg-black/60 backdrop-blur-sm p-4">
+          <div className="bg-[#0d0f1a] border border-white/10 rounded-2xl w-full max-w-md max-h-96 overflow-hidden flex flex-col">
+            <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
+              <h3 className="text-sm font-bold text-white">[{timelineModal.name}] 전체 이력</h3>
+              <button onClick={() => setTimelineModal(null)} className="text-gray-500 hover:text-white">✕</button>
+            </div>
+            <div className="flex-1 overflow-y-auto p-4 space-y-3">
+              {loadingTimeline ? (
+                <div className="flex justify-center py-8"><div className="w-4 h-4 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" /></div>
+              ) : timeline.length === 0 ? (
+                <p className="text-xs text-gray-600 text-center py-8">이력이 없습니다</p>
+              ) : (
+                timeline.map((event, i) => (
+                  <div key={i} className="border-l-2 border-gray-600 pl-3">
+                    <div className="flex items-center gap-2">
+                      <span className="text-sm">{event.icon}</span>
+                      <span className="text-xs text-gray-500">{moment(event.date).fromNow()}</span>
+                      <span className="text-[10px] text-gray-600 ml-auto">{event.by}</span>
+                    </div>
+                    <p className="text-xs text-gray-300 mt-1">{event.text}</p>
+                  </div>
+                ))
+              )}
+            </div>
+            <div className="p-4 border-t border-white/[0.06]">
+              <button onClick={() => setTimelineModal(null)} className="w-full py-2 bg-white/5 text-gray-400 rounded-lg text-xs hover:bg-white/10 transition-all">닫기</button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
