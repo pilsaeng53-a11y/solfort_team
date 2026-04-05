@@ -107,55 +107,59 @@ export default function RegisterCustomer() {
   const valid = form.customer_name && form.phone && salesAmount > 0;
 
   const handleExcelUpload = async (e) => {
-    const file = e.target.files?.[0];
-    if (!file) return;
-    setExcelLoading(true);
-    try {
-      const data = await file.arrayBuffer();
-      const wb = XLSX.read(data);
-      const ws = wb.Sheets[wb.SheetNames[0]];
-      const rows = XLSX.utils.sheet_to_json(ws);
-      const mapped = rows.map(r => ({
-        customer_name: r['고객명'] || r['이름'] || r['name'] || '',
-        phone: r['연락처'] || r['전화'] || r['phone'] || '',
-        sales_amount: parseFloat(r['매출'] || r['금액'] || r['sales_amount'] || '0'),
-        wallet_address: r['지갑주소'] || r['wallet_address'] || ''
-      })).filter(r => r.customer_name && r.phone && r.sales_amount > 0);
-      setExcelRows(mapped);
-    } catch (err) {
-      alert('단덕: ' + err.message);
-    }
-    setExcelLoading(false);
+   const file = e.target.files?.[0];
+   if (!file) return;
+   setExcelLoading(true);
+   try {
+     const data = await file.arrayBuffer();
+     const wb = XLSX.read(data);
+     const ws = wb.Sheets[wb.SheetNames[0]];
+     const rows = XLSX.utils.sheet_to_json(ws);
+     const mapped = rows.map(r => ({
+       customer_name: r['고객명'] || '',
+       phone: r['연락처'] || '',
+       sales_amount: parseFloat(r['매출금액'] || '0'),
+       wallet_address: r['지갑주소'] || '',
+       sale_date: r['날짜'] || new Date().toISOString().split('T')[0]
+     })).filter(r => r.customer_name && r.phone && r.sales_amount > 0);
+     setExcelRows(mapped);
+   } catch (err) {
+     alert('오류: ' + err.message);
+   }
+   setExcelLoading(false);
   };
 
   const handleBulkRegister = async () => {
-    if (excelRows.length === 0) return;
-    setExcelLoading(true);
-    const today = new Date().toISOString().slice(0, 10);
-    const dealerName = dealer?.dealer_name || '미설정';
-    let count = 0;
-    for (const row of excelRows) {
-      await base44.entities.SalesRecord.create({
-        dealer_name: dealerName,
-        customer_name: row.customer_name,
-        phone: row.phone,
-        sales_amount: row.sales_amount,
-        wallet_address: row.wallet_address,
-        sale_date: today,
-        customer_status: 'new',
-        usdt_rate: currentRate,
-        token_price: tokenPrice,
-        promotion_pct: promotionPct,
-        usdt_amount: parseFloat((row.sales_amount / currentRate).toFixed(2)),
-        base_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice).toFixed(2)),
-        final_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice * promotionPct / 100).toFixed(2)),
-      });
-      count++;
-    }
-    setExcelLoading(false);
-    alert(`${count}건 등록 완료`);
-    setExcelRows([]);
-    setTab('single');
+   if (excelRows.length === 0) return;
+   setExcelLoading(true);
+   const dealerName = dealer?.dealer_name || '미설정';
+   let count = 0;
+   try {
+     for (const row of excelRows) {
+       await base44.entities.SalesRecord.create({
+         dealer_name: dealerName,
+         customer_name: row.customer_name,
+         phone: row.phone,
+         sales_amount: row.sales_amount,
+         wallet_address: row.wallet_address,
+         sale_date: row.sale_date,
+         customer_status: 'new',
+         usdt_rate: currentRate,
+         token_price: tokenPrice,
+         promotion_pct: promotionPct,
+         usdt_amount: parseFloat((row.sales_amount / currentRate).toFixed(2)),
+         base_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice).toFixed(2)),
+         final_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice * promotionPct / 100).toFixed(2)),
+       });
+       count++;
+     }
+     alert(`${count}건 등록 완료`);
+     setExcelRows([]);
+     setTab('single');
+   } catch (err) {
+     alert('등록 중 오류: ' + err.message);
+   }
+   setExcelLoading(false);
   };
 
   if (result) {
@@ -238,7 +242,7 @@ export default function RegisterCustomer() {
             개별 등록
           </button>
           <button onClick={() => setTab('excel')} className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${tab === 'excel' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-white/5 text-gray-500'}`}>
-            엑셀 일굌 등록
+           엑셀 일괄 등록
           </button>
         </div>
 
@@ -247,8 +251,8 @@ export default function RegisterCustomer() {
             <h3 className="text-white font-semibold text-sm mb-3">Excel 파일 업로드</h3>
             <label className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-dashed border-blue-500/30 rounded-xl cursor-pointer hover:bg-blue-500/5 transition-all">
               <Upload className="h-4 w-4 text-blue-400" />
-              <span className="text-sm text-gray-400">.xlsx, .csv 파일 선택</span>
-              <input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} className="hidden" />
+              <span className="text-sm text-gray-400">.xlsx, .xls 파일 선택</span>
+              <input type="file" accept=".xlsx,.xls" onChange={handleExcelUpload} className="hidden" />
             </label>
             {excelRows.length > 0 && (
               <>
@@ -258,7 +262,7 @@ export default function RegisterCustomer() {
                     <thead><tr className="border-b border-white/10">
                       <th className="text-left py-1 px-2">고객명</th>
                       <th className="text-left py-1 px-2">연락처</th>
-                      <th className="text-right py-1 px-2">매출</th>
+                      <th className="text-right py-1 px-2">매출금액</th>
                     </tr></thead>
                     <tbody>
                       {excelRows.slice(0, 5).map((r, i) => (
@@ -272,7 +276,7 @@ export default function RegisterCustomer() {
                   </table>
                 </div>
                 <Button onClick={handleBulkRegister} disabled={excelLoading} className="w-full mt-3 sf-gradient-btn rounded-xl text-white border-0 h-12">
-                  {excelLoading ? '등록 중...' : '일굌 등록'}
+                  {excelLoading ? '등록 중...' : '일괄등록'}
                 </Button>
               </>
             )}
