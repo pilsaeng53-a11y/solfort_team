@@ -9,17 +9,21 @@ import useDealer from "../lib/useDealer";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, CheckCircle } from "lucide-react";
+import { ArrowLeft, CheckCircle, Upload } from "lucide-react";
+import * as XLSX from 'xlsx';
 
 export default function RegisterCustomer() {
   const navigate = useNavigate();
   const { rate, source, loading: rateLoading, fetchRate } = useMarketData();
   const { dealer } = useDealer();
+  const [tab, setTab] = useState('single');
   const [form, setForm] = useState({ customer_name: "", phone: "", wallet_address: "", sales_amount: "" });
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submittingOrder, setSubmittingOrder] = useState(false);
+  const [excelRows, setExcelRows] = useState([]);
+  const [excelLoading, setExcelLoading] = useState(false);
 
   const [tokenPrice, setTokenPrice] = useState(3.2);
   const [promotionPct, setPromotionPct] = useState(300);
@@ -102,6 +106,58 @@ export default function RegisterCustomer() {
 
   const valid = form.customer_name && form.phone && salesAmount > 0;
 
+  const handleExcelUpload = async (e) => {
+    const file = e.target.files?.[0];
+    if (!file) return;
+    setExcelLoading(true);
+    try {
+      const data = await file.arrayBuffer();
+      const wb = XLSX.read(data);
+      const ws = wb.Sheets[wb.SheetNames[0]];
+      const rows = XLSX.utils.sheet_to_json(ws);
+      const mapped = rows.map(r => ({
+        customer_name: r['고객명'] || r['이름'] || r['name'] || '',
+        phone: r['연락처'] || r['전화'] || r['phone'] || '',
+        sales_amount: parseFloat(r['매출'] || r['금액'] || r['sales_amount'] || '0'),
+        wallet_address: r['지갑주소'] || r['wallet_address'] || ''
+      })).filter(r => r.customer_name && r.phone && r.sales_amount > 0);
+      setExcelRows(mapped);
+    } catch (err) {
+      alert('단덕: ' + err.message);
+    }
+    setExcelLoading(false);
+  };
+
+  const handleBulkRegister = async () => {
+    if (excelRows.length === 0) return;
+    setExcelLoading(true);
+    const today = new Date().toISOString().slice(0, 10);
+    const dealerName = dealer?.dealer_name || '미설정';
+    let count = 0;
+    for (const row of excelRows) {
+      await base44.entities.SalesRecord.create({
+        dealer_name: dealerName,
+        customer_name: row.customer_name,
+        phone: row.phone,
+        sales_amount: row.sales_amount,
+        wallet_address: row.wallet_address,
+        sale_date: today,
+        customer_status: 'new',
+        usdt_rate: currentRate,
+        token_price: tokenPrice,
+        promotion_pct: promotionPct,
+        usdt_amount: parseFloat((row.sales_amount / currentRate).toFixed(2)),
+        base_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice).toFixed(2)),
+        final_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice * promotionPct / 100).toFixed(2)),
+      });
+      count++;
+    }
+    setExcelLoading(false);
+    alert(`${count}건 등록 완료`);
+    setExcelRows([]);
+    setTab('single');
+  };
+
   if (result) {
     return (
       <div className="min-h-screen bg-[#080a12] flex items-center justify-center px-4">
@@ -176,7 +232,56 @@ export default function RegisterCustomer() {
           </div>
         </div>
 
-        <UsdtBanner rate={rate} source={source} loading={rateLoading} onRefresh={fetchRate} />
+        {/* Tabs */}
+        <div className="flex gap-2">
+          <button onClick={() => setTab('single')} className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${tab === 'single' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-white/5 text-gray-500'}`}>
+            개별 등록
+          </button>
+          <button onClick={() => setTab('excel')} className={`flex-1 py-2 px-3 rounded-lg text-xs font-medium transition-all ${tab === 'excel' ? 'bg-blue-500/20 text-blue-400 border border-blue-500/30' : 'bg-white/5 text-gray-500'}`}>
+            엑셀 일굌 등록
+          </button>
+        </div>
+
+        {tab === 'excel' && (
+          <SFCard>
+            <h3 className="text-white font-semibold text-sm mb-3">Excel 파일 업로드</h3>
+            <label className="flex items-center justify-center gap-2 px-4 py-8 border-2 border-dashed border-blue-500/30 rounded-xl cursor-pointer hover:bg-blue-500/5 transition-all">
+              <Upload className="h-4 w-4 text-blue-400" />
+              <span className="text-sm text-gray-400">.xlsx, .csv 파일 선택</span>
+              <input type="file" accept=".xlsx,.xls,.csv" onChange={handleExcelUpload} className="hidden" />
+            </label>
+            {excelRows.length > 0 && (
+              <>
+                <p className="text-xs text-emerald-400 mt-3">{excelRows.length}건 인식됨</p>
+                <div className="mt-3 overflow-x-auto">
+                  <table className="w-full text-[10px] text-gray-400">
+                    <thead><tr className="border-b border-white/10">
+                      <th className="text-left py-1 px-2">고객명</th>
+                      <th className="text-left py-1 px-2">연락처</th>
+                      <th className="text-right py-1 px-2">매출</th>
+                    </tr></thead>
+                    <tbody>
+                      {excelRows.slice(0, 5).map((r, i) => (
+                        <tr key={i} className="border-b border-white/5">
+                          <td className="py-1 px-2 text-gray-300">{r.customer_name}</td>
+                          <td className="py-1 px-2 text-gray-500">{r.phone}</td>
+                          <td className="text-right py-1 px-2 text-white">₩{r.sales_amount.toLocaleString()}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                <Button onClick={handleBulkRegister} disabled={excelLoading} className="w-full mt-3 sf-gradient-btn rounded-xl text-white border-0 h-12">
+                  {excelLoading ? '등록 중...' : '일굌 등록'}
+                </Button>
+              </>
+            )}
+          </SFCard>
+        )}
+
+        {tab !== 'excel' && (
+          <>
+            <UsdtBanner rate={rate} source={source} loading={rateLoading} onRefresh={fetchRate} />
 
         {/* Customer Info */}
         <SFCard>
@@ -234,13 +339,15 @@ export default function RegisterCustomer() {
           </SFCard>
         )}
 
-        <Button
-          onClick={handleRegister}
-          disabled={!valid || saving}
-          className="w-full sf-gradient-btn rounded-xl text-white border-0 h-14 text-base font-bold"
-        >
-          {saving ? "등록 중..." : "고객 등록"}
-        </Button>
+            <Button
+              onClick={handleRegister}
+              disabled={!valid || saving}
+              className="w-full sf-gradient-btn rounded-xl text-white border-0 h-14 text-base font-bold"
+            >
+              {saving ? "등록 중..." : "고객 등록"}
+            </Button>
+          </>
+        )}
       </div>
     </div>
   );

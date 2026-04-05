@@ -6,7 +6,8 @@ import GradeBadge from "../components/GradeBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, LogOut, User } from "lucide-react";
+import { ArrowLeft, Save, LogOut, User, Eye, EyeOff } from "lucide-react";
+import { base44 } from "@/api/base44Client";
 
 const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
 
@@ -15,6 +16,10 @@ export default function Account() {
   const { dealer, loading, updateDealer } = useDealer();
   const [form, setForm] = useState(null);
   const [saving, setSaving] = useState(false);
+  const [pwForm, setPwForm] = useState({ current: '', newPw: '', confirm: '' });
+  const [pwError, setPwError] = useState('');
+  const [showPw, setShowPw] = useState(false);
+  const [changingPw, setChangingPw] = useState(false);
 
   useEffect(() => {
     if (dealer) {
@@ -47,7 +52,28 @@ export default function Account() {
     navigate("/");
   };
 
-  if (loading || !form) {
+  const handleChangePw = async () => {
+    setPwError('');
+    if (pwForm.current !== dealer?.password) {
+      setPwError('주면 비밀번호가 다릅니다.');
+      return;
+    }
+    if (pwForm.newPw.length < 6) {
+      setPwError('6자 이상 입력하세요.');
+      return;
+    }
+    if (pwForm.newPw !== pwForm.confirm) {
+      setPwError('새 비밀번호가 일치하지 않스늵니다.');
+      return;
+    }
+    setChangingPw(true);
+    await base44.entities.DealerInfo.update(dealer.id, { password: pwForm.newPw });
+    setPwForm({ current: '', newPw: '', confirm: '' });
+    alert('비밀번호가 변경되었습니다.');
+    setChangingPw(false);
+  };
+
+  if (loading || !form || !dealer) {
     return (
       <div className="min-h-screen bg-[#080a12] flex items-center justify-center">
         <div className="w-8 h-8 border-2 border-blue-500/30 border-t-blue-500 rounded-full animate-spin" />
@@ -130,6 +156,32 @@ export default function Account() {
                 />
               </div>
             ))}
+          </div>
+        </SFCard>
+
+        {/* Password Change */}
+        <SFCard>
+          <h3 className="text-white font-semibold text-sm mb-4">비밀번호 변경</h3>
+          <div className="space-y-3">
+            <div>
+              <Label className="text-xs text-gray-400">주면 비밀번호</Label>
+              <div className="relative">
+                <Input type={showPw ? 'text' : 'password'} value={pwForm.current} onChange={e => setPwForm(p => ({ ...p, current: e.target.value }))} className="bg-white/5 border-white/10 text-white mt-1 rounded-xl pr-9" />
+                <button type="button" onClick={() => setShowPw(!showPw)} className="absolute right-3 top-1/2 -translate-y-1/2 text-gray-500 hover:text-gray-300">{showPw ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}</button>
+              </div>
+            </div>
+            <div>
+              <Label className="text-xs text-gray-400">새 비밀번호</Label>
+              <Input type="password" value={pwForm.newPw} onChange={e => setPwForm(p => ({ ...p, newPw: e.target.value }))} placeholder="6자 이상" className="bg-white/5 border-white/10 text-white mt-1 rounded-xl" />
+            </div>
+            <div>
+              <Label className="text-xs text-gray-400">새 비밀번호 확인</Label>
+              <Input type="password" value={pwForm.confirm} onChange={e => setPwForm(p => ({ ...p, confirm: e.target.value }))} className="bg-white/5 border-white/10 text-white mt-1 rounded-xl" />
+            </div>
+            {pwError && <p className="text-xs text-red-400 bg-red-500/10 p-2 rounded">{pwError}</p>}
+            <Button onClick={handleChangePw} disabled={changingPw} className="w-full bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-xl hover:bg-purple-500/30 disabled:opacity-50">
+              {changingPw ? '변경 중...' : '변경하기'}
+            </Button>
           </div>
         </SFCard>
 
