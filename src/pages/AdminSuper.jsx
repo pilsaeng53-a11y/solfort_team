@@ -267,7 +267,9 @@ function SystemSettings() {
 
   const save = async () => {
     setSaving(true);
-    await fetch(`${API}/settings`, { method: "PUT", headers: Auth.headers(), body: JSON.stringify(settings) });
+    try {
+      await fetch(`${API}/settings`, { method: "PUT", headers: Auth.headers(), body: JSON.stringify(settings) });
+    } catch {}
     setSaving(false); setSaved(true);
     setTimeout(() => setSaved(false), 2000);
   };
