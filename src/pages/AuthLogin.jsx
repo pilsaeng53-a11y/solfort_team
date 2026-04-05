@@ -54,6 +54,7 @@ export default function AuthLogin() {
           target: username,
           action: '로그인 성공 - IP: ' + ip,
           after_value: ip,
+          ip_address: ip,
           created_at: new Date().toISOString()
         });
       } catch(e) { }
@@ -97,6 +98,19 @@ export default function AuthLogin() {
       if (dealer.region_scope) {
         localStorage.setItem('sf_region_scope', dealer.region_scope);
       }
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const { ip } = await ipRes.json();
+        await base44.entities.SystemLog.create({
+          log_type: 'login',
+          actor: username,
+          actor_role: dealer.role || 'dealer',
+          target: username,
+          action: '로그인 성공 - IP: ' + ip,
+          ip_address: ip,
+          created_at: new Date().toISOString()
+        });
+      } catch(e) { }
       navigate(Auth.getHomeRoute());
       setLoading(false);
       return;
@@ -140,7 +154,7 @@ export default function AuthLogin() {
           actor_role: member.role || 'call_team',
           target: username,
           action: '로그인 성공 - IP: ' + ip,
-          after_value: ip,
+          ip_address: ip,
           created_at: new Date().toISOString()
         });
       } catch(e) { }
