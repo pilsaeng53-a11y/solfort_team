@@ -1,0 +1,70 @@
+{
+  "name": "CallLead",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "title": "\uace0\uac1d \uc774\ub984"
+    },
+    "phone": {
+      "type": "string",
+      "title": "\uc5f0\ub77d\ucc98"
+    },
+    "source": {
+      "type": "string",
+      "title": "\uc720\uc785 \uacbd\ub85c",
+      "enum": [
+        "sns",
+        "referral",
+        "cold_call",
+        "event",
+        "other"
+      ]
+    },
+    "status": {
+      "type": "string",
+      "title": "\uc0c1\ud0dc",
+      "default": "new"
+    },
+    "interest_amount": {
+      "type": "number",
+      "title": "\uad00\uc2ec \uae08\uc561"
+    },
+    "interest_level": {
+      "type": "string",
+      "title": "\uad00\uc2ec\ub3c4"
+    },
+    "next_call_date": {
+      "type": "string",
+      "title": "\ub2e4\uc74c \ucf5c \uc608\uc815\uc77c"
+    },
+    "assigned_to": {
+      "type": "string",
+      "title": "\ub2f4\ub2f9\uc790"
+    },
+    "dealer_name": {
+      "type": "string",
+      "title": "\uc5f0\uacb0 \ub300\ub9ac\uc810\uba85"
+    },
+    "converted_at": {
+      "type": "string",
+      "title": "\ub9e4\ucd9c \uc804\ud658 \uc2dc\uac04"
+    },
+    "memo": {
+      "type": "string",
+      "title": "\uba54\ubaa8"
+    },
+    "created_at": {
+      "type": "string",
+      "title": "\ub4f1\ub85d\uc77c"
+    },
+    "created_by": {
+      "type": "string",
+      "title": "\ub4f1\ub85d\uc790"
+    }
+  },
+  "required": [
+    "name",
+    "phone"
+  ]
+}

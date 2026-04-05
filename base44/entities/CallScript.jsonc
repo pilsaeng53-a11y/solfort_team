@@ -1,0 +1,50 @@
+{
+  "name": "CallScript",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "\uc81c\ubaa9"
+    },
+    "category": {
+      "type": "string",
+      "title": "\ubd84\ub958",
+      "enum": [
+        "\uc2e0\uaddc\uace0\uac1d",
+        "\ub9dd\uc124\uc774\ub294\uace0\uac1d",
+        "\ube44\uad50\uace0\uac1d",
+        "\ub9ac\ud06c\ub8e8\ud305"
+      ]
+    },
+    "content": {
+      "type": "string",
+      "title": "\uc2a4\ud06c\ub9bd\ud2b8 \ub0b4\uc6a9"
+    },
+    "tips": {
+      "type": "string",
+      "title": "\ucd94\uac00 \ud301"
+    },
+    "order_num": {
+      "type": "number",
+      "title": "\uc815\ub82c \uc21c\uc11c",
+      "default": 0
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "\ud65c\uc131 \uc5ec\ubd80",
+      "default": true
+    },
+    "created_by": {
+      "type": "string",
+      "title": "\uc791\uc131\uc790"
+    },
+    "created_at": {
+      "type": "string",
+      "title": "\uc791\uc131\uc77c\uc2dc"
+    }
+  },
+  "required": [
+    "title",
+    "content"
+  ]
+}

@@ -1,0 +1,50 @@
+{
+  "name": "CallLog",
+  "type": "object",
+  "properties": {
+    "lead_id": {
+      "type": "string",
+      "title": "\ub9ac\ub4dc ID"
+    },
+    "lead_name": {
+      "type": "string",
+      "title": "\uace0\uac1d \uc774\ub984"
+    },
+    "phone": {
+      "type": "string",
+      "title": "\uc5f0\ub77d\ucc98"
+    },
+    "call_result": {
+      "type": "string",
+      "title": "\ud1b5\ud654 \uacb0\uacfc",
+      "enum": [
+        "\ubbf8\uc751\ub2f5",
+        "\uc5f0\uacb0\ub428",
+        "\uad00\uc2ec\uc5c6\uc74c",
+        "\uad00\uc2ec\uc788\uc74c",
+        "\uc7ac\ucf5c\ud544\uc694"
+      ]
+    },
+    "call_duration": {
+      "type": "string",
+      "title": "\ud1b5\ud654 \uc2dc\uac04"
+    },
+    "memo": {
+      "type": "string",
+      "title": "\uba54\ubaa8"
+    },
+    "next_call_date": {
+      "type": "string",
+      "title": "\uc7ac\ucf5c \uc608\uc815\uc77c"
+    },
+    "called_by": {
+      "type": "string",
+      "title": "\ucf5c\ud300 username"
+    },
+    "called_at": {
+      "type": "string",
+      "title": "\ud1b5\ud654 \uc77c\uc2dc"
+    }
+  },
+  "required": []
+}

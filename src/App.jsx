@@ -15,13 +15,21 @@ import Announcements from './pages/Announcements';
 import Account from './pages/Account';
 import SalesRanking from './pages/SalesRanking';
 import CallTeam from './pages/CallTeam';
+import CallLayout from './components/CallLayout';
+import CallDashboard from './pages/CallDashboard';
+import CallLeads from './pages/CallLeads';
+import CallLogs from './pages/CallLogs';
+import CallInterest from './pages/CallInterest';
+import CallConvert from './pages/CallConvert';
+import CallScripts from './pages/CallScripts';
+import CallAI from './pages/CallAI';
 import AdminDealer from './pages/AdminDealer';
 import AdminCall from './pages/AdminCall';
 import AdminSuper from './pages/AdminSuper';
 import Register from './pages/Register';
 import InitAdmin from './pages/InitAdmin';
 
-const HIDE_NAV = ['/', '/call', '/admin/dealer', '/admin/call', '/admin/super'];
+const HIDE_NAV = ['/', '/call', '/admin/dealer', '/admin/call', '/admin/super', '/call/dashboard', '/call/leads', '/call/logs', '/call/interest', '/call/convert', '/call/scripts', '/call/ai'];
 
 const AppContent = () => {
   const location = useLocation();
@@ -46,6 +54,15 @@ const AppContent = () => {
 
           {/* 콜팀 */}
           <Route path="/call" element={<ProtectedRoute roles={['call_team']}><CallTeam /></ProtectedRoute>} />
+          <Route element={<ProtectedRoute roles={['call_team','call_admin','super_admin']}><CallLayout /></ProtectedRoute>}>
+            <Route path="/call/dashboard" element={<CallDashboard />} />
+            <Route path="/call/leads" element={<CallLeads />} />
+            <Route path="/call/logs" element={<CallLogs />} />
+            <Route path="/call/interest" element={<CallInterest />} />
+            <Route path="/call/convert" element={<CallConvert />} />
+            <Route path="/call/scripts" element={<CallScripts />} />
+            <Route path="/call/ai" element={<CallAI />} />
+          </Route>
 
           {/* 관리자 */}
           <Route path="/admin/dealer" element={<ProtectedRoute roles={['dealer_admin','super_admin']}><AdminDealer /></ProtectedRoute>} />
