@@ -1,0 +1,51 @@
+{
+  "name": "SettlementRecord",
+  "type": "object",
+  "properties": {
+    "dealer_name": {
+      "type": "string",
+      "title": "\ub300\ub9ac\uc810\uba85"
+    },
+    "period": {
+      "type": "string",
+      "title": "\uc815\uc0b0 \uae30\uac04"
+    },
+    "total_sales": {
+      "type": "number",
+      "title": "\ucd1d \ub9e4\ucd9c"
+    },
+    "commission_rate": {
+      "type": "number",
+      "title": "\ucee4\ubbf8\uc158\uc728"
+    },
+    "commission_krw": {
+      "type": "number",
+      "title": "\ucee4\ubbf8\uc158 \uae08\uc561(KRW)"
+    },
+    "commission_usdt": {
+      "type": "number",
+      "title": "\ucee4\ubbf8\uc158(USDT)"
+    },
+    "usdt_rate_used": {
+      "type": "number",
+      "title": "\uc801\uc6a9 \ud658\uc728"
+    },
+    "status": {
+      "type": "string",
+      "title": "\uc0c1\ud0dc",
+      "default": "pending"
+    },
+    "created_at": {
+      "type": "string",
+      "title": "\uc0dd\uc131\uc77c"
+    },
+    "paid_at": {
+      "type": "string",
+      "title": "\uc9c0\uae09\uc77c"
+    }
+  },
+  "required": [
+    "dealer_name",
+    "period"
+  ]
+}

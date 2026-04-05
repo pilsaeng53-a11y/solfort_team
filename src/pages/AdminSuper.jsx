@@ -6,9 +6,11 @@ import GradeBadge from "../components/GradeBadge";
 import SFCard from "../components/SFCard";
 import { ReportPanel } from "./AdminCall";
 import PricingManager from "../components/PricingManager";
+import MemberManagementPanel from "../components/MemberManagementPanel";
+import SettlementPanel from "../components/SettlementPanel";
 
 const API = "https://solfort-js.onrender.com";
-const TABS = ["전체 현황", "딜러 관리", "콜팀 관리", "시스템 설정", "전체 리포트", "전체 회원 관리", "단가/요율 관리"];
+const TABS = ["전체 현황", "딜러 관리", "콜팀 관리", "시스템 설정", "전체 리포트", "회원 관리", "정산 관리", "단가/요율 관리"];
 const today = new Date().toISOString().split("T")[0];
 const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
 
@@ -31,8 +33,9 @@ export default function AdminSuper() {
         {tab === 2 && <CallManagement />}
         {tab === 3 && <SystemSettings />}
         {tab === 4 && <ReportPanel accent="purple" />}
-        {tab === 5 && <AllMembersPanel />}
-        {tab === 6 && <PricingManager />}
+        {tab === 5 && <MemberManagementPanel />}
+        {tab === 6 && <SettlementPanel />}
+        {tab === 7 && <PricingManager />}
       </div>
     </div>
   );
