@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { path: "/call/convert", label: "매입 연결" },
   { path: "/call/scripts", label: "콜 스크립트" },
   { path: "/call/ai", label: "AI 영업 도우미" },
+  { path: "/call/competition", label: "🏆 경쟁현황" },
 ];
 
 export default function CallNav() {
