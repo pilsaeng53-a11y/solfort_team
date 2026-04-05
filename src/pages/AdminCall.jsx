@@ -46,6 +46,8 @@ function OverviewPanel() {
   const [dealers, setDealers] = useState([]);
   const [callMembers, setCallMembers] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [branches, setBranches] = useState([]);
+  const [selectedBranch, setSelectedBranch] = useState("전체 지사");
   const timerRef = useRef(null);
 
   const load = async () => {
@@ -54,7 +56,10 @@ function OverviewPanel() {
       base44.entities.DealerInfo.filter({ status: "active" }, "-created_date", 200),
       base44.entities.CallTeamMember.filter({ status: "active" }, "-created_date", 200),
     ]);
-    setRecords(r); setDealers(d); setCallMembers(c); setLoading(false);
+    setRecords(r); setDealers(d); setCallMembers(c);
+    const uniqueBranches = [...new Set(c.map(m => m.team).filter(Boolean))].sort();
+    setBranches(uniqueBranches);
+    setLoading(false);
   };
 
   useEffect(() => {
@@ -65,6 +70,7 @@ function OverviewPanel() {
 
   if (loading) return <Loader />;
 
+  const filteredMembers = selectedBranch === "전체 지사" ? callMembers : callMembers.filter(m => m.team === selectedBranch);
   const todayRecs = records.filter(r => r.sale_date === today);
   const todayTotal = todayRecs.reduce((a, r) => a + (r.sales_amount || 0), 0);
   const todayNew = todayRecs.filter(r => r.customer_status === "new").length;
@@ -73,7 +79,7 @@ function OverviewPanel() {
     { label: "오늘 총 등록", value: `${todayRecs.length}건`, color: "text-emerald-400" },
     { label: "오늘 총 매출", value: `₩${todayTotal.toLocaleString()}`, color: "text-yellow-400" },
     { label: "신규 고객", value: `${todayNew}명`, color: "text-blue-400" },
-    { label: "활성 콜팀", value: `${callMembers.length}명`, color: "text-purple-400" },
+    { label: "활성 콜팀", value: `${filteredMembers.length}명`, color: "text-purple-400" },
   ];
 
   const dealerRows = dealers.map(d => {
@@ -92,6 +98,14 @@ function OverviewPanel() {
 
   return (
     <div className="space-y-5">
+      <div className="flex gap-2 mb-3">
+        <label className="text-xs text-gray-400 self-center">지사 필터:</label>
+        <select value={selectedBranch} onChange={e => setSelectedBranch(e.target.value)}
+          className="bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-xs">
+          <option>전체 지사</option>
+          {branches.map(b => <option key={b}>{b}</option>)}
+        </select>
+      </div>
       <div className="grid grid-cols-2 gap-3">
         {summaryCards.map(c => (
           <SFCard key={c.label}>
