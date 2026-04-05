@@ -1,6 +1,8 @@
 import { useState } from "react";
+import { Link } from "react-router-dom";
 import { useNavigate } from "react-router-dom";
 import { Auth } from "@/lib/auth";
+import { base44 } from "@/api/base44Client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SFLogo from "../components/SFLogo";
@@ -19,19 +21,39 @@ export default function AuthLogin() {
     }
     setLoading(true);
     setError("");
-    const res = await fetch("https://solfort-js.onrender.com/auth/login", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ username, password }),
-    });
-    const data = await res.json();
-    setLoading(false);
-    if (data.token) {
-      Auth.login(data);
+    try {
+      const res = await fetch("https://solfort-js.onrender.com/auth/login", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ username, password }),
+      });
+      const data = await res.json();
+      if (data.token) {
+        Auth.login(data);
+        navigate(Auth.getHomeRoute());
+        setLoading(false);
+        return;
+      }
+    } catch {}
+    // Fallback: Base44 entity lookup
+    const dealers = await base44.entities.DealerInfo.filter({ username, status: 'active' });
+    const dealer = dealers.find(d => d.password === password);
+    if (dealer) {
+      Auth.login({ token: 'local_' + dealer.id, role: 'dealer', dealer_name: dealer.dealer_name, user_id: dealer.id });
       navigate(Auth.getHomeRoute());
-    } else {
-      setError("아이디 또는 비밀번호가 올바르지 않습니다");
+      setLoading(false);
+      return;
     }
+    const callMembers = await base44.entities.CallTeamMember.filter({ username, status: 'active' });
+    const callMember = callMembers.find(c => c.password === password);
+    if (callMember) {
+      Auth.login({ token: 'local_' + callMember.id, role: 'call_team', dealer_name: callMember.name, user_id: callMember.id });
+      navigate(Auth.getHomeRoute());
+      setLoading(false);
+      return;
+    }
+    setError("아이디 또는 비밀번호가 올바르지 않습니다");
+    setLoading(false);
   };
 
   const handleKey = (e) => {
@@ -89,6 +111,10 @@ export default function AuthLogin() {
           </Button>
         </div>
       </div>
+      <p className="text-center text-xs text-gray-600">
+        계정이 없으신가요?{" "}
+        <Link to="/register" className="text-gray-400 hover:text-white underline">회원가입</Link>
+      </p>
     </div>
   );
 }

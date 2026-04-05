@@ -40,6 +40,28 @@
     "backpack_wallet": {
       "type": "string",
       "title": "\ubc31\ud329 \uc9c0\uac11"
+    },
+    "username": {
+      "type": "string",
+      "title": "\uc544\uc774\ub514"
+    },
+    "password": {
+      "type": "string",
+      "title": "\ube44\ubc00\ubc88\ud638"
+    },
+    "role": {
+      "type": "string",
+      "title": "\uc5ed\ud560",
+      "default": "dealer"
+    },
+    "status": {
+      "type": "string",
+      "title": "\uc0c1\ud0dc",
+      "default": "pending"
+    },
+    "referral_code": {
+      "type": "string",
+      "title": "\ucd94\ucc9c \ucf54\ub4dc"
     }
   },
   "required": [
