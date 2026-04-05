@@ -16,20 +16,26 @@ export default function Announcements() {
   const [notices, setNotices] = useState([]);
   const [loading, setLoading] = useState(true);
   const [expanded, setExpanded] = useState({});
+  const [contract, setContract] = useState(null);
 
   useEffect(() => {
-    base44.entities.Notice.list("-created_at", 200).then(all => {
-      const role = Auth.getRole();
-      const filtered = all.filter(n =>
-        n.is_published !== false &&
-        (n.target === "all" || n.target === role)
-      ).sort((a, b) => {
-        if (a.is_pinned && !b.is_pinned) return -1;
-        if (!a.is_pinned && b.is_pinned) return 1;
-        return new Date(b.created_at || 0) - new Date(a.created_at || 0);
-      });
-      setNotices(filtered);
-    }).finally(() => setLoading(false));
+    Promise.all([
+      base44.entities.Notice.list("-created_at", 200).then(all => {
+        const role = Auth.getRole();
+        const filtered = all.filter(n =>
+          n.is_published !== false &&
+          (n.target === "all" || n.target === role)
+        ).sort((a, b) => {
+          if (a.is_pinned && !b.is_pinned) return -1;
+          if (!a.is_pinned && b.is_pinned) return 1;
+          return new Date(b.created_at || 0) - new Date(a.created_at || 0);
+        });
+        setNotices(filtered);
+      }),
+      base44.entities.ContractVersion.filter({ is_current: true }).then(versions => {
+        if (versions.length > 0) setContract(versions[0]);
+      }).catch(() => {}),
+    ]).finally(() => setLoading(false));
   }, []);
 
   const toggle = async (id) => {
@@ -130,6 +136,22 @@ export default function Announcements() {
                 {regularNotices.map(renderNotice)}
               </div>
             )}
+            <SFCard>
+              <div className="flex items-center justify-between">
+                <div>
+                  <p className="text-sm font-semibold text-white">📄 계약서 다운로드</p>
+                  {contract && <p className="text-[10px] text-gray-500 mt-1">{contract.title}</p>}
+                </div>
+                {contract && contract.file_url ? (
+                  <a href={contract.file_url} target="_blank" rel="noopener noreferrer"
+                    className="text-xs bg-blue-500/20 text-blue-400 border border-blue-500/30 px-3 py-1.5 rounded-lg hover:bg-blue-500/30 transition-all">
+                    다운로드
+                  </a>
+                ) : (
+                  <span className="text-xs text-gray-500">관리자 등록 예정</span>
+                )}
+              </div>
+            </SFCard>
           </>
         )}
       </div>
