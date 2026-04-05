@@ -736,13 +736,21 @@ function AnomalyAlerts() {
 
   const sendTelegramAlert = async (type, name) => {
     try {
-      const msg = type === "dealer" 
-        ? `📢 [${name}]님, 최근 3일간 매출 기록이 없습니다. 확인 부탁드립니다.`
-        : `📢 [${name}]님, 최근 2일간 콜 기록이 없습니다. 활동 재개 부탁드립니다.`;
-      // Telegram API call would go here
-      alert(`Telegram: ${msg}`);
+      const msg = `[${name}]님 활동이 없습니다. 확인 부탁드립니다.`;
+      const botToken = "8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8";
+      const chatId = "5757341051";
+      const url = `https://api.telegram.org/bot${botToken}/sendMessage`;
+      
+      const res = await fetch(url, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: msg })
+      });
+      
+      if (!res.ok) throw new Error(`Telegram API error: ${res.status}`);
+      alert(`✅ ${name}님에게 텔레그램 알림을 전송했습니다.`);
     } catch (e) {
-      alert(`알림 전송 실패: ${e.message}`);
+      alert(`❌ 알림 전송 실패: ${e.message}`);
     }
   };
 
