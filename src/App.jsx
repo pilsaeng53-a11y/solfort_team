@@ -24,6 +24,7 @@ import CallConvert from './pages/CallConvert';
 import CallScripts from './pages/CallScripts';
 import CallQueuePage from './pages/CallQueuePage';
 import CallAI from './pages/CallAI';
+import CalendarView from './pages/CalendarView';
 import AdminDealer from './pages/AdminDealer';
 import AdminCall from './pages/AdminCall';
 import AdminSuper from './pages/AdminSuper';
@@ -52,6 +53,7 @@ const AppContent = () => {
           <Route path="/academy" element={<ProtectedRoute roles={['dealer']}><Academy /></ProtectedRoute>} />
           <Route path="/notices" element={<ProtectedRoute roles={['dealer']}><Announcements /></ProtectedRoute>} />
           <Route path="/account" element={<ProtectedRoute roles={['dealer']}><Account /></ProtectedRoute>} />
+          <Route path="/calendar" element={<ProtectedRoute roles={['dealer', 'call_team', 'dealer_admin', 'call_admin', 'super_admin']}><CalendarView /></ProtectedRoute>} />
 
           {/* 콜팀 */}
           <Route path="/call" element={<ProtectedRoute roles={['call_team']}><CallTeam /></ProtectedRoute>} />

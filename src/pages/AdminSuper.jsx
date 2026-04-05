@@ -278,7 +278,7 @@ function DealerOverview() {
               ))}
             </tr></thead>
             <tbody>
-               {filteredDealers.map(d => (
+               {filtered.map(d => (
                 <tr key={d.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                   <td className="py-3 px-2">
                     <button onClick={() => setSelectedDealer(d)} className="text-white font-medium hover:text-purple-400 transition-colors text-left">
@@ -419,7 +419,7 @@ function DealerManagement() {
                 ))}
               </tr></thead>
               <tbody>
-                {filtered.map(d => (
+                 {filteredDealers.map(d => (
                   <tr key={d.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                     <td className="py-3 px-2">
                       <button onClick={() => setSelectedDealer(d)} className="text-white font-medium hover:text-purple-400 transition-colors">

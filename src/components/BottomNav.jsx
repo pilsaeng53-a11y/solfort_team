@@ -10,6 +10,7 @@ const NAV_ITEMS = [
   { path: "/register", icon: UserPlus, label: "등록" },
   { path: "/records", icon: FileText, label: "매출" },
   { path: "/daily", icon: Calendar, label: "일자별" },
+  { path: "/calendar", label: "캘린더" },
   { path: "/ranking", icon: Trophy, label: "랭킹" },
   { path: "/academy", icon: GraduationCap, label: "학습" },
   { path: "/notices", icon: Bell, label: "공지" },
@@ -59,7 +60,11 @@ export default function BottomNav() {
               {(showNoticeDot || showOrderDot) && (
                 <span className="absolute top-0.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
               )}
-              <Icon className="h-4.5 w-4.5" strokeWidth={active ? 2.5 : 1.5} style={{ width: 18, height: 18 }} />
+               {item.icon ? (
+                <item.icon className="h-4.5 w-4.5" strokeWidth={active ? 2.5 : 1.5} style={{ width: 18, height: 18 }} />
+              ) : (
+                <span className="text-lg">📅</span>
+              )}
               <span className="text-[9px] font-medium leading-none">{item.label}</span>
               {active && (
                 <div className="h-0.5 w-4 rounded-full bg-blue-400 mt-0.5" />
