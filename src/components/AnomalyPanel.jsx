@@ -16,6 +16,7 @@ const lastMonthEnd = (() => {
   d.setDate(0);
   return d.toISOString().split("T")[0];
 })();
+const thirtyDaysAgo = new Date(Date.now() - 30 * 86400000).toISOString().slice(0, 10);
 
 function Loader() {
   return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" /></div>;
@@ -24,6 +25,7 @@ function Loader() {
 export default function AnomalyPanel() {
   const [loading, setLoading] = useState(true);
   const [alerts, setAlerts] = useState([]);
+  const [marking, setMarking] = useState(null);
 
   useEffect(() => {
     (async () => {
@@ -111,6 +113,17 @@ export default function AnomalyPanel() {
         });
       }
 
+      // 7. 30일 미접속 휴면 계정
+      const dormant = dealers.filter(d => d.last_login_at && d.last_login_at.slice(0, 10) < thirtyDaysAgo);
+      if (dormant.length > 0) {
+        found.push({
+          level: "warning",
+          title: `💤 30일 미접속 딜러 ${dormant.length}명`,
+          detail: dormant.slice(0, 5).map(d => d.dealer_name).join(", "),
+          dormant: dormant,
+        });
+      }
+
       setAlerts(found);
       setLoading(false);
     })();
@@ -164,9 +177,22 @@ export default function AnomalyPanel() {
                 <SFCard key={i} className="border border-yellow-500/20">
                   <div className="flex items-start gap-3">
                     <AlertTriangle className="h-4 w-4 text-yellow-400 shrink-0 mt-0.5" />
-                    <div>
+                    <div className="flex-1">
                       <p className="text-sm font-semibold text-yellow-400">{a.title}</p>
                       <p className="text-xs text-gray-400 mt-0.5">{a.detail}</p>
+                      {a.dormant && a.dormant.length > 0 && (
+                        <div className="mt-3 space-y-1 max-h-48 overflow-y-auto">
+                          {a.dormant.map(d => (
+                            <div key={d.id} className="flex items-center justify-between gap-2 p-1.5 bg-yellow-500/5 rounded text-[10px]">
+                              <div>
+                                <p className="text-gray-300 font-medium">{d.dealer_name}</p>
+                                <p className="text-gray-600">마지막 로그인: {d.last_login_at ? d.last_login_at.split('T')[0] : '-'}</p>
+                              </div>
+                              <button onClick={async () => { setMarking(d.id); await base44.entities.DealerInfo.update(d.id, { status: 'dormant' }); setAlerts(prev => prev.map(al => al.dormant ? { ...al, dormant: al.dormant.filter(x => x.id !== d.id) } : al)); setMarking(null); }} disabled={marking === d.id} className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-[10px] hover:bg-yellow-500/30 disabled:opacity-50 whitespace-nowrap">{marking === d.id ? '처리 중...' : '휴면 처리'}</button>
+                            </div>
+                          ))}
+                        </div>
+                      )}
                     </div>
                   </div>
                 </SFCard>

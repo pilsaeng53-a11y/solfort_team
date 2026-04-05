@@ -44,6 +44,19 @@ export default function AuthLogin() {
       localStorage.removeItem(FAIL_KEY);
       localStorage.removeItem(LOCK_KEY);
       Auth.login({ token: 'admin_' + admin.id, role: 'super_admin', dealer_name: admin.name, user_id: admin.id });
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const { ip } = await ipRes.json();
+        await base44.entities.SystemLog.create({
+          log_type: 'login',
+          actor: username,
+          actor_role: 'super_admin',
+          target: username,
+          action: '로그인 성공 - IP: ' + ip,
+          after_value: ip,
+          created_at: new Date().toISOString()
+        });
+      } catch(e) { }
       navigate(Auth.getHomeRoute());
       setLoading(false);
       return;
@@ -115,6 +128,19 @@ export default function AuthLogin() {
       localStorage.removeItem(FAIL_KEY);
       localStorage.removeItem(LOCK_KEY);
       Auth.login({ token: 'call_' + member.id, role: member.role || 'call_team', dealer_name: member.name, user_id: member.id });
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const { ip } = await ipRes.json();
+        await base44.entities.SystemLog.create({
+          log_type: 'login',
+          actor: username,
+          actor_role: member.role || 'call_team',
+          target: username,
+          action: '로그인 성공 - IP: ' + ip,
+          after_value: ip,
+          created_at: new Date().toISOString()
+        });
+      } catch(e) { }
       navigate(Auth.getHomeRoute());
       setLoading(false);
       return;
