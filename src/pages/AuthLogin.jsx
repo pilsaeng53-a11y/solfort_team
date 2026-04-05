@@ -14,6 +14,7 @@ export default function AuthLogin() {
   const [password, setPassword] = useState("");
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
+  const [showForgotModal, setShowForgotModal] = useState(false);
 
   const getRoleLabel = (role, extraData) => {
     const roleMap = {
@@ -250,18 +251,44 @@ export default function AuthLogin() {
           >
             {loading ? "로그인 중..." : "로그인"}
           </Button>
-          <div className="border-t border-white/[0.06] pt-4 text-center">
-            <span className="text-sm text-gray-500">계정이 없으신가요? </span>
-            <button
-              type="button"
-              onClick={() => navigate('/register')}
-              className="text-sm text-blue-400 hover:text-blue-300 font-semibold"
-            >
-              회원가입
-            </button>
+          <div className="border-t border-white/[0.06] pt-4 space-y-3">
+            <div className="text-center">
+              <span className="text-sm text-gray-500">계정이 없으신가요? </span>
+              <button
+                type="button"
+                onClick={() => navigate('/register')}
+                className="text-sm text-blue-400 hover:text-blue-300 font-semibold"
+              >
+                회원가입
+              </button>
+            </div>
+            <div className="text-center">
+              <button
+                type="button"
+                onClick={() => setShowForgotModal(true)}
+                className="text-xs text-gray-500 hover:text-gray-300 font-medium"
+              >
+                아이디/비밀번호를 잊으셨나요?
+              </button>
+            </div>
           </div>
         </div>
       </div>
+
+      {showForgotModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
+          <div className="bg-[#0a0c15] border border-white/[0.06] rounded-2xl p-6 max-w-sm text-center space-y-4">
+            <h2 className="text-lg font-bold text-white">비밀번호 찾기</h2>
+            <p className="text-sm text-gray-400">관리자에게 문의하세요.\n텔레그램: @solfort_admin</p>
+            <button
+              onClick={() => setShowForgotModal(false)}
+              className="w-full py-2.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl font-semibold hover:bg-emerald-500/30 transition-all"
+            >
+              닫기
+            </button>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
