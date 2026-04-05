@@ -2,6 +2,7 @@ export const Auth = {
   getToken: () => localStorage.getItem('sf_token'),
   getRole: () => localStorage.getItem('sf_role'),
   getDealerName: () => localStorage.getItem('sf_dealer_name'),
+  getAssignedDealer: () => localStorage.getItem('sf_assigned_dealer') || '',
   getUserId: () => localStorage.getItem('sf_user_id'),
   isLoggedIn: () => !!localStorage.getItem('sf_token'),
   isDealer: () => localStorage.getItem('sf_role') === 'dealer',
@@ -9,6 +10,7 @@ export const Auth = {
   isDealerAdmin: () => localStorage.getItem('sf_role') === 'dealer_admin',
   isCallAdmin: () => localStorage.getItem('sf_role') === 'call_admin',
   isSuperAdmin: () => localStorage.getItem('sf_role') === 'super_admin',
+  isManager: () => localStorage.getItem('sf_role') === 'manager',
   isAdmin: () => ['dealer_admin','call_admin','super_admin'].includes(localStorage.getItem('sf_role')),
   getHomeRoute: () => {
     const role = localStorage.getItem('sf_role');
@@ -17,6 +19,7 @@ export const Auth = {
     if (role === 'dealer_admin') return '/admin/dealer';
     if (role === 'call_admin') return '/admin/call';
     if (role === 'super_admin') return '/admin/super';
+    if (role === 'manager') return '/manager';
     return '/';
   },
   login: (data) => {

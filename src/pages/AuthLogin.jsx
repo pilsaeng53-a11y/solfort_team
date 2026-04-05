@@ -37,6 +37,9 @@ export default function AuthLogin() {
     const dealer = dealers.find(d => d.username === username && d.password === password && d.status === 'active');
     if (dealer) {
       Auth.login({ token: 'dealer_' + dealer.id, role: dealer.role || 'dealer', dealer_name: dealer.dealer_name, user_id: dealer.id });
+      if (dealer.role === 'manager') {
+        localStorage.setItem('sf_assigned_dealer', dealer.assigned_dealer || '');
+      }
       navigate(Auth.getHomeRoute());
       setLoading(false);
       return;
@@ -114,13 +117,10 @@ export default function AuthLogin() {
             <button
               type="button"
               onClick={() => navigate('/register')}
-              className="text-sm text-blue-400 hover:text-blue-300 underline"
+              className="text-sm text-blue-400 hover:text-blue-300 font-semibold"
             >
               회원가입
             </button>
-          </div>
-          <div className="mt-4 pt-4 border-t border-white/[0.06] text-center">
-            <p className="text-xs text-gray-500">계정이 없으신가요? <button onClick={() => navigate('/register')} className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">회원가입</button></p>
           </div>
         </div>
       </div>

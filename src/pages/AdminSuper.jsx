@@ -9,6 +9,7 @@ import PricingManager from "../components/PricingManager";
 import MemberManagementPanel from "../components/MemberManagementPanel";
 import SettlementPanel from "../components/SettlementPanel";
 import SalesOrderPanel from "../components/SalesOrderPanel";
+import ManagerAccountPanel from "../components/ManagerAccountPanel";
 import DealerDetailModal from "../components/DealerDetailModal";
 import ContentManagementPanel from "../components/ContentManagementPanel";
 import AnomalyPanel from "../components/AnomalyPanel";
@@ -19,7 +20,7 @@ const API = "https://solfort-js.onrender.com";
 const today = new Date().toISOString().split("T")[0];
 const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
 
-const DEALER_TABS = ["전체 현황", "딜러 관리", "딜러 계정", "매출", "단가/요율", "정산", "물량 처리"];
+const DEALER_TABS = ["전체 현황", "딜러 관리", "딜러 계정", "매니저 계정", "매출", "단가/요율", "정산", "물량 처리"];
 const CALL_TABS = ["콜팀 현황", "콜팀 계정", "자동화", "조직도", "콜 모니터링"];
 
 export default function AdminSuper() {
@@ -88,10 +89,11 @@ export default function AdminSuper() {
             {dealerTab === 0 && <DealerOverview />}
             {dealerTab === 1 && <DealerManagement />}
             {dealerTab === 2 && <MemberManagementPanel />}
-            {dealerTab === 3 && <SalesPanel />}
-            {dealerTab === 4 && <PricingManager />}
-            {dealerTab === 5 && <SettlementPanel />}
-            {dealerTab === 6 && <SalesOrderPanel />}
+            {dealerTab === 3 && <ManagerAccountPanel />}
+            {dealerTab === 4 && <SalesPanel />}
+            {dealerTab === 5 && <PricingManager />}
+            {dealerTab === 6 && <SettlementPanel />}
+            {dealerTab === 7 && <SalesOrderPanel />}
           </>
         )}
         {category === "call" && (
