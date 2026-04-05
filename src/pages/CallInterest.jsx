@@ -1,110 +1,116 @@
 import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
-import { Auth } from "@/lib/auth";
-import SFCard from "../components/SFCard";
-import { Star, TrendingUp } from "lucide-react";
+import CallNav from "@/components/CallNav";
+import SFCard from "@/components/SFCard";
+import { Star, Phone } from "lucide-react";
 
-const LEVEL_COLORS = {
-  높음: "bg-emerald-500/20 text-emerald-400 border-emerald-500/30",
-  중간: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30",
-  낮음: "bg-gray-500/20 text-gray-400 border-gray-500/30",
+const INTEREST_ORDER = { 높음: 0, 중간: 1, 낮음: 2 };
+const INTEREST_STYLE = {
+  높음: { badge: "bg-red-500/20 text-red-400 border-red-500/30", icon: "🔥" },
+  중간: { badge: "bg-yellow-500/20 text-yellow-400 border-yellow-500/30", icon: "⭐" },
+  낮음: { badge: "bg-gray-500/20 text-gray-400 border-gray-500/30", icon: "" },
 };
 
 function Loader() {
-  return <div className="flex justify-center py-16"><div className="w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" /></div>;
+  return <div className="flex justify-center py-20"><div className="w-7 h-7 border-2 border-emerald-500/30 border-t-emerald-400 rounded-full animate-spin" /></div>;
 }
 
 export default function CallInterest() {
-  const me = Auth.getDealerName();
+  const navigate = useNavigate();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [levelFilter, setLevelFilter] = useState("all");
-  const [converting, setConverting] = useState(null);
-  const [convertForm, setConvertForm] = useState({});
+  const [levelFilter, setLevelFilter] = useState("전체");
 
   useEffect(() => {
     document.title = "SolFort - 관심 고객";
-    base44.entities.CallLead.filter({ status: "관심있음" }, "-created_date", 200)
-      .then(setLeads).finally(() => setLoading(false));
+    base44.entities.CallLead.filter({ status: "관심있음" }, "-created_date", 300)
+      .then(data => {
+        const sorted = [...data].sort((a, b) => {
+          const lo = (INTEREST_ORDER[a.interest_level] ?? 2) - (INTEREST_ORDER[b.interest_level] ?? 2);
+          if (lo !== 0) return lo;
+          return (b.interest_amount || 0) - (a.interest_amount || 0);
+        });
+        setLeads(sorted);
+      })
+      .finally(() => setLoading(false));
   }, []);
 
-  const convert = async (lead) => {
-    const cf = convertForm[lead.id] || {};
-    setConverting(lead.id);
-    await base44.entities.CallLead.update(lead.id, {
-      status: "매출전환", dealer_name: cf.dealer_name || "",
-      converted_at: new Date().toISOString(),
-    });
-    setLeads(prev => prev.filter(l => l.id !== lead.id));
-    setConverting(null); setConvertForm(p => { const n = { ...p }; delete n[lead.id]; return n; });
-  };
+  const filtered = leads.filter(l => levelFilter === "전체" || l.interest_level === levelFilter);
+  const totalAmount = filtered.reduce((a, l) => a + (l.interest_amount || 0), 0);
 
-  const filtered = leads.filter(l => levelFilter === "all" || l.interest_level === levelFilter);
-
-  if (loading) return <Loader />;
-
-  const highCount = leads.filter(l => l.interest_level === "높음").length;
-  const midCount = leads.filter(l => l.interest_level === "중간").length;
-  const totalAmount = leads.reduce((a, l) => a + (l.interest_amount || 0), 0);
+  if (loading) return <><CallNav /><Loader /></>;
 
   return (
-    <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto">
-      <div className="flex items-center gap-2">
-        <Star className="h-5 w-5 text-yellow-400" />
-        <h1 className="text-lg font-bold text-white">관심 고객</h1>
-        <span className="text-xs bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">{leads.length}명</span>
-      </div>
+    <div className="min-h-screen bg-[#080a12]">
+      <CallNav />
+      <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto">
+        <div className="flex items-center gap-3">
+          <Star className="h-5 w-5 text-yellow-400" />
+          <h1 className="text-lg font-bold text-white">관심 고객</h1>
+          <span className="text-sm bg-yellow-500/20 text-yellow-400 px-2.5 py-0.5 rounded-full">총 {leads.length}명</span>
+        </div>
 
-      <div className="grid grid-cols-3 gap-3">
-        <SFCard><p className="text-[10px] text-gray-500">높음 관심</p><p className="text-xl font-bold text-emerald-400 mt-1">{highCount}명</p></SFCard>
-        <SFCard><p className="text-[10px] text-gray-500">중간 관심</p><p className="text-xl font-bold text-yellow-400 mt-1">{midCount}명</p></SFCard>
-        <SFCard><p className="text-[10px] text-gray-500">예상 금액</p><p className="text-xl font-bold text-purple-400 mt-1">₩{(totalAmount/10000).toFixed(0)}만</p></SFCard>
-      </div>
+        <div className="grid grid-cols-3 gap-3">
+          {[
+            { label: "🔥 높음", value: leads.filter(l=>l.interest_level==="높음").length, color: "text-red-400" },
+            { label: "⭐ 중간", value: leads.filter(l=>l.interest_level==="중간").length, color: "text-yellow-400" },
+            { label: "예상 금액", value: "₩" + (totalAmount/10000).toFixed(0) + "만", color: "text-emerald-400" },
+          ].map(s => (
+            <SFCard key={s.label} className="text-center py-3">
+              <p className={`text-xl font-bold ${s.color}`}>{s.value}</p>
+              <p className="text-[10px] text-gray-500 mt-0.5">{s.label}</p>
+            </SFCard>
+          ))}
+        </div>
 
-      <div className="flex gap-2">
-        {[["all","전체"],["높음","높음"],["중간","중간"],["낮음","낮음"]].map(([v,l]) => (
-          <button key={v} onClick={() => setLevelFilter(v)}
-            className={`px-3 py-1.5 rounded-lg text-xs transition-all ${levelFilter === v ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" : "bg-white/5 text-gray-400"}`}>{l}</button>
-        ))}
-      </div>
+        <div className="flex gap-2">
+          {["전체","높음","중간","낮음"].map(v => (
+            <button key={v} onClick={() => setLevelFilter(v)}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all ${levelFilter === v ? "bg-yellow-500/20 text-yellow-400 border border-yellow-500/30" : "bg-white/5 text-gray-500"}`}>
+              {v}
+            </button>
+          ))}
+        </div>
 
-      <div className="space-y-3">
-        {filtered.length === 0 && <p className="text-center py-10 text-xs text-gray-600">관심 고객이 없습니다</p>}
-        {filtered.map(lead => (
-          <SFCard key={lead.id}>
-            <div className="flex items-start justify-between gap-3">
-              <div className="flex-1">
-                <div className="flex items-center gap-2 flex-wrap">
-                  <span className="text-sm font-semibold text-white">{lead.name}</span>
-                  {lead.interest_level && (
-                    <span className={`text-[10px] px-2 py-0.5 rounded-full border ${LEVEL_COLORS[lead.interest_level] || "bg-white/5 text-gray-400 border-white/10"}`}>{lead.interest_level}</span>
-                  )}
-                </div>
-                <p className="text-xs text-gray-400 mt-0.5">{lead.phone}</p>
-                <div className="flex gap-3 mt-1 text-[10px] text-gray-500">
-                  {lead.interest_amount > 0 && <span className="text-emerald-400">₩{lead.interest_amount.toLocaleString()}</span>}
-                  {lead.next_call_date && <span className="text-yellow-400">📅 {lead.next_call_date}</span>}
-                  {lead.memo && <span>{lead.memo}</span>}
-                </div>
-                {convertForm[lead.id]?.showConvert && (
-                  <div className="mt-2 flex gap-2 items-center">
-                    <input placeholder="연결 대리점명" value={convertForm[lead.id]?.dealer_name || ""}
-                      onChange={e => setConvertForm(p => ({ ...p, [lead.id]: { ...p[lead.id], dealer_name: e.target.value } }))}
-                      className="flex-1 bg-white/5 border border-white/10 text-white rounded-lg px-2 py-1.5 text-xs" />
-                    <button onClick={() => convert(lead)} disabled={converting === lead.id}
-                      className="px-3 py-1.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-xs disabled:opacity-50">
-                      {converting === lead.id ? "처리 중" : "확인"}
-                    </button>
+        <div className="grid gap-3 md:grid-cols-2">
+          {filtered.length === 0 && <p className="col-span-2 text-center py-12 text-xs text-gray-600">관심 고객이 없습니다</p>}
+          {filtered.map(lead => {
+            const iStyle = INTEREST_STYLE[lead.interest_level] || INTEREST_STYLE.낮음;
+            return (
+              <SFCard key={lead.id}>
+                <div className="flex items-start justify-between gap-2">
+                  <div className="flex-1">
+                    <div className="flex items-center gap-2 flex-wrap">
+                      <span className="text-sm font-semibold text-white">{lead.name}</span>
+                      {lead.interest_level && (
+                        <span className={`text-[10px] px-2 py-0.5 rounded-full border ${iStyle.badge}`}>{iStyle.icon} {lead.interest_level}</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-400 mt-1">{lead.phone}</p>
+                    {lead.interest_amount > 0 && (
+                      <p className="text-sm text-emerald-400 font-semibold mt-1">₩{Number(lead.interest_amount).toLocaleString()}</p>
+                    )}
+                    <p className={`text-[10px] mt-1 ${lead.next_call_date ? "text-yellow-400" : "text-red-400"}`}>
+                      📅 {lead.next_call_date || "재콜일 미지정"}
+                    </p>
+                    {lead.memo && <p className="text-[10px] text-gray-600 mt-1 truncate">{lead.memo}</p>}
                   </div>
-                )}
-              </div>
-              <button onClick={() => setConvertForm(p => ({ ...p, [lead.id]: { ...p[lead.id], showConvert: !p[lead.id]?.showConvert } }))}
-                className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-[10px] hover:bg-purple-500/30 transition-all shrink-0">
-                <TrendingUp className="h-3 w-3" /> 매출 전환
-              </button>
-            </div>
-          </SFCard>
-        ))}
+                </div>
+                <div className="flex gap-2 mt-3 pt-3 border-t border-white/[0.06]">
+                  <button onClick={() => navigate("/call/logs")}
+                    className="flex-1 flex items-center justify-center gap-1 py-1.5 bg-white/5 text-gray-400 rounded-lg text-[10px] hover:bg-white/10 transition-all">
+                    <Phone className="h-3 w-3" /> 콜 기록
+                  </button>
+                  <button onClick={() => navigate("/call/convert", { state: { lead } })}
+                    className="flex-1 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-[10px] hover:bg-emerald-500/30 transition-all">
+                    매출 등록
+                  </button>
+                </div>
+              </SFCard>
+            );
+          })}
+        </div>
       </div>
     </div>
   );
