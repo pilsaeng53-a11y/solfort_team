@@ -265,8 +265,6 @@ function DealerOverview() {
     return !q || d.dealer_name?.toLowerCase().includes(q) || d.owner_name?.toLowerCase().includes(q) || d.phone?.includes(q);
   });
 
-  if (loading) return <Loader />;
-
   return (
     <>
       <div className="space-y-4">
@@ -280,7 +278,7 @@ function DealerOverview() {
               ))}
             </tr></thead>
             <tbody>
-              {filtered.map(d => (
+              {filteredDealers.map(d => (
                 <tr key={d.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                   <td className="py-3 px-2">
                     <button onClick={() => setSelectedDealer(d)} className="text-white font-medium hover:text-purple-400 transition-colors text-left">
@@ -350,9 +348,9 @@ function DealerManagement() {
     setUpdating(null);
   };
 
-  const pending = dealers.filter(d => d.status === "pending");
-  const base = statusFilter === "all" ? dealers : dealers.filter(d => d.status === statusFilter);
-  const filtered = base.filter(d => {
+  const pendingDealers = dealers.filter(d => d.status === "pending");
+  const baseDealers = statusFilter === "all" ? dealers : dealers.filter(d => d.status === statusFilter);
+  const filteredDealers = baseDealers.filter(d => {
     const q = search.toLowerCase();
     return !q || d.dealer_name?.toLowerCase().includes(q) || d.owner_name?.toLowerCase().includes(q) || d.phone?.includes(q);
   });
@@ -363,11 +361,11 @@ function DealerManagement() {
     <>
       <div className="space-y-8">
         {/* Pending */}
-        {pending.length > 0 && (
+          {pendingDealers.length > 0 && (
           <div>
             <div className="flex items-center gap-2 mb-3">
               <h3 className="text-sm font-semibold text-white">승인 대기</h3>
-              <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">{pending.length}건</span>
+              <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">{pendingDealers.length}건</span>
             </div>
             <div className="overflow-x-auto">
               <table className="w-full text-xs">
@@ -377,7 +375,7 @@ function DealerManagement() {
                   ))}
                 </tr></thead>
                 <tbody>
-                  {pending.map(d => (
+                  {pendingDealers.map(d => (
                     <tr key={d.id} className="border-b border-white/[0.04]">
                       <td className="py-3 px-2 text-gray-500">{d.created_date?.split("T")[0]}</td>
                       <td className="py-3 px-2 text-white">{d.dealer_name}</td>
@@ -477,14 +475,13 @@ function SalesPanel() {
   const now = new Date();
   const [startDate, setStartDate] = useState(`${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}-01`);
   const [endDate, setEndDate] = useState(today);
-  const isSuperAdmin = Auth.isSuperAdmin();
 
   useEffect(() => {
     base44.entities.SalesRecord.list("-sale_date", 5000).then(setSales).finally(() => setLoading(false));
   }, []);
 
   const period = sales.filter(s => s.sale_date >= startDate && s.sale_date <= endDate);
-  const filtered = period.filter(r => {
+  const filteredSales = period.filter(r => {
     const q = search.toLowerCase();
     const matchSearch = !q || r.customer_name?.toLowerCase().includes(q) || r.phone?.includes(q) || r.dealer_name?.toLowerCase().includes(q);
     const matchStatus = statusFilter === "all" || r.customer_status === statusFilter;
@@ -527,7 +524,7 @@ function SalesPanel() {
             ))}
           </tr></thead>
           <tbody>
-            {filtered.slice(0, 200).map(r => (
+            {filteredSales.slice(0, 200).map(r => (
               <tr key={r.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                 <td className="py-2.5 px-2 text-gray-500">{r.sale_date}</td>
                 <td className="py-2.5 px-2 text-gray-400">{r.dealer_name}</td>
@@ -544,7 +541,7 @@ function SalesPanel() {
             ))}
           </tbody>
         </table>
-        <p className="text-xs text-gray-600 mt-2">{filtered.length}건 (최대 200건 표시)</p>
+        <p className="text-xs text-gray-600 mt-2">{filteredSales.length}건 (최대 200건 표시)</p>
       </div>
     </div>
   );
@@ -632,9 +629,9 @@ function CallAccountManagement() {
     setUpdating(null);
   };
 
-  const pending = members.filter(m => m.status === "pending");
-  const base = statusFilter === "all" ? members : members.filter(m => m.status === statusFilter);
-  const filtered = base.filter(m => {
+  const pendingMembers = members.filter(m => m.status === "pending");
+  const baseMembers = statusFilter === "all" ? members : members.filter(m => m.status === statusFilter);
+  const filteredMembers = baseMembers.filter(m => {
     const q = search.toLowerCase();
     return !q || m.name?.toLowerCase().includes(q) || m.username?.toLowerCase().includes(q) || m.team?.toLowerCase().includes(q);
   });
@@ -643,21 +640,21 @@ function CallAccountManagement() {
 
   return (
     <div className="space-y-8">
-      {pending.length > 0 && (
-        <div>
-          <div className="flex items-center gap-2 mb-3">
-            <h3 className="text-sm font-semibold text-white">콜팀 승인 대기</h3>
-            <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">{pending.length}건</span>
-          </div>
-          <div className="overflow-x-auto">
-            <table className="w-full text-xs">
-              <thead><tr className="text-gray-500 border-b border-white/[0.06]">
-                {["가입일", "이름", "아이디", "연락처", "소속팀", "처리"].map(h => (
-                  <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>
-                ))}
-              </tr></thead>
-              <tbody>
-                {pending.map(m => (
+      {pendingMembers.length > 0 && (
+       <div>
+         <div className="flex items-center gap-2 mb-3">
+           <h3 className="text-sm font-semibold text-white">콜팀 승인 대기</h3>
+           <span className="text-[10px] bg-yellow-500/20 text-yellow-400 px-2 py-0.5 rounded-full">{pendingMembers.length}건</span>
+           </div>
+           <div className="overflow-x-auto">
+             <table className="w-full text-xs">
+               <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                 {["가입일", "이름", "아이디", "연락처", "소속팀", "처리"].map(h => (
+                   <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>
+                 ))}
+               </tr></thead>
+               <tbody>
+                 {pendingMembers.map(m => (
                   <tr key={m.id} className="border-b border-white/[0.04]">
                     <td className="py-3 px-2 text-gray-500">{m.created_date?.split("T")[0]}</td>
                     <td className="py-3 px-2 text-white font-medium">{m.name}</td>
@@ -700,7 +697,7 @@ function CallAccountManagement() {
               ))}
             </tr></thead>
             <tbody>
-              {filtered.map(m => (
+              {filteredMembers.map(m => (
                 <tr key={m.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                   <td className="py-3 px-2 text-white font-medium">{m.name}</td>
                   <td className="py-3 px-2 text-gray-500">{m.username}</td>
