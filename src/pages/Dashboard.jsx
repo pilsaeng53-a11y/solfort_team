@@ -10,7 +10,7 @@ import StatCard from "../components/StatCard";
 import WalletDisplay from "../components/WalletDisplay";
 import useMarketData from "../lib/useMarketData";
 import useDealer from "../lib/useDealer";
-import { UserPlus, FileText, Trophy, Send, TrendingUp, Users, DollarSign, Download } from "lucide-react";
+import { UserPlus, FileText, Trophy, Send, TrendingUp, Users, DollarSign, Download, Check, X } from "lucide-react";
 import { utils, writeFile } from "xlsx";
 
 export default function Dashboard() {
@@ -21,6 +21,8 @@ export default function Dashboard() {
   const [records, setRecords] = useState([]);
   const [loading, setLoading] = useState(true);
   const [orders, setOrders] = useState([]);
+  const [dispatchRequests, setDispatchRequests] = useState([]);
+  const [updating, setUpdating] = useState(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -62,9 +64,18 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (dealer?.dealer_name) {
-      base44.entities.SalesOrder.list("-created_date", 100)
-        .then(all => setOrders(all.filter(o => o.dealer_name === dealer.dealer_name)))
-        .catch(() => setOrders([]));
+      Promise.all([
+        base44.entities.SalesOrder.list("-created_date", 100),
+        base44.entities.MeetingDispatchRequest.filter({ target_dealer_name: dealer.dealer_name }, "-requested_at", 50),
+      ])
+        .then(([allOrders, reqs]) => {
+          setOrders(allOrders.filter(o => o.dealer_name === dealer.dealer_name));
+          setDispatchRequests(reqs);
+        })
+        .catch(() => {
+          setOrders([]);
+          setDispatchRequests([]);
+        });
     }
   }, [dealer]);
 
@@ -88,6 +99,26 @@ export default function Dashboard() {
     navigate("/");
     return null;
   }
+
+  const updateDispatchStatus = async (id, newStatus) => {
+    setUpdating(id);
+    try {
+      const request = dispatchRequests.find(r => r.id === id);
+      await base44.entities.MeetingDispatchRequest.update(id, { status: newStatus });
+      setDispatchRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
+      
+      const statusLabel = newStatus === "accepted" ? "수락" : "거절";
+      const msg = `[${dealer.dealer_name}] 파견요청 ${statusLabel}: ${request.customer_name}`;
+      const botToken = "8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8";
+      const chatId = "5757341051";
+      fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ chat_id: chatId, text: msg }),
+      }).catch(() => {});
+    } catch (e) {}
+    setUpdating(null);
+  };
 
   const grade = dealer.grade || "GREEN";
   const commission = GRADE_CONFIG[grade]?.commission || "10%";
@@ -227,6 +258,45 @@ export default function Dashboard() {
             </div>
           )}
         </SFCard>
+
+        {/* Dispatch Requests Section */}
+        {dispatchRequests.length > 0 && (
+          <SFCard>
+            <p className="text-xs text-gray-500 mb-3">📤 파견 요청 현황 ({dispatchRequests.length})</p>
+            <div className="space-y-2 max-h-72 overflow-y-auto">
+              {dispatchRequests.map(req => {
+                const isPending = req.status === "pending";
+                const statusColor = req.status === "pending" ? "bg-yellow-500/20 text-yellow-400" : req.status === "accepted" ? "bg-emerald-500/20 text-emerald-400" : "bg-red-500/20 text-red-400";
+                const statusLabel = req.status === "pending" ? "대기" : req.status === "accepted" ? "수락" : "거절";
+                return (
+                  <div key={req.id} className="flex items-start justify-between gap-3 border-l-2 border-purple-500/30 pl-3 py-2.5 text-xs">
+                    <div className="flex-1 min-w-0">
+                      <p className="text-white font-medium truncate">{req.customer_name} ({req.customer_phone})</p>
+                      <p className="text-gray-500 text-[10px] mt-0.5">요청자: {req.caller_name}</p>
+                      {req.memo && <p className="text-gray-600 text-[10px] mt-0.5 line-clamp-1">{req.memo}</p>}
+                      <p className="text-gray-600 text-[10px] mt-0.5">{req.requested_at?.split("T")[0]}</p>
+                    </div>
+                    <div className="flex items-center gap-1.5 shrink-0">
+                      <span className={`px-2 py-0.5 rounded-full text-[9px] font-medium whitespace-nowrap ${statusColor}`}>{statusLabel}</span>
+                      {isPending && (
+                        <>
+                          <button onClick={() => updateDispatchStatus(req.id, "accepted")} disabled={updating === req.id}
+                            className="p-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded hover:bg-emerald-500/30 disabled:opacity-50 transition-all">
+                            <Check className="h-3 w-3" />
+                          </button>
+                          <button onClick={() => updateDispatchStatus(req.id, "rejected")} disabled={updating === req.id}
+                            className="p-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded hover:bg-red-500/30 disabled:opacity-50 transition-all">
+                            <X className="h-3 w-3" />
+                          </button>
+                        </>
+                      )}
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </SFCard>
+        )}
 
         {/* Orders Section */}
         {orders.length > 0 && (
