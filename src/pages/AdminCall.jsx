@@ -8,7 +8,7 @@ import SFCard from "../components/SFCard";
 import { BarChart, Bar, XAxis, YAxis, Tooltip, ResponsiveContainer, PieChart, Pie, Cell, Legend } from "recharts";
 
 const API = "https://solfort-js.onrender.com";
-const TABS = ["전체 현황", "콜팀 계정 관리", "자동화", "리포트", "콜팀 리드 현황", "이상 알림"];
+const TABS = ["전체 현황", "콜팀 계정 관리", "자동화", "리포트", "콜팀 리드 현황", "이상 알림", "인센티브 관리"];
 const today = new Date().toISOString().split("T")[0];
 const PERIOD_OPTIONS = [{ key: "today", label: "오늘" }, { key: "week", label: "이번주" }, { key: "month", label: "이번달" }, { key: "custom", label: "직접입력" }];
 const COMMISSION_RATES = { GREEN: 10, PURPLE: 30, GOLD: 40, PLATINUM: 50 };
@@ -34,6 +34,7 @@ export default function AdminCall() {
         {tab === 3 && <ReportPanel accent="emerald" />}
         {tab === 4 && <CallLeadMonitor />}
         {tab === 5 && <AnomalyAlerts />}
+        {tab === 6 && <IncentivePanel />}
       </div>
     </div>
   );
@@ -684,6 +685,182 @@ export function ReportPanel({ accent = "emerald" }) {
 
 function Loader() {
   return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" /></div>;
+}
+
+/* ── 탭 7: 인센티브 관리 ── */
+function IncentivePanel() {
+  const [unitPrice, setUnitPrice] = useState("");
+  const [ratePercent, setRatePercent] = useState("");
+  const [savingSetting, setSavingSetting] = useState(false);
+  const [members, setMembers] = useState([]);
+  const [conversions, setConversions] = useState([]);
+  const [salesData, setSalesData] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [paidRecords, setPaidRecords] = useState([]);
+
+  const currentMonth = new Date().toISOString().slice(0, 7);
+  const monthStart = `${currentMonth}-01`;
+  const monthEnd = new Date(new Date().getFullYear(), new Date().getMonth() + 1, 0).toISOString().slice(0, 10);
+
+  useEffect(() => {
+    Promise.all([
+      base44.entities.CallTeamMember.filter({ status: "active" }, "-created_date", 200),
+      base44.entities.CallLead.filter({ status: "매출전환" }, "-converted_at", 500),
+      base44.entities.SalesRecord.list("-created_date", 2000),
+      base44.entities.SystemSettings.filter({ setting_key: "incentive_unit_price" }),
+      base44.entities.SystemSettings.filter({ setting_key: "incentive_rate_percent" }),
+      base44.entities.SystemLog.filter({ action: "incentive_paid" }),
+    ]).then(([m, c, s, up, rp, logs]) => {
+      setMembers(m);
+      setConversions(c);
+      setSalesData(s);
+      if (up.length > 0) setUnitPrice(up[0].setting_value);
+      if (rp.length > 0) setRatePercent(rp[0].setting_value);
+      setPaidRecords(logs);
+      setLoading(false);
+    });
+  }, []);
+
+  const saveSetting = async () => {
+    setSavingSetting(true);
+    try {
+      const upExisting = await base44.entities.SystemSettings.filter({ setting_key: "incentive_unit_price" });
+      if (upExisting.length > 0) {
+        await base44.entities.SystemSettings.update(upExisting[0].id, { setting_value: unitPrice });
+      } else {
+        await base44.entities.SystemSettings.create({ setting_key: "incentive_unit_price", setting_value: unitPrice, setting_label: "인센티브 건당단가(KRW)" });
+      }
+
+      const rpExisting = await base44.entities.SystemSettings.filter({ setting_key: "incentive_rate_percent" });
+      if (rpExisting.length > 0) {
+        await base44.entities.SystemSettings.update(rpExisting[0].id, { setting_value: ratePercent });
+      } else {
+        await base44.entities.SystemSettings.create({ setting_key: "incentive_rate_percent", setting_value: ratePercent, setting_label: "인센티브 금액비율(%)" });
+      }
+      alert("✅ 기준설정이 저장되었습니다.");
+    } catch (e) {
+      alert(`❌ 저장 실패: ${e.message}`);
+    }
+    setSavingSetting(false);
+  };
+
+  const calculateIncentive = (member) => {
+    const converted = conversions.filter(c => c.assigned_to === member.username && (c.converted_at || "").startsWith(currentMonth)).length;
+    const sales = salesData.filter(s => s.dealer_name === member.name && s.sale_date >= monthStart && s.sale_date <= monthEnd);
+    const totalSales = sales.reduce((a, s) => a + (s.sales_amount || 0), 0);
+
+    const unitIncentive = parseInt(unitPrice || 0) * converted;
+    const amountIncentive = Math.round(totalSales * (parseInt(ratePercent || 0) / 100));
+    const total = unitIncentive + amountIncentive;
+
+    return { converted, totalSales, salesCount: sales.length, unitIncentive, amountIncentive, total };
+  };
+
+  const handlePaid = async (member) => {
+    const inc = calculateIncentive(member);
+    if (inc.total === 0) { alert("인센티브가 없습니다."); return; }
+    
+    try {
+      await base44.entities.SystemLog.create({
+        log_type: "incentive",
+        actor: Auth.getDealerName(),
+        actor_role: Auth.getRole(),
+        target: member.name,
+        action: "incentive_paid",
+        after_value: `${inc.total}원`,
+      });
+      setPaidRecords(prev => [...prev, { id: Date.now(), target: member.name, after_value: `${inc.total}원`, created_at: new Date().toISOString() }]);
+      alert(`✅ ${member.name}님에게 ₩${inc.total.toLocaleString()} 지급 처리되었습니다.`);
+    } catch (e) {
+      alert(`❌ 처리 실패: ${e.message}`);
+    }
+  };
+
+  if (loading) return <Loader />;
+
+  const memberStats = members.map(m => ({ ...m, ...calculateIncentive(m) })).sort((a, b) => b.total - a.total);
+
+  return (
+    <div className="space-y-6">
+      {/* 기준설정 */}
+      <SFCard>
+        <h3 className="text-sm font-semibold text-white mb-4">📋 기준설정</h3>
+        <div className="grid grid-cols-2 gap-4 max-w-lg">
+          <div>
+            <label className="text-xs text-gray-400 block mb-2">건당단가 (KRW)</label>
+            <input type="number" value={unitPrice} onChange={e => setUnitPrice(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+          </div>
+          <div>
+            <label className="text-xs text-gray-400 block mb-2">금액×% 비율</label>
+            <input type="number" value={ratePercent} onChange={e => setRatePercent(e.target.value)}
+              className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+          </div>
+        </div>
+        <button onClick={saveSetting} disabled={savingSetting}
+          className="mt-4 px-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-medium hover:bg-emerald-500/30 disabled:opacity-50">
+          {savingSetting ? "저장 중..." : "💾 저장"}
+        </button>
+      </SFCard>
+
+      {/* 이번달 계산 */}
+      <div>
+        <h3 className="text-sm font-semibold text-white mb-3">📊 이번달 계산 ({currentMonth})</h3>
+        <div className="overflow-x-auto">
+          <table className="w-full text-xs">
+            <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+              {["이름", "전환건수", "총매출", "건수인센", "금액인센", "합계", "액션"].map(h => (
+                <th key={h} className="text-left py-3 px-2 font-medium whitespace-nowrap">{h}</th>
+              ))}
+            </tr></thead>
+            <tbody>
+              {memberStats.map(m => (
+                <tr key={m.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                  <td className="py-3 px-2 text-white font-medium">{m.name}</td>
+                  <td className="py-3 px-2 text-blue-400 font-bold">{m.converted}건</td>
+                  <td className="py-3 px-2 text-yellow-400">₩{m.totalSales.toLocaleString()}</td>
+                  <td className="py-3 px-2 text-emerald-400">₩{m.unitIncentive.toLocaleString()}</td>
+                  <td className="py-3 px-2 text-purple-400">₩{m.amountIncentive.toLocaleString()}</td>
+                  <td className="py-3 px-2 text-white font-bold text-base">₩{m.total.toLocaleString()}</td>
+                  <td className="py-3 px-2">
+                    <button onClick={() => handlePaid(m)} disabled={m.total === 0}
+                      className="text-[10px] bg-green-500/20 text-green-400 border border-green-500/30 px-2.5 py-1 rounded hover:bg-green-500/30 disabled:opacity-30 transition-all">
+                      ✅ 지급완료
+                    </button>
+                  </td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      {/* 지급이력 */}
+      {paidRecords.length > 0 && (
+        <div>
+          <h3 className="text-sm font-semibold text-white mb-3">📜 지급이력 (최근 50건)</h3>
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                {["지급자", "지급금액", "지급일시"].map(h => (
+                  <th key={h} className="text-left py-3 px-2 font-medium whitespace-nowrap">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {paidRecords.slice(0, 50).map(r => (
+                  <tr key={r.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                    <td className="py-3 px-2 text-white font-medium">{r.target}</td>
+                    <td className="py-3 px-2 text-emerald-400 font-bold">{r.after_value}</td>
+                    <td className="py-3 px-2 text-gray-500">{(r.created_at || "").slice(0, 16).replace("T", " ")}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        </div>
+      )}
+    </div>
+  );
 }
 
 /* ── 탭 6: 이상 알림 ── */
