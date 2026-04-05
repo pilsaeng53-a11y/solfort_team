@@ -29,7 +29,16 @@ export default function Register() {
   const termsRef = useRef(null);
 
   const handleForm = k => e => {
-    setForm(p => ({ ...p, [k]: e.target.value }));
+    let value = e.target.value;
+    if (k === 'phone') {
+      value = value.replace(/\D/g, '').slice(0, 11);
+      if (value.length >= 6) {
+        value = value.slice(0, 3) + '-' + value.slice(3, 7) + '-' + value.slice(7);
+      } else if (value.length >= 3) {
+        value = value.slice(0, 3) + '-' + value.slice(3);
+      }
+    }
+    setForm(p => ({ ...p, [k]: value }));
     if (k === 'username') setDuplicateError('');
   };
 
@@ -226,77 +235,109 @@ export default function Register() {
               <h2 className="text-sm font-bold text-white mb-4">정보 입력</h2>
               {role === 'dealer' ? (
                 <>
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">대리점명 <span className="text-red-400">*</span></label>
-                    <input value={form.dealer_name} onChange={handleForm('dealer_name')} placeholder="예: ABC 대리점"
-                      className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">대리점주 이름 <span className="text-red-400">*</span></label>
-                    <input value={form.name} onChange={handleForm('name')} placeholder="홍길동"
-                      className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">지역</label>
-                    <input value={form.region} onChange={handleForm('region')} placeholder="서울"
-                      className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">추천코드</label>
-                    <input value={form.referral_code} onChange={handleForm('referral_code')} placeholder="선택사항"
-                      className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-                  </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">아이디 <span className="text-red-400">*</span></label>
+                      <input value={form.username} onChange={handleForm('username')} placeholder="영문/숫자"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                      {duplicateError && <p className="text-[10px] text-red-400 mt-1">{duplicateError}</p>}
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">비밀번호 <span className="text-red-400">*</span></label>
+                      <div className="relative">
+                        <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleForm('password')}
+                          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600 pr-9" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">비밀번호 확인 <span className="text-red-400">*</span></label>
+                      <div className="relative">
+                        <input type={showPasswordConfirm ? 'text' : 'password'} value={form.passwordConfirm} onChange={handleForm('passwordConfirm')}
+                          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600 pr-9" />
+                        <button type="button" onClick={() => setShowPasswordConfirm(!showPasswordConfirm)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                          {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">대리점명 <span className="text-red-400">*</span></label>
+                      <input value={form.dealer_name} onChange={handleForm('dealer_name')} placeholder="예: ABC 대리점"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">대리점주 이름 <span className="text-red-400">*</span></label>
+                      <input value={form.name} onChange={handleForm('name')} placeholder="홍길동"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">연락처 <span className="text-red-400">*</span></label>
+                      <input value={form.phone} onChange={handleForm('phone')} placeholder="010-1234-5678"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">지역</label>
+                      <input value={form.region} onChange={handleForm('region')} placeholder="서울"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">추천코드</label>
+                      <input value={form.referral_code} onChange={handleForm('referral_code')} placeholder="선택사항"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
                 </>
               ) : (
                 <>
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">이름 <span className="text-red-400">*</span></label>
-                    <input value={form.name} onChange={handleForm('name')} placeholder="홍길동"
-                      className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">소속팀 <span className="text-red-400">*</span></label>
-                    <input value={form.team} onChange={handleForm('team')} placeholder="A팀"
-                      className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-                  </div>
-                  <div>
-                    <label className="text-xs text-gray-400 block mb-1">사원번호</label>
-                    <input value={form.employee_id} onChange={handleForm('employee_id')} placeholder="선택사항"
-                      className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-                  </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">아이디 <span className="text-red-400">*</span></label>
+                      <input value={form.username} onChange={handleForm('username')} placeholder="영문/숫자"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                      {duplicateError && <p className="text-[10px] text-red-400 mt-1">{duplicateError}</p>}
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">비밀번호 <span className="text-red-400">*</span></label>
+                      <div className="relative">
+                        <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleForm('password')}
+                          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600 pr-9" />
+                        <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                          {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">비밀번호 확인 <span className="text-red-400">*</span></label>
+                      <div className="relative">
+                        <input type={showPasswordConfirm ? 'text' : 'password'} value={form.passwordConfirm} onChange={handleForm('passwordConfirm')}
+                          className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600 pr-9" />
+                        <button type="button" onClick={() => setShowPasswordConfirm(!showPasswordConfirm)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
+                          {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
+                        </button>
+                      </div>
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">이름 <span className="text-red-400">*</span></label>
+                      <input value={form.name} onChange={handleForm('name')} placeholder="홍길동"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">연락처 <span className="text-red-400">*</span></label>
+                      <input value={form.phone} onChange={handleForm('phone')} placeholder="010-1234-5678"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">소속팀 <span className="text-red-400">*</span></label>
+                      <input value={form.team} onChange={handleForm('team')} placeholder="A팀"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
+                    <div>
+                      <label className="text-xs text-gray-400 block mb-1">사원번호</label>
+                      <input value={form.employee_id} onChange={handleForm('employee_id')} placeholder="선택사항"
+                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                    </div>
                 </>
               )}
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">아이디 <span className="text-red-400">*</span></label>
-                <input value={form.username} onChange={handleForm('username')} placeholder="영문/숫자"
-                  className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-                {duplicateError && <p className="text-[10px] text-red-400 mt-1">{duplicateError}</p>}
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">연락처 <span className="text-red-400">*</span></label>
-                <input value={form.phone} onChange={handleForm('phone')} placeholder="01012345678"
-                  className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">비밀번호 <span className="text-red-400">*</span></label>
-                <div className="relative">
-                  <input type={showPassword ? 'text' : 'password'} value={form.password} onChange={handleForm('password')}
-                    className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600 pr-9" />
-                  <button type="button" onClick={() => setShowPassword(!showPassword)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
-                    {showPassword ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">비밀번호 확인 <span className="text-red-400">*</span></label>
-                <div className="relative">
-                  <input type={showPasswordConfirm ? 'text' : 'password'} value={form.passwordConfirm} onChange={handleForm('passwordConfirm')}
-                    className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600 pr-9" />
-                  <button type="button" onClick={() => setShowPasswordConfirm(!showPasswordConfirm)} className="absolute right-3 top-2.5 text-gray-500 hover:text-gray-300">
-                    {showPasswordConfirm ? <EyeOff className="h-4 w-4" /> : <Eye className="h-4 w-4" />}
-                  </button>
-                </div>
-              </div>
+
               <div className="flex gap-2 mt-6">
                 <button onClick={handleBack}
                   className="flex-1 py-2.5 bg-white/5 text-gray-400 rounded-xl text-sm font-semibold hover:bg-white/10 transition-all">
@@ -304,7 +345,7 @@ export default function Register() {
                 </button>
                 <button onClick={handleStep3Submit} disabled={saving}
                   className="flex-1 py-2.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-xl text-sm font-semibold hover:bg-emerald-500/30 disabled:opacity-40 transition-all">
-                  {saving ? '신청 중...' : '신청하기'}
+                  {saving ? '신청 중...' : role === 'dealer' ? '대리점 가입 신청' : '콜팀 가입 신청'}
                 </button>
               </div>
             </div>
@@ -323,7 +364,12 @@ export default function Register() {
             </div>
           )}
         </div>
-      </div>
-    </div>
-  );
+        </div>
+
+        {/* Bottom login link */}
+        <div className="py-4 text-center border-t border-white/[0.06]">
+        <p className="text-xs text-gray-500">이미 계정이 있으신가요? <button onClick={() => navigate('/')} className="text-blue-400 hover:text-blue-300 font-semibold transition-colors">로그인</button></p>
+        </div>
+        </div>
+        );
 }
