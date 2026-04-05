@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Auth } from "@/lib/auth";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
-import { Plus, X, ChevronDown } from "lucide-react";
+import { Plus, X, ChevronDown, Send } from "lucide-react";
 
 const STATUS_OPTS = ["신규", "연락됨", "관심있음", "거절", "매출전환"];
 const COLOR_FILTERS = [
@@ -49,13 +49,24 @@ export default function CallLeads() {
   const [saving, setSaving] = useState(false);
   const [openStatus, setOpenStatus] = useState(null);
   const [tagFilter, setTagFilter] = useState("");
+  const [memos, setMemos] = useState({});
+  const [memoInput, setMemoInput] = useState({});
 
   useEffect(() => {
     document.title = "SolFort - 고객 리드";
     load();
   }, []);
 
-  const load = () => base44.entities.CallLead.list("-created_date", 500).then(setLeads).finally(() => setLoading(false));
+  const load = async () => {
+    const l = await base44.entities.CallLead.list("-created_date", 500);
+    setLeads(l);
+    const m = {};
+    for (const lead of l) {
+      m[lead.id] = await base44.entities.FollowupMemo.filter({ lead_id: lead.id }, '-created_at', 100);
+    }
+    setMemos(m);
+    setLoading(false);
+  };
   const set = k => e => setForm(p => ({ ...p, [k]: e.target.value }));
 
   const save = async () => {
@@ -91,6 +102,21 @@ export default function CallLeads() {
       form.tags = tags.join(",");
     }
     setForm({ ...form });
+  };
+
+  const saveMemo = async (leadId) => {
+    const text = memoInput[leadId]?.trim();
+    if (!text) return;
+    const user = await base44.auth.me();
+    await base44.entities.FollowupMemo.create({
+      lead_id: leadId,
+      memo: text,
+      created_by: user.full_name || me,
+      created_at: new Date().toISOString(),
+    });
+    setMemoInput(p => ({ ...p, [leadId]: '' }));
+    const updated = await base44.entities.FollowupMemo.filter({ lead_id: leadId }, '-created_at', 100);
+    setMemos(p => ({ ...p, [leadId]: updated }));
   };
 
   const filtered = leads.filter(l => {
@@ -149,12 +175,13 @@ export default function CallLeads() {
         <div className="space-y-2">
           {filtered.length === 0 && <p className="text-center py-12 text-xs text-gray-600">리드가 없습니다</p>}
           {filtered.map(lead => {
-            const iStyle = INTEREST_STYLE[lead.interest_level] || INTEREST_STYLE["낙음"];
-            const borderCls = COLOR_BORDER[lead.color_tag] || "border-l-4 border-transparent";
-            return (
-              <SFCard key={lead.id} className={borderCls}>
-                <div className="flex items-start gap-3" >
-                  <div className="flex-1 min-w-0">
+           const iStyle = INTEREST_STYLE[lead.interest_level] || INTEREST_STYLE["낙음"];
+           const borderCls = COLOR_BORDER[lead.color_tag] || "border-l-4 border-transparent";
+           return (
+              <div key={lead.id} className="space-y-2">
+               <SFCard className={borderCls}>
+               <div className="flex items-start gap-3" >
+                 <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
                       <span className="text-sm font-semibold text-white">{lead.name}</span>
                       <span className={`text-[10px] px-2 py-0.5 rounded-full ${STATUS_BADGE[lead.status] || "bg-white/5 text-gray-400"}`}>{lead.status}</span>
@@ -205,6 +232,42 @@ export default function CallLeads() {
                   </div>
                 </div>
               </SFCard>
+              
+              {/* Memo Section */}
+              <SFCard className="bg-white/[0.02]">
+                <p className="text-xs font-semibold text-gray-400 mb-2.5">📝 팔로우업 메모</p>
+                <div className="space-y-2 max-h-40 overflow-y-auto mb-3">
+                  {(memos[lead.id] || []).length === 0 ? (
+                    <p className="text-[10px] text-gray-600 text-center py-2">메모가 없습니다</p>
+                  ) : (
+                    (memos[lead.id] || []).map((m, idx) => (
+                      <div key={idx} className="border-l-2 border-blue-500/30 pl-2.5 py-1.5">
+                        <div className="flex items-center justify-between">
+                          <span className="text-[10px] text-gray-500">{m.created_by}</span>
+                          <span className="text-[10px] text-gray-600">{m.created_at?.substring(0,10)}</span>
+                        </div>
+                        <p className="text-[11px] text-gray-300 mt-0.5">{m.memo}</p>
+                      </div>
+                    ))
+                  )}
+                </div>
+                <div className="flex gap-1.5">
+                  <input
+                    value={memoInput[lead.id] || ''}
+                    onChange={e => setMemoInput(p => ({ ...p, [lead.id]: e.target.value }))}
+                    onKeyPress={e => e.key === 'Enter' && saveMemo(lead.id)}
+                    placeholder="메모 입력..."
+                    className="flex-1 bg-white/5 border border-white/10 text-white rounded-lg px-2.5 py-1.5 text-[10px] placeholder:text-gray-600"
+                  />
+                  <button
+                    onClick={() => saveMemo(lead.id)}
+                    className="px-2.5 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg hover:bg-blue-500/30 transition-all"
+                  >
+                    <Send className="h-3.5 w-3.5" />
+                  </button>
+                </div>
+              </SFCard>
+              </div>
             );
           })}
         </div>
