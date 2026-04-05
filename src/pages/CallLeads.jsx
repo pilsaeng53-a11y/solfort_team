@@ -105,14 +105,11 @@ export default function CallLeads() {
             </button>
           ))}
         </div>
-
         <div className="flex flex-wrap gap-2">
-          {COLOR_FILTERS.map(f => (
-            <button key={f.key} onClick={() => setColorFilter(f.key)}
-              className={`px-3 py-1.5 rounded-lg text-xs transition-all ${
-                colorFilter === f.key ? "bg-white/15 text-white border border-white/20" : "bg-white/5 text-gray-500 hover:text-gray-300"
-              }`}>
-              {f.label}
+          {[["전체","전체"],["blue","파란(거절)"],["yellow","노란(가망)"],["red","빨간(수락)"],["미태깅","미태깅"]].map(([v,l]) => (
+            <button key={v} onClick={() => setColorFilter(v)}
+              className={`px-3 py-1.5 rounded-lg text-xs transition-all ${colorFilter === v ? "bg-white/20 text-white border border-white/30" : "bg-white/5 text-gray-400 hover:text-gray-200"}`}>
+              {v === "blue" ? "🔵" : v === "yellow" ? "🟡" : v === "red" ? "🔴" : ""} {l}
             </button>
           ))}
         </div>

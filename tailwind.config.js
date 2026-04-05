@@ -8,6 +8,7 @@ module.exports = {
       'bg-yellow-500/20', 'text-yellow-400', 'border-yellow-500/30',
       'bg-blue-500/20', 'text-blue-400', 'border-blue-500/30',
       'bg-red-500/20', 'text-red-400', 'border-red-500/30',
+      'border-l-blue-500', 'border-l-yellow-500', 'border-l-red-500', 'border-l-transparent',
     ],
   theme: {
   	extend: {

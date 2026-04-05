@@ -22,8 +22,8 @@ import CallLogs from './pages/CallLogs';
 import CallInterest from './pages/CallInterest';
 import CallConvert from './pages/CallConvert';
 import CallScripts from './pages/CallScripts';
-import CallAI from './pages/CallAI';
 import CallQueuePage from './pages/CallQueuePage';
+import CallAI from './pages/CallAI';
 import AdminDealer from './pages/AdminDealer';
 import AdminCall from './pages/AdminCall';
 import AdminSuper from './pages/AdminSuper';
@@ -62,8 +62,8 @@ const AppContent = () => {
             <Route path="/call/interest" element={<CallInterest />} />
             <Route path="/call/convert" element={<CallConvert />} />
             <Route path="/call/scripts" element={<CallScripts />} />
-            <Route path="/call/ai" element={<CallAI />} />
             <Route path="/call/queue" element={<CallQueuePage />} />
+            <Route path="/call/ai" element={<CallAI />} />
           </Route>
 
           {/* 관리자 */}
