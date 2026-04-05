@@ -5,8 +5,10 @@ import { Auth } from "@/lib/auth";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
 import { Plus, X, ChevronDown } from "lucide-react";
+import CustomerDetailModal from "@/components/CustomerDetailModal";
+import CustomerTimeline from "@/components/CustomerTimeline";
 
-const STATUS_OPTS = ["신규", "연락됨", "관심있음", "거절", "매출전환"];
+const STATUS_OPTS = ["신규", "1차통화완료", "관심", "보류", "재콜예정", "미팅요청", "계약완료", "거절", "이탈"];
 const COLOR_FILTERS = [
   { key: "전체", label: "전체" },
   { key: "blue", label: "파란 거절" },
@@ -17,10 +19,14 @@ const COLOR_FILTERS = [
 const COLOR_BORDER = { blue: "border-l-4 border-blue-500", yellow: "border-l-4 border-yellow-500", red: "border-l-4 border-red-500" };
 const STATUS_BADGE = {
   신규: "bg-gray-500/20 text-gray-400",
-  연락됨: "bg-blue-500/20 text-blue-400",
-  관심있음: "bg-emerald-500/20 text-emerald-400",
+  "1차통화완료": "bg-blue-500/20 text-blue-400",
+  관심: "bg-emerald-500/20 text-emerald-400",
+  보류: "bg-orange-500/20 text-orange-400",
+  재콜예정: "bg-yellow-500/20 text-yellow-400",
+  미팅요청: "bg-cyan-500/20 text-cyan-400",
+  계약완료: "bg-purple-500/20 text-purple-400",
   거절: "bg-red-500/20 text-red-400",
-  매출전환: "bg-purple-500/20 text-purple-400",
+  이탈: "bg-rose-500/20 text-rose-400",
 };
 const SOURCE_LABELS = { sns: "SNS", referral: "추천", cold_call: "콜드콜", event: "이벤트", other: "기타" };
 const INTEREST_STYLE = {
@@ -47,6 +53,8 @@ export default function CallLeads() {
   const [form, setForm] = useState(EMPTY);
   const [saving, setSaving] = useState(false);
   const [openStatus, setOpenStatus] = useState(null);
+  const [selectedLeadDetail, setSelectedLeadDetail] = useState(null);
+  const [timelineOpen, setTimelineOpen] = useState(null);
 
   useEffect(() => {
     document.title = "SolFort - 고객 리드";
@@ -142,6 +150,10 @@ export default function CallLeads() {
                     </div>
                   </div>
                   <div className="flex items-center gap-2 shrink-0">
+                    <button onClick={() => setSelectedLeadDetail(lead)}
+                      className="text-[10px] bg-white/5 text-gray-400 px-2.5 py-1.5 rounded-lg hover:bg-white/10 transition-all whitespace-nowrap">
+                      상세 보기
+                    </button>
                     <button onClick={() => navigate("/call/logs")}
                       className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all whitespace-nowrap">
                       콜 기록 추가
@@ -218,6 +230,22 @@ export default function CallLeads() {
             </div>
           </div>
         </div>
+      )}
+
+      {selectedLeadDetail && (
+        <CustomerDetailModal
+          lead={selectedLeadDetail}
+          onClose={() => setSelectedLeadDetail(null)}
+          onViewTimeline={() => {
+            setTimelineOpen(selectedLeadDetail);
+            setSelectedLeadDetail(null);
+          }}
+          onNavigate={navigate}
+        />
+      )}
+
+      {timelineOpen && (
+        <CustomerTimeline lead={timelineOpen} onClose={() => setTimelineOpen(null)} />
       )}
     </div>
   );
