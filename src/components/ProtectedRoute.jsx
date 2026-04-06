@@ -40,7 +40,11 @@ export default function ProtectedRoute({ children, roles }) {
     Auth.logout();
     return <Navigate to="/" replace />;
   }
-  if (roles && roles.length > 0 && !roles.includes(Auth.getRole())) {
+  const currentRole = Auth.getRole();
+  if (currentRole === 'super_admin' || currentRole === 'online_director') {
+    return children;
+  }
+  if (roles && roles.length > 0 && !roles.includes(currentRole)) {
     return <Navigate to={Auth.getHomeRoute()} replace />;
   }
 
