@@ -1,4 +1,5 @@
 import { useState, useEffect, useRef } from "react";
+import { utils, writeFile } from "xlsx";
 import { base44 } from "@/api/base44Client";
 import { Auth } from "@/lib/auth";
 import { toast } from "sonner";
@@ -659,6 +660,111 @@ function DealerManagement() {
   );
 }
 
+/* ── 엑셀 고급 내보내기 ── */
+function AdvancedExport() {
+  const [exporting, setExporting] = useState(null);
+  const now = new Date();
+  const yearMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+
+  const buildRows = (records) => records.map(r => ({
+    "날짜": r.sale_date || "",
+    "고객명": r.customer_name || "",
+    "연락처": r.phone || "",
+    "매출금액": r.sales_amount || 0,
+    "SOF수량": r.final_quantity || 0,
+    "지갑주소": r.wallet_address || "",
+    "메모": r.memo || "",
+  }));
+
+  const doExport = async (mode) => {
+    setExporting(mode);
+    try {
+      const [sales, dealers, callMembers, onlineMembers] = await Promise.all([
+        base44.entities.SalesRecord.list("-sale_date", 10000),
+        base44.entities.DealerInfo.filter({ status: "active" }, "-created_date", 500),
+        base44.entities.CallTeamMember.filter({ status: "active" }, "-created_date", 500),
+        base44.entities.OnlineTeamMember.list("-created_date", 500),
+      ]);
+
+      const wb = utils.book_new();
+      const dealerNames = new Set(dealers.filter(d => d.role !== "manager").map(d => d.dealer_name));
+      const callTeams = [...new Set(callMembers.map(m => m.team).filter(Boolean))];
+
+      if (mode === "all" || mode === "dealer") {
+        // One sheet per dealer
+        dealers.filter(d => d.role !== "manager").forEach(d => {
+          const rows = buildRows(sales.filter(s => s.dealer_name === d.dealer_name));
+          if (rows.length > 0) {
+            const ws = utils.json_to_sheet(rows);
+            utils.book_append_sheet(wb, ws, d.dealer_name.slice(0, 31));
+          }
+        });
+      }
+
+      if (mode === "all" || mode === "call") {
+        // One sheet per call team
+        const callDealerNames = new Set(callMembers.map(m => m.name));
+        // Group call-originated sales by team member's team
+        const callSales = sales.filter(s => !dealerNames.has(s.dealer_name));
+        callTeams.forEach(team => {
+          const teamUsernames = callMembers.filter(m => m.team === team).map(m => m.username);
+          const rows = buildRows(callSales.filter(s => teamUsernames.some(u => s.dealer_name?.includes(u) || s.created_by === u)));
+          // fallback: just show all call sales if can't match
+          const sheetRows = rows.length > 0 ? rows : buildRows(callSales.slice(0, 1000));
+          const ws = utils.json_to_sheet(sheetRows);
+          utils.book_append_sheet(wb, ws, `콜팀_${team}`.slice(0, 31));
+        });
+        if (callTeams.length === 0) {
+          const ws = utils.json_to_sheet(buildRows(callSales));
+          utils.book_append_sheet(wb, ws, "콜팀_전체");
+        }
+      }
+
+      if (mode === "all" || mode === "online") {
+        // Online team DB sheet
+        const onlineRows = onlineMembers.map(m => ({
+          "이름": m.name || "",
+          "아이디": m.username || "",
+          "연락처": m.phone || "",
+          "메타 광고 계정": m.meta_ad_account || "",
+          "상태": m.status || "",
+          "가입일": (m.created_date || "").split("T")[0],
+        }));
+        const ws = utils.json_to_sheet(onlineRows);
+        utils.book_append_sheet(wb, ws, "온라인팀_DB");
+      }
+
+      if (wb.SheetNames.length === 0) {
+        utils.book_append_sheet(wb, utils.json_to_sheet([{ "데이터": "없음" }]), "데이터없음");
+      }
+
+      writeFile(wb, `SolFort_전체매출_${yearMonth}.xlsx`);
+    } catch (e) {
+      alert("내보내기 실패: " + e.message);
+    }
+    setExporting(null);
+  };
+
+  const btns = [
+    { key: "all", label: "📊 전체 다운로드" },
+    { key: "dealer", label: "🏪 대리점만" },
+    { key: "call", label: "📞 콜팀만" },
+    { key: "online", label: "💻 온라인팀만" },
+  ];
+
+  return (
+    <div className="flex flex-wrap gap-2 mb-4">
+      {btns.map(b => (
+        <button key={b.key} onClick={() => doExport(b.key)} disabled={!!exporting}
+          className="px-3 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-medium hover:bg-emerald-500/30 disabled:opacity-50 transition-all">
+          {exporting === b.key ? "중..." : b.label}
+        </button>
+      ))}
+      <span className="self-center text-[10px] text-gray-600">SolFort_전체매출_{yearMonth}.xlsx</span>
+    </div>
+  );
+}
+
 /* ── 매출 탭 ── */
 function SalesPanel() {
   const [sales, setSales] = useState([]);
@@ -685,6 +791,7 @@ function SalesPanel() {
 
   return (
     <div className="space-y-4">
+      <AdvancedExport />
       <div className="flex gap-2 flex-wrap items-end">
         <div>
           <label className="text-xs text-gray-400 block mb-1">시작일</label>
