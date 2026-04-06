@@ -125,6 +125,7 @@ export default function AdminSuper() {
   return (
     <div className="min-h-screen bg-[#080a12]">
       <AdminHeader title="최고 관리자" accent="purple" />
+      <OperationSummary />
 
       {/* Category Selector */}
       <div className="px-4 pt-3 pb-0 border-b border-white/[0.06]">
@@ -215,6 +216,88 @@ export default function AdminSuper() {
         {category === "content" && <ContentManagementPanel />}
         {category === "anomaly" && <AnomalyPanel />}
         {category === "syslog" && <SystemLogPanel />}
+      </div>
+    </div>
+  );
+}
+
+/* ── 운영 현황 요약 카드 ── */
+function OperationSummary() {
+  const [data, setData] = useState(null);
+
+  const load = async () => {
+    const [dealers, callMembers, onlineMembers, sales] = await Promise.all([
+      base44.entities.DealerInfo.list("-created_date", 500),
+      base44.entities.CallTeamMember.list("-created_date", 500),
+      base44.entities.OnlineTeamMember.list("-created_date", 200),
+      base44.entities.SalesRecord.list("-sale_date", 5000),
+    ]);
+    const now = new Date();
+    const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
+    const todayStr = now.toISOString().split("T")[0];
+
+    const monthSales = sales.filter(s => (s.sale_date || "").startsWith(thisMonth));
+    // Dealer sales = records where dealer_name matches a dealer
+    const dealerNames = new Set(dealers.filter(d => d.role === "dealer" || !d.role || d.role === "dealer").map(d => d.dealer_name));
+    const dealerMonthlySales = monthSales.filter(s => dealerNames.has(s.dealer_name)).reduce((a, s) => a + (s.sales_amount || 0), 0);
+    // Call team sales = records linked via converted leads (dealer_name not in dealer list)
+    const callMonthlySales = monthSales.filter(s => !dealerNames.has(s.dealer_name)).reduce((a, s) => a + (s.sales_amount || 0), 0);
+    const totalMonthlySales = monthSales.reduce((a, s) => a + (s.sales_amount || 0), 0);
+
+    const pendingApprovals = dealers.filter(d => d.status === "pending").length
+      + callMembers.filter(m => m.status === "pending").length
+      + onlineMembers.filter(m => m.status === "pending").length;
+
+    const todayNew = dealers.filter(d => (d.created_date || "").startsWith(todayStr)).length
+      + callMembers.filter(m => (m.created_date || "").startsWith(todayStr)).length
+      + onlineMembers.filter(m => (m.created_date || "").startsWith(todayStr)).length;
+
+    setData({
+      dealerTotal: dealers.filter(d => d.role !== "manager").length,
+      dealerActive: dealers.filter(d => d.status === "active" && d.role !== "manager").length,
+      dealerPending: dealers.filter(d => d.status === "pending").length,
+      callTotal: callMembers.length,
+      callActive: callMembers.filter(m => m.status === "active").length,
+      callPending: callMembers.filter(m => m.status === "pending").length,
+      onlineTotal: onlineMembers.length,
+      onlineActive: onlineMembers.filter(m => m.status === "active").length,
+      onlinePending: onlineMembers.filter(m => m.status === "pending").length,
+      totalMonthlySales,
+      dealerMonthlySales,
+      callMonthlySales,
+      onlineDbCount: onlineMembers.filter(m => m.status === "active").length,
+      pendingApprovals,
+      todayNew,
+    });
+  };
+
+  useEffect(() => { load(); }, []);
+
+  if (!data) return <div className="flex justify-center py-6"><div className="w-5 h-5 border-2 border-emerald-500/30 border-t-emerald-500 rounded-full animate-spin" /></div>;
+
+  const cards = [
+    { label: "총 대리점", value: data.dealerTotal, sub: `활성 ${data.dealerActive} / 대기 ${data.dealerPending}` },
+    { label: "총 콜팀", value: data.callTotal, sub: `활성 ${data.callActive} / 대기 ${data.callPending}` },
+    { label: "온라인팀", value: data.onlineTotal, sub: `활성 ${data.onlineActive} / 대기 ${data.onlinePending}` },
+    { label: "이달 총매출", value: `₩${(data.totalMonthlySales / 10000).toFixed(0)}만`, sub: "대리점+콜팀 합산" },
+    { label: "이달 대리점 매출", value: `₩${(data.dealerMonthlySales / 10000).toFixed(0)}만`, sub: "이달 대리점" },
+    { label: "이달 콜팀 매출", value: `₩${(data.callMonthlySales / 10000).toFixed(0)}만`, sub: "이달 콜팀" },
+    { label: "온라인팀 DB수", value: data.onlineDbCount, sub: "이달 활성 온라인팀" },
+    { label: "미처리 승인대기", value: data.pendingApprovals, sub: "전체 미승인 인원", urgent: data.pendingApprovals > 0 },
+    { label: "오늘 신규 가입", value: data.todayNew, sub: "오늘 신청 건수", urgent: data.todayNew > 0 },
+  ];
+
+  return (
+    <div className="px-4 pt-4 pb-0">
+      <p className="text-xs text-gray-500 font-semibold mb-3">📊 운영 현황</p>
+      <div className="grid grid-cols-3 md:grid-cols-5 gap-2 mb-4">
+        {cards.map(c => (
+          <div key={c.label} className="bg-[#0d1a12] border border-emerald-500/20 rounded-xl p-3">
+            <p className="text-[10px] text-gray-500 mb-1">{c.label}</p>
+            <p className={`text-lg font-bold ${c.urgent ? "text-red-400" : "text-emerald-400"}`}>{c.value}</p>
+            <p className="text-[9px] text-gray-600 mt-0.5">{c.sub}</p>
+          </div>
+        ))}
       </div>
     </div>
   );
