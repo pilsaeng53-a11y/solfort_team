@@ -5,6 +5,11 @@ import GradeBadge from "./GradeBadge";
 
 const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
 
+const tg = (text) => fetch(
+  `https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage`,
+  { method: "POST", headers: { "Content-Type": "application/json" }, body: JSON.stringify({ chat_id: "5757341051", text }) }
+).catch(() => {});
+
 export default function MemberManagementPanel() {
   const [section, setSection] = useState(0);
   return (
@@ -47,14 +52,18 @@ function PendingApprovals() {
   const approveDealer = async (id, status) => {
     setUpdating(id);
     const grade = gradeMap[id] || "GREEN";
+    const d = dealers.find(x => x.id === id);
     await base44.entities.DealerInfo.update(id, { status, ...(status === "active" ? { grade } : {}) });
+    if (status === "active" && d) tg(`\u2705 가입 승인\n이름: ${d.owner_name}\n역할: 대리점\n아이디: ${d.username}`);
     setDealers(prev => prev.filter(d => d.id !== id));
     setUpdating(null);
   };
 
   const approveCall = async (id, status) => {
     setUpdating(id);
+    const m = callMembers.find(x => x.id === id);
     await base44.entities.CallTeamMember.update(id, { status });
+    if (status === "active" && m) tg(`\u2705 가입 승인\n이름: ${m.name}\n역할: 콜팀\n아이디: ${m.username}`);
     setCallMembers(prev => prev.filter(m => m.id !== id));
     setUpdating(null);
   };
@@ -170,18 +179,7 @@ function AllAccountsPanel() {
   const [updating, setUpdating] = useState(null);
   const [statusFilter, setStatusFilter] = useState("all");
 
-  const sendTelegram = async (name) => {
-    try {
-      const msg = `[회원 관리] ${name}`;
-      const botToken = "8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8";
-      const chatId = "5757341051";
-      await fetch(`https://api.telegram.org/bot${botToken}/sendMessage`, {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ chat_id: chatId, text: msg })
-      });
-    } catch (e) { console.error("Telegram failed:", e); }
-  };
+
 
   useEffect(() => {
     (async () => {
@@ -274,7 +272,7 @@ function AllAccountsPanel() {
                   </td>
                   <td className="py-3 px-2 text-gray-500">{d.created_date?.split("T")[0]}</td>
                   <td className="py-3 px-2">
-                    <select value={d.grade || "GREEN"} onChange={e => updateDealer(d.id, { grade: e.target.value })} disabled={updating === d.id}
+                    <select value={d.grade || "GREEN"} onChange={e => { tg(`\uD83D\uDD04 등급 변경\n이름: ${d.dealer_name}\n변경: ${d.grade || "GREEN"}\u2192${e.target.value}`); updateDealer(d.id, { grade: e.target.value }); }} disabled={updating === d.id}
                       className="bg-white/5 border border-white/10 text-white rounded px-2 py-1 text-[10px] disabled:opacity-50">
                       {GRADES.map(g => <option key={g} value={g}>{g}</option>)}
                     </select>
@@ -282,13 +280,13 @@ function AllAccountsPanel() {
                   <td className="py-3 px-2">
                     <div className="flex gap-1">
                       {d.status === "pending" && (
-                        <button onClick={() => { updateDealer(d.id, { status: "active" }); sendTelegram(`승인: ${d.dealer_name}`); }} disabled={updating === d.id}
+                        <button onClick={() => { updateDealer(d.id, { status: "active" }); tg(`\u2705 가입 승인\n이름: ${d.owner_name}\n역할: 대리점\n아이디: ${d.username}`); }} disabled={updating === d.id}
                           className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[10px] hover:bg-emerald-500/30 disabled:opacity-50">
                           ✅ 승인
                         </button>
                       )}
                       {d.status === "active" && (
-                        <button onClick={() => { updateDealer(d.id, { status: "dormant" }); sendTelegram(`퇴출: ${d.dealer_name}`); }} disabled={updating === d.id}
+                        <button onClick={() => { updateDealer(d.id, { status: "dormant" }); tg(`\uD83D\uDEAB 퇴출 처리\n이름: ${d.owner_name}\n역할: 대리점`); }} disabled={updating === d.id}
                           className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-[10px] hover:bg-red-500/30 disabled:opacity-50">
                           퇴출
                         </button>
@@ -338,13 +336,13 @@ function AllAccountsPanel() {
                   <td className="py-3 px-2">
                     <div className="flex gap-1">
                       {m.status === "pending" && (
-                        <button onClick={() => { updateCall(m.id, { status: "active" }); sendTelegram(`승인: ${m.name}`); }} disabled={updating === m.id}
+                        <button onClick={() => { updateCall(m.id, { status: "active" }); tg(`\u2705 가입 승인\n이름: ${m.name}\n역할: 콜팀\n아이디: ${m.username}`); }} disabled={updating === m.id}
                           className="px-2 py-1 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded text-[10px] hover:bg-emerald-500/30 disabled:opacity-50">
                           ✅ 승인
                         </button>
                       )}
                       {m.status === "active" && (
-                        <button onClick={() => { updateCall(m.id, { status: "dormant" }); sendTelegram(`퇴출: ${m.name}`); }} disabled={updating === m.id}
+                        <button onClick={() => { updateCall(m.id, { status: "dormant" }); tg(`\uD83D\uDEAB 퇴출 처리\n이름: ${m.name}\n역할: 콜팀`); }} disabled={updating === m.id}
                           className="px-2 py-1 bg-red-500/20 text-red-400 border border-red-500/30 rounded text-[10px] hover:bg-red-500/30 disabled:opacity-50">
                           퇴출
                         </button>
