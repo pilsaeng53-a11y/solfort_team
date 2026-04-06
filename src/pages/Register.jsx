@@ -64,6 +64,16 @@ export default function Register() {
     if (allAgreed) setStep(3);
   };
 
+  const sendTelegramNotification = (roleLabel, name, username, phone) => {
+    const datetime = new Date().toLocaleString('ko-KR', { timeZone: 'Asia/Seoul' });
+    const text = `🔔 신규 가입 신청\n역할: ${roleLabel}\n이름: ${name}\n아이디: ${username}\n연락처: ${phone}\n시각: ${datetime}`;
+    fetch(`https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ chat_id: '5757341051', text }),
+    }).catch(() => {});
+  };
+
   const handleStep3Submit = async () => {
     if (!form.username || !form.password || !form.phone) {
       alert('필수 항목을 입력해주세요.');
@@ -93,6 +103,7 @@ export default function Register() {
           agreed_terms: true,
           agreed_at: now,
         });
+        sendTelegramNotification('대리점', form.name, form.username, form.phone);
       } else if (role === 'call_team') {
         await base44.entities.CallTeamMember.create({
           name: form.name,
@@ -106,6 +117,7 @@ export default function Register() {
           agreed_terms: true,
           agreed_at: now,
         });
+        sendTelegramNotification('콜영업팀', form.name, form.username, form.phone);
       } else if (role === 'online_team') {
         await base44.entities.OnlineTeamMember.create({
           name: form.name,
@@ -117,6 +129,7 @@ export default function Register() {
           agreed_terms: true,
           status: 'pending',
         });
+        sendTelegramNotification('온라인팀', form.name, form.username, form.phone);
       }
       setStep(4);
     } catch (e) {
