@@ -1,0 +1,53 @@
+{
+  "name": "Event",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "\uc81c\ubaa9"
+    },
+    "content": {
+      "type": "string",
+      "title": "\ub0b4\uc6a9"
+    },
+    "target": {
+      "type": "string",
+      "title": "\ub300\uc0c1",
+      "enum": [
+        "\uc804\uccb4",
+        "\ub300\ub9ac\uc810",
+        "\ucf5c\ud300",
+        "\uc628\ub77c\uc778\ud300"
+      ],
+      "default": "\uc804\uccb4"
+    },
+    "start_date": {
+      "type": "string",
+      "title": "\uc2dc\uc791\uc77c"
+    },
+    "end_date": {
+      "type": "string",
+      "title": "\uc885\ub8cc\uc77c"
+    },
+    "image_url": {
+      "type": "string",
+      "title": "\uc774\ubbf8\uc9c0 URL"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "\ud65c\uc131\ud654",
+      "default": true
+    },
+    "created_by": {
+      "type": "string",
+      "title": "\uc791\uc131\uc790"
+    }
+  },
+  "required": [
+    "title",
+    "content",
+    "target",
+    "start_date",
+    "end_date"
+  ]
+}

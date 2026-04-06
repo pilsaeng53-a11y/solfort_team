@@ -130,7 +130,7 @@ export default function AdminSuper() {
       {/* Category Selector */}
       <div className="px-4 pt-3 pb-0 border-b border-white/[0.06]">
         <div className="flex gap-2 mb-3 items-center">
-          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["online", "💻 온라인팀 관리"], ["merged", "👥 전체 가입자 통합"], ["content", "📋 콘텐츠 관리"], ["anomaly", "🔍 이상 감지"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
+          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["online", "💻 온라인팀 관리"], ["merged", "👥 전체 가입자 통합"], ["content", "📋 콘텐츠 관리"], ["event", "🎉 이벤트 관리"], ["anomaly", "🔍 이상 감지"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
             <button key={k} onClick={() => setCategory(k)}
               className={`px-4 py-2 rounded-t-lg text-xs font-semibold transition-all ${category === k ? "bg-purple-500/20 text-purple-400 border-t border-x border-purple-500/30 border-b-0" : "bg-white/5 text-gray-400 hover:text-white"}`}>
               {l}
@@ -214,6 +214,7 @@ export default function AdminSuper() {
           </>
         )}
         {category === "content" && <ContentManagementPanel />}
+        {category === "event" && <EventManagementPanel />}
         {category === "anomaly" && <AnomalyPanel />}
         {category === "syslog" && <SystemLogPanel />}
       </div>
@@ -1340,6 +1341,147 @@ function OnlineTeamPanel() {
           </table>
         </div>
       </div>
+    </div>
+  );
+}
+
+/* ── 이벤트 관리 ── */
+function EventManagementPanel() {
+  const [events, setEvents] = useState([]);
+  const [loading, setLoading] = useState(true);
+  const [saving, setSaving] = useState(false);
+  const [toggling, setToggling] = useState(null);
+  const [form, setForm] = useState({ title: "", content: "", target: "전체", start_date: "", end_date: "", image_url: "" });
+
+  const load = async () => {
+    const data = await base44.entities.Event.list("-created_date", 100);
+    setEvents(data);
+    setLoading(false);
+  };
+
+  useEffect(() => { load(); }, []);
+
+  const handleSubmit = async () => {
+    if (!form.title || !form.content || !form.start_date || !form.end_date) {
+      toast.error("필수 항목을 모두 입력해주세요."); return;
+    }
+    setSaving(true);
+    const created = await base44.entities.Event.create({ ...form, is_active: true, created_by: Auth.getUsername?.() || "admin" });
+    setEvents(prev => [created, ...prev]);
+    setForm({ title: "", content: "", target: "전체", start_date: "", end_date: "", image_url: "" });
+    toast.success("이벤트가 등록되었습니다.");
+    setSaving(false);
+  };
+
+  const handleToggle = async (ev) => {
+    setToggling(ev.id);
+    await base44.entities.Event.update(ev.id, { is_active: !ev.is_active });
+    setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, is_active: !e.is_active } : e));
+    setToggling(null);
+  };
+
+  const handleDelete = async (id) => {
+    if (!confirm("삭제하시겠습니까?")) return;
+    await base44.entities.Event.delete(id);
+    setEvents(prev => prev.filter(e => e.id !== id));
+    toast.success("이벤트가 삭제되었습니다.");
+  };
+
+  const setF = (k) => (e) => setForm(p => ({ ...p, [k]: e.target.value }));
+
+  return (
+    <div className="space-y-6">
+      {/* Create Form */}
+      <SFCard>
+        <h3 className="text-sm font-semibold text-white mb-4">🎉 이벤트 등록</h3>
+        <div className="space-y-3">
+          <input value={form.title} onChange={setF("title")} placeholder="제목 *"
+            className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+          <textarea value={form.content} onChange={setF("content")} placeholder="내용 *" rows={3}
+            className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600 resize-none" />
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1">대상</label>
+              <select value={form.target} onChange={setF("target")}
+                className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs">
+                {["전체", "대리점", "콜팀", "온라인팀"].map(t => <option key={t} value={t}>{t}</option>)}
+              </select>
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1">이미지 URL (선택)</label>
+              <input value={form.image_url} onChange={setF("image_url")} placeholder="https://..."
+                className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+            </div>
+          </div>
+          <div className="grid grid-cols-2 gap-3">
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1">시작일 *</label>
+              <input type="date" value={form.start_date} onChange={setF("start_date")}
+                className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+            </div>
+            <div>
+              <label className="text-[10px] text-gray-500 block mb-1">종료일 *</label>
+              <input type="date" value={form.end_date} onChange={setF("end_date")}
+                className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+            </div>
+          </div>
+          <button onClick={handleSubmit} disabled={saving}
+            className="w-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 py-2.5 rounded-xl text-sm font-semibold hover:bg-emerald-500/30 disabled:opacity-50">
+            {saving ? "등록 중..." : "✅ 이벤트 등록"}
+          </button>
+        </div>
+      </SFCard>
+
+      {/* Event List */}
+      <SFCard>
+        <h3 className="text-sm font-semibold text-white mb-4">이벤트 목록 ({events.length}건)</h3>
+        {loading ? <Loader /> : events.length === 0 ? (
+          <p className="text-xs text-gray-600 text-center py-6">등록된 이벤트가 없습니다</p>
+        ) : (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                {["제목", "대상", "기간", "상태", "액션"].map(h => (
+                  <th key={h} className="text-left py-3 px-2 font-medium">{h}</th>
+                ))}
+              </tr></thead>
+              <tbody>
+                {events.map(ev => (
+                  <tr key={ev.id} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
+                    <td className="py-3 px-2">
+                      <p className="text-white font-medium">{ev.title}</p>
+                      <p className="text-[10px] text-gray-600 truncate max-w-[200px]">{ev.content}</p>
+                    </td>
+                    <td className="py-3 px-2">
+                      <span className="px-2 py-0.5 rounded-full text-[10px] bg-blue-500/20 text-blue-400">{ev.target}</span>
+                    </td>
+                    <td className="py-3 px-2 text-gray-400 text-[10px] whitespace-nowrap">
+                      {ev.start_date} ~ {ev.end_date}
+                    </td>
+                    <td className="py-3 px-2">
+                      <span className={`px-2 py-0.5 rounded-full text-[10px] font-medium ${ev.is_active ? "bg-emerald-500/20 text-emerald-400" : "bg-gray-500/20 text-gray-500"}`}>
+                        {ev.is_active ? "활성" : "비활성"}
+                      </span>
+                    </td>
+                    <td className="py-3 px-2">
+                      <div className="flex gap-1">
+                        <button onClick={() => handleToggle(ev)} disabled={toggling === ev.id}
+                          className={`px-2 py-1 rounded text-[10px] disabled:opacity-50 transition-all ${ev.is_active ? "bg-yellow-500/20 text-yellow-400 hover:bg-yellow-500/30" : "bg-emerald-500/20 text-emerald-400 hover:bg-emerald-500/30"}`}>
+                          {ev.is_active ? "비활성화" : "활성화"}
+                        </button>
+                        <button onClick={() => handleDelete(ev.id)}
+                          className="px-2 py-1 bg-red-500/20 text-red-400 rounded text-[10px] hover:bg-red-500/30">
+                          삭제
+                        </button>
+                      </div>
+                    </td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </SFCard>
     </div>
   );
 }
