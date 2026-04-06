@@ -23,11 +23,15 @@ export default function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [dispatchRequests, setDispatchRequests] = useState([]);
   const [updating, setUpdating] = useState(null);
+  const [activeEvents, setActiveEvents] = useState([]);
 
   const today = new Date().toISOString().split("T")[0];
 
   useEffect(() => {
     loadRecords();
+    base44.entities.Event.list("-created_date", 50)
+      .then(evs => setActiveEvents(evs.filter(e => e.is_active && (e.target === "전체" || e.target === "대리점"))))
+      .catch(() => {});
   }, []);
 
   const loadRecords = async () => {
@@ -140,6 +144,22 @@ export default function Dashboard() {
           </div>
           <GradeBadge grade={grade} showCommission />
         </div>
+
+        {/* Active Events */}
+        {activeEvents.length > 0 && (
+          <div className="space-y-2">
+            {activeEvents.map(ev => (
+              <div key={ev.id} className="bg-gradient-to-r from-emerald-900/40 to-blue-900/40 border border-emerald-500/20 rounded-xl p-4">
+                {ev.image_url && (
+                  <img src={ev.image_url} alt={ev.title} className="w-full h-28 object-cover rounded-lg mb-3" />
+                )}
+                <p className="text-sm font-bold text-white">{ev.title}</p>
+                <p className="text-xs text-gray-300 mt-1 whitespace-pre-line">{ev.content}</p>
+                <p className="text-[10px] text-emerald-400/70 mt-2">{ev.start_date} ~ {ev.end_date}</p>
+              </div>
+            ))}
+          </div>
+        )}
 
         {/* USDT Rate */}
         <UsdtBanner rate={rate} source={source} loading={rateLoading} onRefresh={fetchRate} />
