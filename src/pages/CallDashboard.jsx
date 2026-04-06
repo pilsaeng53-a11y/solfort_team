@@ -31,10 +31,14 @@ export default function CallDashboard() {
   const [logs, setLogs] = useState([]);
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState([]);
+  const [activeEvents, setActiveEvents] = useState([]);
 
   useEffect(() => {
     document.title = "SolFort - 콜 대시보드";
     load();
+    base44.entities.Event.list("-created_date", 50)
+      .then(evs => setActiveEvents(evs.filter(e => e.is_active && (e.target === "전체" || e.target === "콜팀"))))
+      .catch(() => {});
   }, []);
 
   const load = () =>
@@ -80,6 +84,19 @@ export default function CallDashboard() {
     <div className="min-h-screen bg-[#080a12]">
       <CallNav/>
       <div className="p-4 md:p-6 space-y-5 max-w-5xl mx-auto">
+        {/* Active Events */}
+        {activeEvents.length > 0 && (
+          <div className="space-y-2">
+            {activeEvents.map(ev => (
+              <div key={ev.id} className="bg-gradient-to-r from-blue-900/40 to-purple-900/40 border border-blue-500/20 rounded-xl p-4">
+                <p className="text-sm font-bold text-white">{ev.title}</p>
+                <p className="text-xs text-gray-300 mt-1 whitespace-pre-line">{ev.content}</p>
+                <p className="text-[10px] text-blue-400/70 mt-2">{ev.start_date} ~ {ev.end_date}</p>
+              </div>
+            ))}
+          </div>
+        )}
+
         {/* Feature 1: Today Briefing */}
         <SFCard className="bg-gradient-to-r from-emerald-500/10 to-blue-500/10 border border-emerald-500/20 rounded-xl p-4">
           <div className="flex items-center justify-between text-xs text-gray-300">
