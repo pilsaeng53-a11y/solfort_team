@@ -23,6 +23,9 @@ export default function CallNav() {
   const location = useLocation();
   const navigate = useNavigate();
   const [now, setNow] = useState(new Date());
+  const stored = JSON.parse(localStorage.getItem('sf_dealer') || '{}');
+  const position = stored.position || '';
+  const showTeamMgmt = position.includes('지사장') || position.includes('팀장');
 
   useEffect(() => {
     const t = setInterval(() => setNow(new Date()), 1000);
@@ -74,6 +77,18 @@ export default function CallNav() {
             </button>
           );
         })}
+        {showTeamMgmt && (
+          <button
+            onClick={() => navigate('/team-management')}
+            className={`shrink-0 px-4 py-2.5 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
+              location.pathname === '/team-management'
+                ? 'border-emerald-400 text-emerald-400'
+                : 'border-transparent text-gray-500 hover:text-gray-300'
+            }`}
+          >
+            👥 팀관리
+          </button>
+        )}
       </div>
     </div>
   );
