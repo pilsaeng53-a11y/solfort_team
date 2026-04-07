@@ -26,13 +26,136 @@ const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
 
 const DEALER_TABS = ["전체 현황", "딜러 관리", "딜러 계정", "매니저 계정", "매출", "단가/요율", "정산", "물량 처리"];
 const CALL_TABS = ["콜팀 현황", "콜팀 계정", "자동화", "조직도", "콜 모니터링"];
-const ONLINE_TABS = ["온라인팀"];
+const ONLINE_TABS = ["온라인팀 계정"];
+const ACCOUNT_TABS = ["딜러어드민 계정", "콜어드민 계정", "매니저 계정", "온라인디렉터 계정"];
+
+function OnlineDirectorCreationSection() {
+  const [formData, setFormData] = useState({ name: "", username: "", password: "", phone: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.username || !formData.password) {
+      toast.error("이름, 아이디, 비밀번호를 입력해주세요."); return;
+    }
+    setSubmitting(true);
+    try {
+      await base44.entities.DealerInfo.create({
+        dealer_name: formData.name,
+        owner_name: formData.name,
+        username: formData.username,
+        password: formData.password,
+        phone: formData.phone,
+        role: "online_director",
+        status: "active",
+      });
+      toast.success("온라인디렉터 계정이 생성되었습니다.");
+      setFormData({ name: "", username: "", password: "", phone: "" });
+    } catch (e) {
+      toast.error("생성 실패: " + e.message);
+    }
+    setSubmitting(false);
+  };
+
+  return (
+    <SFCard className="mb-5">
+      <h3 className="text-sm font-semibold text-white mb-4">🌐 온라인디렉터 계정 생성</h3>
+      <div className="space-y-3">
+        {[["name","이름","text"],["username","아이디","text"],["password","비밀번호","password"],["phone","연락처","text"]].map(([k,p,t]) => (
+          <input key={k} type={t} placeholder={p} value={formData[k]}
+            onChange={e => setFormData(prev => ({ ...prev, [k]: e.target.value }))}
+            className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+        ))}
+        <button onClick={handleSubmit} disabled={submitting}
+          className="w-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 py-2 rounded-lg text-xs font-medium hover:bg-emerald-500/30 disabled:opacity-50">
+          {submitting ? "생성 중..." : "✅ 생성"}
+        </button>
+      </div>
+    </SFCard>
+  );
+}
+
+function DealerAdminCreationSection() {
+  const [formData, setFormData] = useState({ name: "", username: "", password: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.username || !formData.password) {
+      toast.error("모든 필드를 입력해주세요."); return;
+    }
+    setSubmitting(true);
+    try {
+      await base44.entities.DealerInfo.create({
+        dealer_name: formData.name, owner_name: formData.name,
+        username: formData.username, password: formData.password,
+        role: "dealer_admin", status: "active",
+      });
+      toast.success("딜러어드민 계정이 생성되었습니다.");
+      setFormData({ name: "", username: "", password: "" });
+    } catch (e) { toast.error("생성 실패: " + e.message); }
+    setSubmitting(false);
+  };
+
+  return (
+    <SFCard className="mb-5">
+      <h3 className="text-sm font-semibold text-white mb-4">🏪 딜러어드민 계정 생성</h3>
+      <div className="space-y-3">
+        {[["name","이름","text"],["username","아이디","text"],["password","비밀번호","password"]].map(([k,p,t]) => (
+          <input key={k} type={t} placeholder={p} value={formData[k]}
+            onChange={e => setFormData(prev => ({ ...prev, [k]: e.target.value }))}
+            className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+        ))}
+        <button onClick={handleSubmit} disabled={submitting}
+          className="w-full bg-purple-500/20 text-purple-400 border border-purple-500/30 py-2 rounded-lg text-xs font-medium hover:bg-purple-500/30 disabled:opacity-50">
+          {submitting ? "생성 중..." : "✅ 생성"}
+        </button>
+      </div>
+    </SFCard>
+  );
+}
+
+function CallAdminCreationSection() {
+  const [formData, setFormData] = useState({ name: "", username: "", password: "" });
+  const [submitting, setSubmitting] = useState(false);
+
+  const handleSubmit = async () => {
+    if (!formData.name || !formData.username || !formData.password) {
+      toast.error("모든 필드를 입력해주세요."); return;
+    }
+    setSubmitting(true);
+    try {
+      await base44.entities.CallTeamMember.create({
+        name: formData.name, username: formData.username,
+        password: formData.password, role: "call_admin", status: "active",
+      });
+      toast.success("콜어드민 계정이 생성되었습니다.");
+      setFormData({ name: "", username: "", password: "" });
+    } catch (e) { toast.error("생성 실패: " + e.message); }
+    setSubmitting(false);
+  };
+
+  return (
+    <SFCard className="mb-5">
+      <h3 className="text-sm font-semibold text-white mb-4">📞 콜어드민 계정 생성</h3>
+      <div className="space-y-3">
+        {[["name","이름","text"],["username","아이디","text"],["password","비밀번호","password"]].map(([k,p,t]) => (
+          <input key={k} type={t} placeholder={p} value={formData[k]}
+            onChange={e => setFormData(prev => ({ ...prev, [k]: e.target.value }))}
+            className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+        ))}
+        <button onClick={handleSubmit} disabled={submitting}
+          className="w-full bg-blue-500/20 text-blue-400 border border-blue-500/30 py-2 rounded-lg text-xs font-medium hover:bg-blue-500/30 disabled:opacity-50">
+          {submitting ? "생성 중..." : "✅ 생성"}
+        </button>
+      </div>
+    </SFCard>
+  );
+}
 
 function ManagerCreationSection() {
   const [dealers, setDealers] = useState([]);
   const [loading, setLoading] = useState(true);
   const [formData, setFormData] = useState({ name: "", username: "", password: "", assigned_dealer: "" });
-  const [submitting, setSubmitting] = useState(false)
+  const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
     base44.entities.DealerInfo.list("-created_date", 500)
@@ -115,6 +238,7 @@ export default function AdminSuper() {
   const [dealerTab, setDealerTab] = useState(0);
   const [callTab, setCallTab] = useState(0);
   const [onlineTab, setOnlineTab] = useState(0);
+  const [accountTab, setAccountTab] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
 
   useEffect(() => {
@@ -130,22 +254,28 @@ export default function AdminSuper() {
 
       {/* Category Selector */}
       <div className="px-4 pt-3 pb-0 border-b border-white/[0.06]">
-        <div className="flex gap-2 mb-3 items-center">
-          {[["overview", "🏠 전체 현황"], ["dealer", "🏪 대리점 관리"], ["call", "📞 콜팀 관리"], ["online", "💻 온라인팀 관리"], ["merged", "👥 전체 가입자 통합"], ["content", "📋 콘텐츠 관리"], ["event", "🎉 이벤트 관리"], ["anomaly", "🔍 이상 감지"], ["syslog", "📋 시스템 로그"]].map(([k, l]) => (
+        {/* 3 big primary section buttons */}
+        <div className="grid grid-cols-3 gap-2 mb-3">
+          {[["dealer","🏪 대리점 관리","purple"],["call","📞 콜팀 관리","blue"],["online","💻 온라인팀 관리","emerald"]].map(([k,l,c]) => (
             <button key={k} onClick={() => setCategory(k)}
-              className={`px-4 py-2 rounded-t-lg text-xs font-semibold transition-all ${category === k ? "bg-purple-500/20 text-purple-400 border-t border-x border-purple-500/30 border-b-0" : "bg-white/5 text-gray-400 hover:text-white"}`}>
-              {l}
-            </button>
+              className={`py-3 rounded-xl text-xs font-bold transition-all border ${
+                category === k
+                  ? `bg-${c}-500/20 text-${c}-400 border-${c}-500/30`
+                  : "bg-white/5 text-gray-400 border-white/10 hover:text-white"
+              }`}>{l}</button>
           ))}
-          {/* Shortcut buttons */}
+        </div>
+        {/* Secondary util buttons */}
+        <div className="flex flex-wrap gap-1 mb-3">
+          {[["overview","🏠 전체 현황"],["merged","👥 통합 가입자"],["accounts","🔑 계정 생성"],["content","📋 콘텐츠"],["event","🎉 이벤트"],["anomaly","🔍 이상 감지"],["syslog","📋 시스템 로그"]].map(([k,l]) => (
+            <button key={k} onClick={() => setCategory(k)}
+              className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${category === k ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-white/5 text-gray-400 hover:text-white"}`}>{l}</button>
+          ))}
           <button onClick={() => navigate("/analytics")}
-            className="ml-auto px-3 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs hover:bg-blue-500/30 transition-all">📊 분석 대시보드</button>
-          <button onClick={() => navigate("/online-director")}
-            className="px-3 py-1.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-xs hover:bg-purple-500/30 transition-all">💻 온라인팀 관리</button>
-          {/* Pending badge */}
+            className="px-3 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs hover:bg-blue-500/30 transition-all">📊 분석</button>
           {pendingOrders > 0 && (
             <button onClick={() => { setCategory("dealer"); setDealerTab(6); }}
-              className="ml-auto flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs hover:bg-red-500/30 transition-all animate-pulse">
+              className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs hover:bg-red-500/30 transition-all animate-pulse">
               📦 물량 대기 <span className="bg-red-500 text-white text-[10px] rounded-full px-1.5 py-0.5">{pendingOrders}</span>
             </button>
           )}
@@ -157,8 +287,7 @@ export default function AdminSuper() {
             {DEALER_TABS.map((t, i) => (
               <button key={i} onClick={() => setDealerTab(i)}
                 className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${dealerTab === i ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-white/5 text-gray-400"}`}>
-                {t}
-                {i === 6 && pendingOrders > 0 && <span className="ml-1 bg-red-500 text-white text-[10px] rounded-full px-1.5">{pendingOrders}</span>}
+                {t}{i === 6 && pendingOrders > 0 && <span className="ml-1 bg-red-500 text-white text-[10px] rounded-full px-1.5">{pendingOrders}</span>}
               </button>
             ))}
           </div>
@@ -167,7 +296,7 @@ export default function AdminSuper() {
           <div className="flex overflow-x-auto gap-1 pb-3">
             {CALL_TABS.map((t, i) => (
               <button key={i} onClick={() => setCallTab(i)}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${callTab === i ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-white/5 text-gray-400"}`}>
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${callTab === i ? "bg-blue-500/20 text-blue-400 border border-blue-500/30" : "bg-white/5 text-gray-400"}`}>
                 {t}
               </button>
             ))}
@@ -177,7 +306,17 @@ export default function AdminSuper() {
           <div className="flex overflow-x-auto gap-1 pb-3">
             {ONLINE_TABS.map((t, i) => (
               <button key={i} onClick={() => setOnlineTab(i)}
-                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${onlineTab === i ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-white/5 text-gray-400"}`}>
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${onlineTab === i ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30" : "bg-white/5 text-gray-400"}`}>
+                {t}
+              </button>
+            ))}
+          </div>
+        )}
+        {category === "accounts" && (
+          <div className="flex overflow-x-auto gap-1 pb-3">
+            {ACCOUNT_TABS.map((t, i) => (
+              <button key={i} onClick={() => setAccountTab(i)}
+                className={`shrink-0 px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${accountTab === i ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-white/5 text-gray-400"}`}>
                 {t}
               </button>
             ))}
@@ -212,6 +351,14 @@ export default function AdminSuper() {
         {category === "online" && (
           <>
             {onlineTab === 0 && <OnlineTeamPanel />}
+          </>
+        )}
+        {category === "accounts" && (
+          <>
+            {accountTab === 0 && <DealerAdminCreationSection />}
+            {accountTab === 1 && <CallAdminCreationSection />}
+            {accountTab === 2 && <><ManagerCreationSection /><ManagerAccountPanel /></>}
+            {accountTab === 3 && <OnlineDirectorCreationSection />}
           </>
         )}
         {category === "content" && <ContentManagementPanel />}
