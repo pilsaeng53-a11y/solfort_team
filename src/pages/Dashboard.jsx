@@ -29,6 +29,9 @@ export default function Dashboard() {
   const [goalInput, setGoalInput] = useState("");
   const [savingGoal, setSavingGoal] = useState(false);
   const [editingGoal, setEditingGoal] = useState(false);
+  const [connectedDealers, setConnectedDealers] = useState([]);
+  const [connectedSales, setConnectedSales] = useState([]);
+  const [copiedCode, setCopiedCode] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -40,7 +43,22 @@ export default function Dashboard() {
     base44.entities.CallLead.list("-created_date", 500)
       .then(leads => setRecallLeads(leads.filter(l => l.next_call_date === today && l.status === "재콜예정")))
       .catch(() => {});
-      }, []);
+  }, []);
+
+  useEffect(() => {
+    if (dealer?.id && (dealer.position === '대리점지사장' || dealer.position === '대리점장')) {
+      base44.entities.DealerInfo.filter({ parent_dealer_id: dealer.id }, '-created_date', 200)
+        .then(async (dealers) => {
+          setConnectedDealers(dealers);
+          if (dealers.length > 0) {
+            const sales = await base44.entities.SalesRecord.list('-sale_date', 5000);
+            const names = new Set(dealers.map(d => d.dealer_name));
+            setConnectedSales(sales.filter(s => names.has(s.dealer_name)));
+          }
+        })
+        .catch(() => {});
+    }
+  }, [dealer]);
 
   const loadRecords = async () => {
     setLoading(true);
@@ -217,6 +235,20 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
+
+        {/* 내 추천코드 */}
+        {dealer?.my_referral_code && (
+          <SFCard>
+            <div className="flex items-center justify-between">
+              <p className="text-xs text-gray-500">내 추천코드</p>
+              <button onClick={() => { navigator.clipboard.writeText(dealer.my_referral_code).catch(() => {}); setCopiedCode(true); setTimeout(() => setCopiedCode(false), 2000); }}
+                className="text-[10px] text-emerald-400 hover:text-emerald-300 transition-all">
+                {copiedCode ? '✅ 복사됨' : '📋 복사'}
+              </button>
+            </div>
+            <p className="text-xl font-bold text-emerald-400 tracking-widest mt-1 font-mono">{dealer.my_referral_code}</p>
+          </SFCard>
+        )}
 
         {/* USDT Rate */}
         <UsdtBanner rate={rate} source={source} loading={rateLoading} onRefresh={fetchRate} />
@@ -406,6 +438,55 @@ export default function Dashboard() {
             </div>
           </SFCard>
         )}
+
+        {/* 연결 대리점 현황 */}
+        {(dealer?.position === '대리점지사장' || dealer?.position === '대리점장') && connectedDealers.length >= 0 && (() => {
+          const thisMonth = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,'0')}`; })();
+          const totalMonthSales = connectedSales.filter(s => (s.sale_date || '').startsWith(thisMonth)).reduce((a, s) => a + (s.sales_amount || 0), 0);
+          return (
+            <SFCard>
+              <p className="text-xs text-gray-500 mb-3">🏢 연결 대리점 현황</p>
+              {connectedDealers.length === 0 ? (
+                <p className="text-xs text-gray-600 text-center py-4">연결된 대리점이 없습니다</p>
+              ) : (
+                <>
+                  <div className="overflow-x-auto mb-3">
+                    <table className="w-full text-xs">
+                      <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+                        {['대리점명','직책','이달매출','누적매출','상태'].map(h => (
+                          <th key={h} className="text-left py-2 px-1.5 font-medium">{h}</th>
+                        ))}
+                      </tr></thead>
+                      <tbody>
+                        {connectedDealers.map(d => {
+                          const dMonth = connectedSales.filter(s => s.dealer_name === d.dealer_name && (s.sale_date || '').startsWith(thisMonth)).reduce((a, s) => a + (s.sales_amount || 0), 0);
+                          const dTotal = connectedSales.filter(s => s.dealer_name === d.dealer_name).reduce((a, s) => a + (s.sales_amount || 0), 0);
+                          return (
+                            <tr key={d.id} className="border-b border-white/[0.04] last:border-0">
+                              <td className="py-2 px-1.5 text-white font-medium">{d.dealer_name}</td>
+                              <td className="py-2 px-1.5 text-gray-400">{d.position || d.grade || '-'}</td>
+                              <td className="py-2 px-1.5 text-emerald-400">₩{(dMonth/10000).toFixed(0)}만</td>
+                              <td className="py-2 px-1.5 text-white">₩{(dTotal/10000).toFixed(0)}만</td>
+                              <td className="py-2 px-1.5">
+                                <span className={`px-2 py-0.5 rounded-full text-[10px] ${d.status === 'active' ? 'bg-emerald-500/20 text-emerald-400' : 'bg-yellow-500/20 text-yellow-400'}`}>
+                                  {d.status === 'active' ? '활성' : d.status === 'pending' ? '대기' : d.status}
+                                </span>
+                              </td>
+                            </tr>
+                          );
+                        })}
+                      </tbody>
+                    </table>
+                  </div>
+                  <div className="flex items-center justify-between pt-2 border-t border-white/[0.06] text-xs">
+                    <span className="text-gray-500">총 연결 <span className="text-white font-bold">{connectedDealers.length}</span>개 대리점</span>
+                    <span className="text-gray-500">이달 합산 <span className="text-emerald-400 font-bold">₩{totalMonthSales.toLocaleString()}</span></span>
+                  </div>
+                </>
+              )}
+            </SFCard>
+          );
+        })()}
 
         {/* Orders Section */}
         {orders.length > 0 && (
