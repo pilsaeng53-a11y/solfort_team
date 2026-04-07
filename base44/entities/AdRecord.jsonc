@@ -1,0 +1,38 @@
+{
+  "name": "AdRecord",
+  "type": "object",
+  "properties": {
+    "username": {
+      "type": "string",
+      "title": "\ub4f1\ub85d\uc790 \uc544\uc774\ub514"
+    },
+    "ad_date": {
+      "type": "string",
+      "title": "\ub0a0\uc9dc"
+    },
+    "ad_cost": {
+      "type": "number",
+      "title": "\uad11\uace0\ube44"
+    },
+    "impressions": {
+      "type": "number",
+      "title": "\ub178\ucd9c\uc218"
+    },
+    "clicks": {
+      "type": "number",
+      "title": "\ud074\ub9ad\uc218"
+    },
+    "conversions": {
+      "type": "number",
+      "title": "DB\uc804\ud658\uc218"
+    },
+    "meta_ad_account": {
+      "type": "string",
+      "title": "\uba54\ud0c0 \uad11\uace0 \uacc4\uc815"
+    }
+  },
+  "required": [
+    "username",
+    "ad_date"
+  ]
+}
