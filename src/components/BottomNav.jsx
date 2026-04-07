@@ -1,79 +1,112 @@
-import { useNavigate, useLocation } from "react-router-dom";
-import { useEffect, useState } from "react";
-import { base44 } from "@/api/base44Client";
-import { Auth } from "@/lib/auth";
-import { Home, LayoutDashboard, UserPlus, FileText, Calendar, Trophy, GraduationCap, Bell, Globe } from "lucide-react";
+import { useState } from "react";
+import { useLocation, useNavigate } from "react-router-dom";
+import { X } from "lucide-react";
 
-const NAV_ITEMS = [
-  { path: "/", icon: Home, label: "홈" },
-  { path: "/dashboard", icon: LayoutDashboard, label: "대시보드" },
-  { path: "/register", icon: UserPlus, label: "등록" },
-  { path: "/records", icon: FileText, label: "매출" },
-  { path: "/daily", icon: Calendar, label: "일자별" },
-  { path: "/calendar", label: "캘린더" },
-  { path: "/ranking", icon: Trophy, label: "랭킹" },
-  { path: "/academy", icon: GraduationCap, label: "학습" },
-  { path: "/notices", icon: Bell, label: "공지" },
-  { path: "/foundation", icon: Globe, label: "🌐재단" },
+const MAIN_ITEMS = [
+  { icon: "🏠", label: "홈", path: "/dashboard" },
+  { icon: "👥", label: "고객", path: "/records" },
+  { icon: "📊", label: "매출", path: "/daily" },
+  { icon: "📢", label: "공지", path: "/notices" },
+  { icon: "⚙️", label: "더보기", action: "drawer" },
+];
+
+const DRAWER_ITEMS = [
+  { icon: "🌐", label: "재단", path: "/foundation" },
+  { icon: "📝", label: "일지", path: "/daily-journal" },
+  { icon: "🏆", label: "경쟁", path: "/ranking" },
+  { icon: "🌐", label: "네트워크", path: "/my-network" },
+  { icon: "💰", label: "인센티브", path: "/incentive-settings" },
+  { icon: "📁", label: "업로드", path: "/lead-upload" },
+  { icon: "📋", label: "계약서", path: "/register-customer" },
+  { icon: "👤", label: "계정", path: "/account" },
 ];
 
 export default function BottomNav() {
-  const navigate = useNavigate();
   const location = useLocation();
-  const [hasNewNotice, setHasNewNotice] = useState(false);
-  const [hasRejectedOrder, setHasRejectedOrder] = useState(false);
+  const navigate = useNavigate();
+  const [drawerOpen, setDrawerOpen] = useState(false);
 
-  useEffect(() => {
-    const lastSeen = localStorage.getItem("sf_notice_seen") || "";
-    base44.entities.Notice.filter({ is_published: true }, "-created_date", 20)
-      .then(notices => {
-        if (notices.length > 0) {
-          const latest = notices[0].created_at || notices[0].created_date || "";
-          if (latest > lastSeen) setHasNewNotice(true);
-        }
-      }).catch(() => {});
-    const dealerName = Auth.getDealerName();
-    if (dealerName) {
-      base44.entities.SalesOrder.filter({ status: "rejected" }, "-created_date", 10)
-        .then(orders => { if (orders.some(o => o.dealer_name === dealerName)) setHasRejectedOrder(true); })
-        .catch(() => {});
+  const isActive = (path) => location.pathname === path;
+
+  const handleItemClick = (item) => {
+    if (item.action === "drawer") {
+      setDrawerOpen(true);
+    } else if (item.path) {
+      navigate(item.path);
+      setDrawerOpen(false);
     }
-  }, []);
+  };
 
   return (
-    <nav className="fixed bottom-0 left-0 right-0 z-50 border-t border-white/[0.06] bg-[#080a12]/95 backdrop-blur-xl">
-      <div className="max-w-lg mx-auto flex items-center justify-around px-1 py-1.5">
-        {NAV_ITEMS.map((item) => {
-          const active = location.pathname === item.path;
-          const Icon = item.icon;
-          const showNoticeDot = item.path === "/notices" && hasNewNotice;
-          const showOrderDot = item.path === "/records" && hasRejectedOrder;
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`relative flex flex-col items-center gap-0.5 py-1 px-1.5 rounded-xl transition-all min-w-[40px] ${
-                active
-                  ? "text-blue-400"
-                  : "text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              {(showNoticeDot || showOrderDot) && (
-                <span className="absolute top-0.5 right-1.5 h-2 w-2 bg-red-500 rounded-full" />
-              )}
-               {item.icon ? (
-                <item.icon className="h-4.5 w-4.5" strokeWidth={active ? 2.5 : 1.5} style={{ width: 18, height: 18 }} />
-              ) : (
-                <span className="text-lg">📅</span>
-              )}
-              <span className="text-[9px] font-medium leading-none">{item.label}</span>
-              {active && (
-                <div className="h-0.5 w-4 rounded-full bg-blue-400 mt-0.5" />
-              )}
-            </button>
-          );
-        })}
+    <>
+      {/* Bottom Navigation */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#080a12] border-t border-white/[0.06] z-40">
+        <div className="max-w-6xl mx-auto px-4 py-3">
+          <div className="grid grid-cols-5 gap-2">
+            {MAIN_ITEMS.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => handleItemClick(item)}
+                className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-medium transition-all ${
+                  item.path && isActive(item.path)
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                    : "text-gray-400 hover:text-gray-200"
+                }`}
+              >
+                <span className="text-lg mb-0.5">{item.icon}</span>
+                <span className="whitespace-nowrap">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
       </div>
-    </nav>
+
+      {/* Drawer Overlay */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* Slide-up Drawer */}
+      <div
+        className={`fixed bottom-0 left-0 right-0 bg-[#0a0c15] border-t border-white/[0.06] z-50 transform transition-transform duration-300 ${
+          drawerOpen ? "translate-y-0" : "translate-y-full"
+        }`}
+        style={{ maxHeight: "70vh" }}
+      >
+        {/* Drawer Header */}
+        <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
+          <h2 className="text-sm font-bold text-white">더 보기</h2>
+          <button
+            onClick={() => setDrawerOpen(false)}
+            className="p-1 hover:bg-white/10 rounded transition-all"
+          >
+            <X className="h-4 w-4 text-gray-400" />
+          </button>
+        </div>
+
+        {/* Drawer Grid */}
+        <div className="p-4 overflow-y-auto" style={{ maxHeight: "calc(70vh - 60px)" }}>
+          <div className="grid grid-cols-4 gap-3">
+            {DRAWER_ITEMS.map((item) => (
+              <button
+                key={item.label}
+                onClick={() => handleItemClick(item)}
+                className={`flex flex-col items-center justify-center py-3 rounded-lg text-[10px] font-medium transition-all ${
+                  isActive(item.path)
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                    : "text-gray-300 hover:bg-white/5"
+                }`}
+              >
+                <span className="text-2xl mb-1">{item.icon}</span>
+                <span className="whitespace-nowrap">{item.label}</span>
+              </button>
+            ))}
+          </div>
+        </div>
+      </div>
+    </>
   );
 }
