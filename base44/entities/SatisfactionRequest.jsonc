@@ -1,0 +1,32 @@
+{
+  "name": "SatisfactionRequest",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string",
+      "title": "\uace0\uac1d\uba85"
+    },
+    "phone": {
+      "type": "string",
+      "title": "\uc5f0\ub77d\ucc98"
+    },
+    "staff_name": {
+      "type": "string",
+      "title": "\ub2f4\ub2f9\uc9c1\uc6d0\uba85"
+    },
+    "sent_at": {
+      "type": "string",
+      "title": "\ubc1c\uc1a1 \uc2dc\uac04"
+    },
+    "status": {
+      "type": "string",
+      "title": "\uc0c1\ud0dc",
+      "default": "pending"
+    }
+  },
+  "required": [
+    "customer_name",
+    "phone",
+    "staff_name"
+  ]
+}

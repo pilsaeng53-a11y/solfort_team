@@ -23,9 +23,36 @@ export default function TelegramBot() {
   };
 
   const parseAndSave = async (msgText, from) => {
+    // Format 3: 이름:X 별점:N 평가:Y (satisfaction review)
+    if (msgText.includes("이름:") && msgText.includes("별점:")) {
+      try {
+        const nameMatch = msgText.match(/이름:\s*([^\n별]+)/);
+        const ratingMatch = msgText.match(/별점:\s*(\d)/);
+        const reviewMatch = msgText.match(/평가:\s*([^\n]*)/);
+        
+        if (nameMatch && ratingMatch) {
+          const customer_name = nameMatch[1].trim();
+          const rating = parseInt(ratingMatch[1]);
+          const review_text = reviewMatch ? reviewMatch[1].trim() : "";
+          
+          await base44.entities.CustomerReview.create({
+            customer_name,
+            rating,
+            review_text,
+            staff_name: from,
+            reviewed_at: new Date().toISOString(),
+          });
+          addLog("review", `평가 등록: ${customer_name} / ${rating}⭐`, `from: ${from}`);
+          return;
+        }
+      } catch (e) {
+        addLog("error", `평가 파싱 오류: ${e.message}`, `from: ${from}`);
+        return;
+      }
+    }
+    
     const parts = msgText.trim().split("/");
     if (parts.length === 3) {
-      // Format 1: 이름/연락처/금액
       const [customer_name, phone, amountStr] = parts;
       const amount = Number(amountStr.replace(/[^0-9]/g, ""));
       await base44.entities.SalesRecord.create({
@@ -38,7 +65,6 @@ export default function TelegramBot() {
       });
       addLog("sales", `매출 등록: ${customer_name.trim()} / ${phone.trim()} / ₩${amount.toLocaleString()}`, `from: ${from}`);
     } else if (parts.length === 4) {
-      // Format 2: 이름/연락처/상태/금액
       const [name, phone, status, amountStr] = parts;
       const statusMap = { "수락": "수락", "거절": "거절", "가망": "가망" };
       const mappedStatus = statusMap[status.trim()] || status.trim();
@@ -90,6 +116,7 @@ export default function TelegramBot() {
   const LOG_STYLES = {
     sales: { bg: "bg-emerald-500/10 border-emerald-500/30", text: "text-emerald-400", label: "매출" },
     lead: { bg: "bg-blue-500/10 border-blue-500/30", text: "text-blue-400", label: "리드" },
+    review: { bg: "bg-purple-500/10 border-purple-500/30", text: "text-purple-400", label: "평가" },
     unknown: { bg: "bg-yellow-500/10 border-yellow-500/30", text: "text-yellow-400", label: "미인식" },
     error: { bg: "bg-red-500/10 border-red-500/30", text: "text-red-400", label: "오류" },
   };
@@ -119,6 +146,10 @@ export default function TelegramBot() {
         <div className="flex items-start gap-2">
           <span className="text-[10px] bg-blue-500/20 text-blue-400 px-2 py-0.5 rounded font-mono shrink-0">리드</span>
           <p className="text-xs text-gray-300 font-mono">이름/연락처/수락|거절|가망/금액</p>
+        </div>
+        <div className="flex items-start gap-2">
+          <span className="text-[10px] bg-purple-500/20 text-purple-400 px-2 py-0.5 rounded font-mono shrink-0">평가</span>
+          <p className="text-xs text-gray-300 font-mono">이름:X 별점:N 평가:Y</p>
         </div>
       </div>
 

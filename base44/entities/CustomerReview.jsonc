@@ -1,0 +1,33 @@
+{
+  "name": "CustomerReview",
+  "type": "object",
+  "properties": {
+    "customer_name": {
+      "type": "string",
+      "title": "\uace0\uac1d\uba85"
+    },
+    "rating": {
+      "type": "number",
+      "title": "\ubcc4\uc810",
+      "minimum": 1,
+      "maximum": 5
+    },
+    "review_text": {
+      "type": "string",
+      "title": "\ud3c9\uac00 \ub0b4\uc6a9"
+    },
+    "staff_name": {
+      "type": "string",
+      "title": "\ub2f4\ub2f9\uc9c1\uc6d0\uba85"
+    },
+    "reviewed_at": {
+      "type": "string",
+      "title": "\ud3c9\uac00 \uc2dc\uac04"
+    }
+  },
+  "required": [
+    "customer_name",
+    "rating",
+    "staff_name"
+  ]
+}
