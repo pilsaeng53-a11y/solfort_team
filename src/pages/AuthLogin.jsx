@@ -141,7 +141,24 @@ export default function AuthLogin() {
         return;
       }
       const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
-       await base44.entities.DealerInfo.update(dealer.id, { session_token: sessionToken, last_login_at: new Date().toISOString() });
+      const currentTime = new Date().toISOString();
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const { ip: currentIP } = await ipRes.json();
+        const lastIP = dealer.last_login_ip;
+        const updateData = { session_token: sessionToken, last_login_at: currentTime, last_login_ip: currentIP };
+        await base44.entities.DealerInfo.update(dealer.id, updateData);
+        if (lastIP && lastIP !== currentIP) {
+          const msg = `⚠️ 새로운 IP 접속 감지\n계정: ${username}\n이전IP: ${lastIP}\n새IP: ${currentIP}\n시각: ${currentTime}`;
+          fetch('https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: '5757341051', text: msg })
+          }).catch(() => {});
+        }
+      } catch(e) {
+        await base44.entities.DealerInfo.update(dealer.id, { session_token: sessionToken, last_login_at: currentTime });
+      }
       localStorage.setItem('sf_session_token', sessionToken);
       localStorage.setItem('sf_session_id', dealer.id);
       localStorage.removeItem(FAIL_KEY);
@@ -187,7 +204,24 @@ export default function AuthLogin() {
         return;
       }
       const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
-       await base44.entities.CallTeamMember.update(member.id, { session_token: sessionToken, last_login_at: new Date().toISOString() });
+      const currentTime = new Date().toISOString();
+      try {
+        const ipRes = await fetch('https://api.ipify.org?format=json');
+        const { ip: currentIP } = await ipRes.json();
+        const lastIP = member.last_login_ip;
+        const updateData = { session_token: sessionToken, last_login_at: currentTime, last_login_ip: currentIP };
+        await base44.entities.CallTeamMember.update(member.id, updateData);
+        if (lastIP && lastIP !== currentIP) {
+          const msg = `⚠️ 새로운 IP 접속 감지\n계정: ${username}\n이전IP: ${lastIP}\n새IP: ${currentIP}\n시각: ${currentTime}`;
+          fetch('https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: '5757341051', text: msg })
+          }).catch(() => {});
+        }
+      } catch(e) {
+        await base44.entities.CallTeamMember.update(member.id, { session_token: sessionToken, last_login_at: currentTime });
+      }
       localStorage.setItem('sf_session_token', sessionToken);
       localStorage.setItem('sf_session_id', member.id);
       localStorage.removeItem(FAIL_KEY);
