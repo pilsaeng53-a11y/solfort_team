@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Auth } from "@/lib/auth";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
-import { Plus, X, ChevronDown, Send, Copy, Check, TrendingUp } from "lucide-react";
+import { Plus, X, ChevronDown, Send, Copy, Check, TrendingUp, Play, Square, ChevronUp } from "lucide-react";
 
 const STATUS_OPTS = ["신규", "연락됨", "관심있음", "거절", "매출전환"];
 const COLOR_FILTERS = [
@@ -55,13 +55,87 @@ export default function CallLeads() {
   const [tagFilter, setTagFilter] = useState("");
   const [memos, setMemos] = useState({});
   const [memoInput, setMemoInput] = useState({});
+  const [activeTimer, setActiveTimer] = useState(null);
+  const [timerSeconds, setTimerSeconds] = useState({});
+  const [callLogs, setCallLogs] = useState({});
+  const [currentUser, setCurrentUser] = useState(null);
+  const [showResult, setShowResult] = useState(null);
+  const [selectedResult, setSelectedResult] = useState("");
+  const [showLogsList, setShowLogsList] = useState(null);
 
   useEffect(() => {
     document.title = "SolFort - 고객 리드";
     load();
     loadMyInfo();
     handleLongOverdueLeads();
+    loadCurrentUser();
+    loadCallLogs();
   }, []);
+
+  useEffect(() => {
+    if (activeTimer === null) return;
+    const interval = setInterval(() => {
+      setTimerSeconds(p => ({ ...p, [activeTimer]: (p[activeTimer] || 0) + 1 }));
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activeTimer]);
+
+  const loadCurrentUser = async () => {
+    const user = await base44.auth.me();
+    setCurrentUser(user);
+  };
+
+  const loadCallLogs = async () => {
+    const logs = await base44.entities.CallLog.list('-called_at', 500);
+    const grouped = {};
+    logs.forEach(log => {
+      if (!grouped[log.lead_id]) grouped[log.lead_id] = [];
+      grouped[log.lead_id].push(log);
+    });
+    setCallLogs(grouped);
+  };
+
+  const getTodayStats = () => {
+    const today = new Date().toISOString().split('T')[0];
+    const todayLogs = Object.values(callLogs).flat().filter(log => log.called_at?.startsWith(today));
+    const totalCount = todayLogs.length;
+    const totalDuration = todayLogs.reduce((sum, log) => sum + (log.call_duration || 0), 0);
+    return { totalCount, totalDuration };
+  };
+
+  const startTimer = (leadId) => {
+    setActiveTimer(leadId);
+    setTimerSeconds(p => ({ ...p, [leadId]: p[leadId] || 0 }));
+  };
+
+  const stopTimer = async (leadId) => {
+    const seconds = timerSeconds[leadId] || 0;
+    const duration = Math.floor(seconds / 60);
+    setActiveTimer(null);
+    setShowResult(leadId);
+    setSelectedResult("");
+  };
+
+  const saveCallLog = async (leadId) => {
+    const seconds = timerSeconds[leadId] || 0;
+    const duration = Math.floor(seconds / 60);
+    if (!selectedResult) return;
+    const log = await base44.entities.CallLog.create({
+      lead_id: leadId,
+      lead_name: leads.find(l => l.id === leadId)?.name || '',
+      phone: leads.find(l => l.id === leadId)?.phone || '',
+      call_result: selectedResult,
+      call_duration: `${Math.floor(seconds / 60)}:${String(seconds % 60).padStart(2, '0')}`,
+      memo: '',
+      called_by: currentUser?.full_name || me,
+      called_at: new Date().toISOString(),
+    });
+    setCallLogs(p => ({ ...p, [leadId]: [...(p[leadId] || []), log] }));
+    setShowResult(null);
+    setTimerSeconds(p => ({ ...p, [leadId]: 0 }));
+    setSelectedResult("");
+    await loadCallLogs();
+  };
 
   const handleLongOverdueLeads = async () => {
     const flagKey = `long_overdue_check_${new Date().toISOString().split('T')[0]}`;
@@ -191,6 +265,7 @@ export default function CallLeads() {
   });
 
   const longOverdueLeads = filtered.filter(l => l.status === '장기미처리');
+  const { totalCount, totalDuration } = getTodayStats();
 
   if (loading) return <><CallNav /><Loader /></>;
 
@@ -199,6 +274,18 @@ export default function CallLeads() {
       <CallNav />
       <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto">
         {/* 내 정보 미니 카드 */}
+        {/* 오늘 통화 통계 */}
+        <div className="bg-gradient-to-r from-blue-500/10 to-emerald-500/10 border border-white/10 rounded-2xl p-4 flex items-center gap-6">
+          <div>
+            <p className="text-[10px] text-gray-500 mb-1">오늘 통화 건수</p>
+            <p className="text-2xl font-bold text-blue-400">{totalCount}</p>
+          </div>
+          <div>
+            <p className="text-[10px] text-gray-500 mb-1">누적 통화 시간</p>
+            <p className="text-2xl font-bold text-emerald-400">{Math.floor(totalDuration / 60)}:{String(totalDuration % 60).padStart(2, '0')}</p>
+          </div>
+        </div>
+
         {myInfo && (
           <div className="bg-[#0d1020] border border-white/[0.07] rounded-2xl p-3.5 flex flex-wrap items-center gap-3">
             <div className="flex items-center gap-2">
@@ -331,10 +418,10 @@ export default function CallLeads() {
                       className={`text-lg transition-all ${lead.is_bookmarked ? "text-yellow-400" : "text-gray-600 hover:text-yellow-400"}`}>
                       ⭐
                     </button>
-                    <button onClick={() => navigate("/call/logs")}
-                      className="text-[10px] bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 px-2.5 py-1.5 rounded-lg hover:bg-emerald-500/20 transition-all whitespace-nowrap">
-                      콜 기록 추가
-                    </button>
+                    <button onClick={() => setShowLogsList(showLogsList === lead.id ? null : lead.id)}
+                       className="text-[10px] bg-purple-500/10 text-purple-400 border border-purple-500/20 px-2.5 py-1.5 rounded-lg hover:bg-purple-500/20 transition-all whitespace-nowrap">
+                        일지 보기
+                      </button>
                     <div className="relative">
                       <button onClick={() => setOpenStatus(openStatus === lead.id ? null : lead.id)}
                         className="flex items-center gap-1 text-[10px] bg-white/5 text-gray-400 px-2.5 py-1.5 rounded-lg hover:bg-white/10 transition-all">
@@ -355,6 +442,77 @@ export default function CallLeads() {
                 </div>
               </SFCard>
               
+              {/* Call Logs */}
+              {showLogsList === lead.id && (
+                <SFCard className="bg-purple-500/[0.03]">
+                  <p className="text-xs font-semibold text-gray-400 mb-2.5">📞 오늘의 통화 일지</p>
+                  <div className="space-y-1.5 max-h-32 overflow-y-auto">
+                    {(callLogs[lead.id] || []).filter(log => log.called_at?.startsWith(new Date().toISOString().split('T')[0])).length === 0 ? (
+                      <p className="text-[10px] text-gray-600 text-center py-2">통화 기록이 없습니다</p>
+                    ) : (
+                      (callLogs[lead.id] || []).filter(log => log.called_at?.startsWith(new Date().toISOString().split('T')[0])).map((log, idx) => (
+                        <div key={idx} className="flex items-center gap-2 text-[10px] bg-white/5 rounded-lg p-2 border border-white/5">
+                          <span className="text-gray-500 min-w-fit">{log.called_at?.substring(11, 16)}</span>
+                          <span className="text-gray-400 min-w-fit">{log.call_duration || '0:00'}</span>
+                          <span className={`px-1.5 py-0.5 rounded text-[9px] font-medium ${
+                            log.call_result === '수락' ? 'bg-emerald-500/20 text-emerald-400' :
+                            log.call_result === '거절' ? 'bg-red-500/20 text-red-400' :
+                            log.call_result === '가망' ? 'bg-yellow-500/20 text-yellow-400' :
+                            'bg-blue-500/20 text-blue-400'
+                          }`}>{log.call_result}</span>
+                        </div>
+                      ))
+                    )}
+                  </div>
+                </SFCard>
+              )}
+
+              {/* Timer Section */}
+              <SFCard className={`border-2 ${ activeTimer === lead.id ? 'border-green-500/40 bg-green-500/5' : 'border-white/10'}`}>
+                <p className="text-xs font-semibold text-gray-400 mb-3">📞 콜 타이머</p>
+                {activeTimer === lead.id ? (
+                  <div className="space-y-3">
+                    <div className="text-center">
+                      <p className="text-4xl font-bold text-green-400 font-mono animate-pulse">
+                        {String(Math.floor((timerSeconds[lead.id] || 0) / 60)).padStart(2, '0')}:{String((timerSeconds[lead.id] || 0) % 60).padStart(2, '0')}
+                      </p>
+                    </div>
+                    <button onClick={() => stopTimer(lead.id)}
+                      className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs font-semibold hover:bg-red-500/30 transition-all">
+                      <Square className="h-3.5 w-3.5" /> 종료
+                    </button>
+                  </div>
+                ) : (
+                  <button onClick={() => startTimer(lead.id)}
+                    className="w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs font-semibold hover:bg-green-500/30 transition-all">
+                    <Play className="h-3.5 w-3.5" /> 콜 시작
+                  </button>
+                )}
+              </SFCard>
+
+              {/* Result Selector */}
+              {showResult === lead.id && (
+                <SFCard className="border-blue-500/30 bg-blue-500/5">
+                  <p className="text-xs font-semibold text-gray-400 mb-3">📋 통화 결과</p>
+                  <div className="grid grid-cols-2 gap-2 mb-3">
+                    {['수락', '거절', '가망', '재콜'].map(r => (
+                      <button key={r} onClick={() => setSelectedResult(r)}
+                        className={`px-3 py-2 rounded-lg text-xs font-medium transition-all ${
+                          selectedResult === r
+                            ? 'bg-blue-500/30 text-blue-400 border border-blue-500/40'
+                            : 'bg-white/5 text-gray-400 border border-white/10 hover:bg-white/10'
+                        }`}>
+                        {r}
+                      </button>
+                    ))}
+                  </div>
+                  <button onClick={() => saveCallLog(lead.id)} disabled={!selectedResult}
+                    className="w-full px-4 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-semibold hover:bg-blue-500/30 disabled:opacity-40 transition-all">
+                    저장
+                  </button>
+                </SFCard>
+              )}
+
               {/* Memo Section */}
               <SFCard className="bg-white/[0.02]">
                 <p className="text-xs font-semibold text-gray-400 mb-2.5">📝 팔로우업 메모</p>
