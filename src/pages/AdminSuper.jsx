@@ -277,6 +277,12 @@ export default function AdminSuper() {
             className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${category === "botmgmt" ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-white/5 text-gray-400 hover:text-white"}`}>🤖 봇 관리</button>
           <button onClick={() => navigate("/analytics")}
             className="px-3 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs hover:bg-blue-500/30 transition-all">📊 분석</button>
+          <button onClick={() => navigate("/telegram-bot")}
+            className="px-3 py-1.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg text-xs hover:bg-cyan-500/30 transition-all">🤖 텔레그램봇</button>
+          <button onClick={() => navigate("/incentive-settings")}
+            className="px-3 py-1.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-500/30 transition-all">💰 인센티브관리</button>
+          <button onClick={() => navigate("/my-network")}
+            className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs hover:bg-emerald-500/30 transition-all">🌐 네트워크현황</button>
           {pendingOrders > 0 && (
             <button onClick={() => { setCategory("dealer"); setDealerTab(6); }}
               className="flex items-center gap-1.5 px-3 py-1.5 bg-red-500/20 text-red-400 border border-red-500/30 rounded-lg text-xs hover:bg-red-500/30 transition-all animate-pulse">
@@ -509,7 +515,7 @@ function OverviewPanel({ onGoOrders }) {
         ))}
       </div>
       <SFCard>
-        <h3 className="text-xs font-semibold text-gray-400 mb-3">딜러 랭킹 TOP 5</h3>
+        <h3 className="text-xs font-semibold text-gray-400 mb-3">딜러 랝킹 TOP 5</h3>
         <div className="space-y-2">
           {dealerRanking.map((d, i) => (
             <div key={d.name} className="flex items-center gap-3">
@@ -520,8 +526,54 @@ function OverviewPanel({ onGoOrders }) {
           ))}
         </div>
       </SFCard>
+      <ReferralRankingSection dealers={dealers} sales={sales} />
       <DealerOrgChart dealers={dealers} />
     </div>
+  );
+}
+
+function ReferralRankingSection({ dealers, sales }) {
+  const dealerMap = Object.fromEntries(dealers.map(d => [d.id, d]));
+
+  const rows = dealers
+    .filter(d => d.role !== 'manager')
+    .map(d => {
+      const direct = dealers.filter(x => x.parent_dealer_id === d.id);
+      const directIds = new Set(direct.map(x => x.id));
+      const indirect = dealers.filter(x => x.parent_dealer_id && directIds.has(dealerMap[x.parent_dealer_id]?.id));
+      const networkNames = new Set([d.dealer_name, ...direct.map(x => x.dealer_name), ...indirect.map(x => x.dealer_name)]);
+      const networkSales = sales.filter(s => networkNames.has(s.dealer_name)).reduce((a, s) => a + (s.sales_amount || 0), 0);
+      return { id: d.id, name: d.dealer_name, code: d.referral_code || '-', direct: direct.length, indirect: indirect.length, networkSales };
+    })
+    .sort((a, b) => (b.direct + b.indirect) - (a.direct + a.indirect))
+    .slice(0, 10);
+
+  if (rows.every(r => r.direct === 0)) return null;
+
+  return (
+    <SFCard>
+      <h3 className="text-xs font-semibold text-gray-400 mb-3">📊 추천코드 현황 TOP 10</h3>
+      <div className="overflow-x-auto">
+        <table className="w-full text-xs">
+          <thead><tr className="text-gray-500 border-b border-white/[0.06]">
+            {['이름','추천코드','직추천수','간추천수','네트워크매출'].map(h => (
+              <th key={h} className="text-left py-2 px-2 font-medium">{h}</th>
+            ))}
+          </tr></thead>
+          <tbody>
+            {rows.map(r => (
+              <tr key={r.id} className="border-b border-white/[0.04] last:border-0">
+                <td className="py-2 px-2 text-white font-medium">{r.name}</td>
+                <td className="py-2 px-2 text-gray-400 font-mono">{r.code}</td>
+                <td className="py-2 px-2 text-emerald-400 font-bold">{r.direct}</td>
+                <td className="py-2 px-2 text-blue-400">{r.indirect}</td>
+                <td className="py-2 px-2 text-yellow-400">₩{(r.networkSales/10000).toFixed(0)}만</td>
+              </tr>
+            ))}
+          </tbody>
+        </table>
+      </div>
+    </SFCard>
   );
 }
 
