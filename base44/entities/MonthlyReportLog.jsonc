@@ -1,0 +1,25 @@
+{
+  "name": "MonthlyReportLog",
+  "type": "object",
+  "properties": {
+    "report_month": {
+      "type": "string",
+      "title": "\ub9ac\ud3ec\ud2b8 \uc6d4 (YYYY-MM)"
+    },
+    "total_sales": {
+      "type": "number",
+      "title": "\ucd1d \ub9e4\ucd9c"
+    },
+    "sent_at": {
+      "type": "string",
+      "title": "\ubc1c\uc1a1 \uc77c\uc2dc"
+    },
+    "message_preview": {
+      "type": "string",
+      "title": "\uba54\uc2dc\uc9c0 \ubbf8\ub9ac\ubcf4\uae30"
+    }
+  },
+  "required": [
+    "report_month"
+  ]
+}
