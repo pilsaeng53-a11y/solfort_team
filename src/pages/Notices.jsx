@@ -18,10 +18,13 @@ export default function Notices() {
   const [expandedId, setExpandedId] = useState(null);
   const [user, setUser] = useState(null);
   const [showModal, setShowModal] = useState(false);
+  const [teams, setTeams] = useState([]);
+  const [regions, setRegions] = useState([]);
   const [formData, setFormData] = useState({
     title: "",
     content: "",
-    category: "전체",
+    target: "전체공지",
+    specificTeams: [],
     is_important: false,
     file_url: "",
   });
@@ -31,23 +34,42 @@ export default function Notices() {
       try {
         const currentUser = await base44.auth.me();
         setUser(currentUser);
+        await loadTeamsAndRegions();
       } catch {}
     };
     initUser();
   }, []);
 
+  const loadTeamsAndRegions = async () => {
+    try {
+      const [callMembers, dealers] = await Promise.all([
+        base44.entities.CallTeamMember.list("-created_date", 500),
+        base44.entities.DealerInfo.list("-created_date", 500),
+      ]);
+      const teamNames = [...new Set(callMembers.map(m => m.team).filter(Boolean))];
+      const regionNames = [...new Set(dealers.map(d => d.region).filter(Boolean))];
+      setTeams(teamNames);
+      setRegions(regionNames);
+    } catch (e) {}
+  };
+
   useEffect(() => {
     loadNotices();
-  }, [activeTab]);
+  }, [activeTab, user]);
 
   const loadNotices = async () => {
     setLoading(true);
     try {
-      const target = TABS.find(t => t.id === activeTab)?.target || "전체";
       const allNotices = await base44.entities.Notice.list("-created_date", 200);
-      const filtered = target === "전체" 
-        ? allNotices 
-        : allNotices.filter(n => n.target === target);
+      let filtered = allNotices;
+      
+      if (user?.role === "dealer") {
+        filtered = allNotices.filter(n => n.target === "전체공지" || n.target === "대리점만");
+      } else if (user?.role === "call_team") {
+        filtered = allNotices.filter(n => n.target === "전체공지" || n.target === "콜팀만");
+      } else if (user?.role === "online_team") {
+        filtered = allNotices.filter(n => n.target === "전체공지" || n.target === "온라인팀만");
+      }
       setNotices(filtered);
     } catch (e) {
       setNotices([]);
@@ -62,22 +84,53 @@ export default function Notices() {
     }
 
     try {
+      const targetMap = { "전체공지": "전체", "대리점만": "대리점", "콜팀만": "콜팀", "온라인팀만": "온라인팀" };
+      const target = formData.target === "특정팀선택" ? "특정팀: " + formData.specificTeams.join(", ") : targetMap[formData.target];
+      
       await base44.entities.Notice.create({
         title: formData.title,
         content: formData.content,
-        target: formData.category,
+        target: target,
         is_pinned: formData.is_important,
         is_published: true,
-        category: formData.category === "영업자료" ? "important" : "general",
+        category: isMaterialsTab ? "important" : "general",
         file_url: formData.file_url || null,
         created_by: user?.email || user?.username,
       });
-      setFormData({ title: "", content: "", category: "전체", is_important: false, file_url: "" });
+
+      if (formData.target === "특정팀선택" && formData.specificTeams.length > 0) {
+        const preview = formData.content.length > 50 ? formData.content.substring(0, 50) + "..." : formData.content;
+        const msg = `📢 ${formData.specificTeams.join(", ")} 공지\n제목: ${formData.title}\n${preview}`;
+        await sendTelegram(msg);
+      }
+
+      setFormData({ title: "", content: "", target: "전체공지", specificTeams: [], is_important: false, file_url: "" });
       setShowModal(false);
       loadNotices();
     } catch (e) {
       alert("공지 등록에 실패했습니다.");
     }
+  };
+
+  const sendTelegram = async (message) => {
+    try {
+      const BOT_TOKEN = '8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8';
+      const CHAT_ID = '5757341051';
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: CHAT_ID, text: message }),
+      });
+    } catch (e) {}
+  };
+
+  const getTargetBadgeColor = (target) => {
+    if (target === "전체") return "bg-gray-500/20 text-gray-400";
+    if (target === "대리점") return "bg-emerald-500/20 text-emerald-400";
+    if (target === "콜팀") return "bg-blue-500/20 text-blue-400";
+    if (target === "온라인팀") return "bg-purple-500/20 text-purple-400";
+    if (target?.startsWith("특정팀")) return "bg-yellow-500/20 text-yellow-400";
+    return "bg-emerald-500/20 text-emerald-400";
   };
 
   const isSuperAdmin = user?.role === "super_admin";
@@ -174,11 +227,11 @@ export default function Notices() {
                   <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-3 mb-2 flex-wrap">
                       <p className="text-white font-semibold">{notice.title}</p>
-                      {notice.target && notice.target !== "전체" && (
-                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded-full shrink-0">
-                          {notice.target}
-                        </span>
-                      )}
+                           {notice.target && notice.target !== "전체" && (
+                             <span className={`text-[10px] px-2 py-0.5 rounded-full shrink-0 ${getTargetBadgeColor(notice.target)}`}>
+                               {notice.target.startsWith("특정팀") ? "특정팀" : notice.target}
+                             </span>
+                           )}
                     </div>
                     {!expandedId ? (
                       <p className="text-xs text-gray-500 line-clamp-2">{notice.content}</p>
@@ -236,18 +289,89 @@ export default function Notices() {
                 />
               </div>
 
-              <div>
-                <label className="text-xs text-gray-400 block mb-1">카테고리</label>
-                <select
-                  value={formData.category}
-                  onChange={e => setFormData(p => ({ ...p, category: e.target.value }))}
-                  className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500/50"
-                >
-                  {["전체", "대리점", "콜팀", "온라인팀", "영업자료"].map(c => (
-                    <option key={c} value={c}>{c}</option>
-                  ))}
-                </select>
-              </div>
+              {isMaterialsTab ? (
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">카테고리</label>
+                  <select
+                    value={formData.target}
+                    onChange={e => setFormData(p => ({ ...p, target: e.target.value }))}
+                    className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500/50"
+                  >
+                    {["전체공지", "대리점만", "콜팀만", "온라인팀만", "특정팀선택"].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              ) : (
+                <div>
+                  <label className="text-xs text-gray-400 block mb-1">대상</label>
+                  <select
+                    value={formData.target}
+                    onChange={e => setFormData(p => ({ ...p, target: e.target.value, specificTeams: [] }))}
+                    className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs focus:outline-none focus:border-emerald-500/50"
+                  >
+                    {["전체공지", "대리점만", "콜팀만", "온라인팀만", "특정팀선택"].map(c => (
+                      <option key={c} value={c}>{c}</option>
+                    ))}
+                  </select>
+                </div>
+              )}
+
+              {formData.target === "특정팀선택" && (
+                <div>
+                  <label className="text-xs text-gray-400 block mb-2">팀 선택</label>
+                  <div className="space-y-2">
+                    {teams.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-gray-500 mb-1">콜팀</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {teams.map(t => (
+                            <label key={t} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={formData.specificTeams.includes(t)}
+                                onChange={e => {
+                                  if (e.target.checked) {
+                                    setFormData(p => ({ ...p, specificTeams: [...p.specificTeams, t] }));
+                                  } else {
+                                    setFormData(p => ({ ...p, specificTeams: p.specificTeams.filter(x => x !== t) }));
+                                  }
+                                }}
+                                className="w-3 h-3 rounded accent-emerald-500"
+                              />
+                              <span className="text-xs text-gray-300">{t}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                    {regions.length > 0 && (
+                      <div>
+                        <p className="text-[10px] text-gray-500 mb-1">지역</p>
+                        <div className="grid grid-cols-2 gap-2">
+                          {regions.map(r => (
+                            <label key={r} className="flex items-center gap-2 cursor-pointer">
+                              <input
+                                type="checkbox"
+                                checked={formData.specificTeams.includes(r)}
+                                onChange={e => {
+                                  if (e.target.checked) {
+                                    setFormData(p => ({ ...p, specificTeams: [...p.specificTeams, r] }));
+                                  } else {
+                                    setFormData(p => ({ ...p, specificTeams: p.specificTeams.filter(x => x !== r) }));
+                                  }
+                                }}
+                                className="w-3 h-3 rounded accent-emerald-500"
+                              />
+                              <span className="text-xs text-gray-300">{r}</span>
+                            </label>
+                          ))}
+                        </div>
+                      </div>
+                    )}
+                  </div>
+                </div>
+              )}
 
               {!isMaterialsTab && (
                 <label className="flex items-center gap-2 cursor-pointer">

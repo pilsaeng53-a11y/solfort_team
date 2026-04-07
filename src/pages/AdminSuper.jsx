@@ -11,6 +11,7 @@ import SFCard from "../components/SFCard";
 import { ReportPanel } from "./AdminCall";
 import PricingManager from "../components/PricingManager";
 import MemberManagementPanel from "../components/MemberManagementPanel";
+import ReferralCodeManagement from "../components/ReferralCodeManagement";
 import SettlementPanel from "../components/SettlementPanel";
 import SalesOrderPanel from "../components/SalesOrderPanel";
 import ManagerAccountPanel from "../components/ManagerAccountPanel";
@@ -617,6 +618,27 @@ function OverviewPanel({ onGoOrders }) {
     { label: "물량 대기", value: `${pendingOrders}건`, color: pendingOrders > 0 ? "text-red-400" : "text-gray-400" },
   ];
 
+  const generateCode = () => {
+    const chars = "ABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
+    let code = "SF";
+    for (let i = 0; i < 4; i++) {
+      code += chars.charAt(Math.floor(Math.random() * chars.length));
+    }
+    return code;
+  };
+
+  const sendTelegram = async (message) => {
+    try {
+      const BOT_TOKEN = '8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8';
+      const CHAT_ID = '5757341051';
+      await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: CHAT_ID, text: message }),
+      });
+    } catch (e) { console.error(e); }
+  };
+
   return (
     <div className="space-y-5">
       <div className="grid grid-cols-2 gap-3">
@@ -642,6 +664,7 @@ function OverviewPanel({ onGoOrders }) {
       </SFCard>
       <ReferralRankingSection dealers={dealers} sales={sales} />
       <DealerOrgChart dealers={dealers} />
+      <ReferralCodeManagement generateCode={generateCode} sendTelegram={sendTelegram} />
     </div>
   );
 }
