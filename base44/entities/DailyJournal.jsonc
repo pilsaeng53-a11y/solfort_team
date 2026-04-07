@@ -1,0 +1,61 @@
+{
+  "name": "DailyJournal",
+  "type": "object",
+  "properties": {
+    "author": {
+      "type": "string",
+      "title": "\uc791\uc131\uc790\uba85"
+    },
+    "role": {
+      "type": "string",
+      "title": "\uc5ed\ud560"
+    },
+    "position": {
+      "type": "string",
+      "title": "\uc9c1\ucc45"
+    },
+    "good_points": {
+      "type": "string",
+      "title": "\uc624\ub298 \uc798\ud55c \uac83"
+    },
+    "bad_points": {
+      "type": "string",
+      "title": "\uc544\uc26c\uc6b4 \uc810/\ubb38\uc81c\uc810"
+    },
+    "tomorrow_goal": {
+      "type": "string",
+      "title": "\ub0b4\uc77c \ubaa9\ud45c"
+    },
+    "today_sales": {
+      "type": "number",
+      "title": "\uc624\ub298 \ub9e4\ucd9c/\uc131\uacfc"
+    },
+    "written_at": {
+      "type": "string",
+      "title": "\uc791\uc131 \uc2dc\uac04"
+    },
+    "parent_id": {
+      "type": "string",
+      "title": "\uc0c1\uc704\uc790 ID"
+    },
+    "parent_name": {
+      "type": "string",
+      "title": "\uc0c1\uc704\uc790\uba85"
+    },
+    "is_read": {
+      "type": "boolean",
+      "title": "\uc77d\uc74c \uc5ec\ubd80",
+      "default": false
+    },
+    "read_at": {
+      "type": "string",
+      "title": "\uc77d\uc740 \uc2dc\uac04"
+    }
+  },
+  "required": [
+    "author",
+    "good_points",
+    "bad_points",
+    "tomorrow_goal"
+  ]
+}
