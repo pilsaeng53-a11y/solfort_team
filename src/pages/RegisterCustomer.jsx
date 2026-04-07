@@ -20,6 +20,7 @@ export default function RegisterCustomer() {
   const [form, setForm] = useState({ customer_name: "", phone: "", wallet_address: "", sales_amount: "" });
   const [saving, setSaving] = useState(false);
   const [result, setResult] = useState(null);
+  const [showContract, setShowContract] = useState(false);
   const [orderSubmitted, setOrderSubmitted] = useState(false);
   const [submittingOrder, setSubmittingOrder] = useState(false);
   const [excelRows, setExcelRows] = useState([]);
@@ -176,6 +177,8 @@ export default function RegisterCustomer() {
   };
 
   if (result) {
+    const contractNo = 'SR' + Date.now();
+    const contractDate = new Date().toLocaleDateString('ko-KR');
     return (
       <div className="min-h-screen bg-[#080a12] flex items-center justify-center px-4">
         <SFCard glow className="max-w-md w-full text-center">
@@ -200,6 +203,12 @@ export default function RegisterCustomer() {
                 </div>
               ))}
             </div>
+            <button
+              onClick={() => setShowContract(true)}
+              className="w-full py-3 rounded-xl text-sm font-semibold bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 hover:bg-yellow-500/30 transition-all"
+            >
+              📄 계약서 미리보기
+            </button>
             <button
               onClick={async () => {
                 if (orderSubmitted) return;
@@ -229,6 +238,135 @@ export default function RegisterCustomer() {
             </Button>
           </div>
         </SFCard>
+
+        {/* 계약서 모달 */}
+        {showContract && (
+          <div className="fixed inset-0 bg-black/70 flex items-start justify-center z-50 p-4 overflow-y-auto">
+            <div className="bg-white text-gray-900 w-full max-w-2xl rounded-lg shadow-2xl my-4">
+              {/* 인쇄 버튼 (화면에서만 표시) */}
+              <div className="flex justify-between items-center p-4 border-b border-gray-200 print:hidden">
+                <h2 className="text-lg font-bold text-gray-800">계약서 미리보기</h2>
+                <div className="flex gap-2">
+                  <button
+                    onClick={() => window.print()}
+                    className="px-4 py-2 bg-blue-600 text-white rounded-lg text-sm font-semibold hover:bg-blue-700"
+                  >
+                    🖨️ 계약서 출력/저장
+                  </button>
+                  <button
+                    onClick={() => setShowContract(false)}
+                    className="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg text-sm hover:bg-gray-300"
+                  >
+                    닫기
+                  </button>
+                </div>
+              </div>
+
+              {/* 계약서 본문 */}
+              <div id="contract-print-area" className="p-8">
+                {/* 헤더 */}
+                <div className="text-center mb-8 pb-6 border-b-2 border-gray-800">
+                  <div className="inline-flex items-center justify-center w-16 h-16 bg-blue-600 rounded-xl mb-3">
+                    <span className="text-2xl font-black text-white">SF</span>
+                  </div>
+                  <h1 className="text-2xl font-black text-gray-900 tracking-widest">SolFort</h1>
+                  <p className="text-sm text-gray-500 mt-1">디지털 자산 거래 계약서</p>
+                  <div className="mt-4 inline-block bg-gray-100 px-6 py-2 rounded-full">
+                    <span className="text-lg font-bold tracking-widest text-gray-800">SOF 구매 계약서</span>
+                  </div>
+                </div>
+
+                {/* 계약 기본 정보 */}
+                <div className="grid grid-cols-2 gap-4 mb-6 text-sm">
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <span className="text-gray-500 text-xs block">계약번호</span>
+                    <span className="font-bold text-gray-900">{contractNo}</span>
+                  </div>
+                  <div className="bg-gray-50 rounded-lg p-3">
+                    <span className="text-gray-500 text-xs block">계약일자</span>
+                    <span className="font-bold text-gray-900">{contractDate}</span>
+                  </div>
+                </div>
+
+                {/* 계약 당사자 */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-200">■ 계약 당사자</h3>
+                  <div className="grid grid-cols-2 gap-4 text-sm">
+                    <div className="border border-gray-200 rounded-lg p-3">
+                      <p className="text-xs text-gray-500 mb-2 font-semibold">매도인 (공급자)</p>
+                      <p className="font-bold text-gray-900">SolFort</p>
+                      <p className="text-gray-600 text-xs mt-1">담당: {result.dealer_name}</p>
+                    </div>
+                    <div className="border border-gray-200 rounded-lg p-3">
+                      <p className="text-xs text-gray-500 mb-2 font-semibold">매수인 (구매자)</p>
+                      <p className="font-bold text-gray-900">{result.customer_name}</p>
+                      <p className="text-gray-600 text-xs mt-1">연락처: {result.phone}</p>
+                    </div>
+                  </div>
+                </div>
+
+                {/* 거래 내역 */}
+                <div className="mb-6">
+                  <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-200">■ 거래 내역</h3>
+                  <table className="w-full text-sm border-collapse">
+                    <thead>
+                      <tr className="bg-gray-800 text-white">
+                        <th className="px-3 py-2 text-left text-xs">항목</th>
+                        <th className="px-3 py-2 text-right text-xs">내용</th>
+                      </tr>
+                    </thead>
+                    <tbody className="divide-y divide-gray-200">
+                      {[
+                        ['구매 자산', 'SolFort Token (SOF)'],
+                        ['SOF 수량', `${result.final_quantity} SOF`],
+                        ['매출금액', `₩${result.sales_amount.toLocaleString()} (KRW)`],
+                        ['수령 지갑주소', result.wallet_address || '미입력'],
+                        ['담당 딜러', result.dealer_name],
+                      ].map(([k, v]) => (
+                        <tr key={k} className="bg-white">
+                          <td className="px-3 py-2 text-gray-600 text-xs">{k}</td>
+                          <td className="px-3 py-2 text-right font-semibold text-gray-900 text-xs">{v}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+
+                {/* 약관 */}
+                <div className="mb-8">
+                  <h3 className="text-sm font-bold text-gray-700 mb-3 pb-1 border-b border-gray-200">■ 계약 조건</h3>
+                  <div className="text-xs text-gray-600 space-y-2 leading-relaxed">
+                    <p>1. 본 계약은 매수인이 SolFort 토큰(SOF)을 위 거래 내역에 명시된 금액으로 구매함에 합의한 것입니다.</p>
+                    <p>2. 구매 대금은 계약 체결 즉시 지불되며, 구매한 SOF는 지정된 지갑 주소로 전송됩니다.</p>
+                    <p>3. 디지털 자산의 특성상 전송 완료 후 취소 및 환불이 불가합니다.</p>
+                    <p>4. 매수인은 디지털 자산 투자에 따른 위험을 충분히 인지하고 자의로 본 계약을 체결합니다.</p>
+                    <p>5. 본 계약에 관한 분쟁은 쌍방 협의를 통해 해결하며, 협의가 불가할 경우 관할 법원에 의거합니다.</p>
+                  </div>
+                </div>
+
+                {/* 서명란 */}
+                <div className="mt-8 pt-6 border-t-2 border-gray-800">
+                  <p className="text-center text-xs text-gray-500 mb-6">위 계약 내용을 충분히 확인하고 동의하여 서명합니다.</p>
+                  <div className="grid grid-cols-2 gap-8">
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">매도인</p>
+                      <p className="text-xs text-gray-500 mb-8">SolFort / {result.dealer_name}</p>
+                      <div className="border-b border-gray-400 w-40 mx-auto" />
+                      <p className="text-xs text-gray-400 mt-1">(서명)</p>
+                    </div>
+                    <div className="text-center">
+                      <p className="text-sm font-semibold text-gray-700 mb-2">매수인</p>
+                      <p className="text-xs text-gray-500 mb-8">{result.customer_name}</p>
+                      <div className="border-b border-gray-400 w-40 mx-auto" />
+                      <p className="text-xs text-gray-400 mt-1">(서명)</p>
+                    </div>
+                  </div>
+                  <p className="text-center text-xs text-gray-400 mt-6">{contractDate} · SolFort 계약서</p>
+                </div>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
     );
   }
