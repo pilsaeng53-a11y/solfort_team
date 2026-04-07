@@ -6,6 +6,12 @@ import { Eye, EyeOff, Check, ChevronLeft } from 'lucide-react';
 
 const STEPS = ['역할 선택', '약관 동의', '정보 입력', '신청 완료'];
 
+const POSITION_OPTIONS = {
+  dealer: ['대리점지사장', '대리점장', '부점장', '영업원'],
+  call_team: ['콜지사장', '콜팀장', '시니어콜러', '콜러'],
+  online_team: ['온라인팀장', '시니어멤버', '멤버'],
+};
+
 export default function Register() {
   const navigate = useNavigate();
   const [step, setStep] = useState(1);
@@ -20,7 +26,7 @@ export default function Register() {
   const [form, setForm] = useState({
     name: '', username: '', password: '', passwordConfirm: '', phone: '',
     dealer_name: '', region: '', referral_code: '',
-    team: '', employee_id: '', meta_ad_account: '',
+    team: '', employee_id: '', meta_ad_account: '', position: '',
   });
   const [showPassword, setShowPassword] = useState(false);
   const [showPasswordConfirm, setShowPasswordConfirm] = useState(false);
@@ -89,6 +95,24 @@ export default function Register() {
     setSaving(true);
     const now = new Date().toISOString();
     try {
+      let parentInfo = {};
+      if (form.referral_code) {
+        const [dealerRefs, callRefs] = await Promise.all([
+          base44.entities.DealerInfo.list('-created_date', 500),
+          base44.entities.CallTeamMember.list('-created_date', 500),
+        ]);
+        const foundDealer = dealerRefs.find(d => d.my_referral_code === form.referral_code);
+        const foundCall = callRefs.find(c => c.my_referral_code === form.referral_code);
+        const found = foundDealer || foundCall;
+        if (found) {
+          parentInfo = {
+            parent_dealer_id: found.id,
+            parent_dealer_name: foundDealer ? (found.dealer_name || found.owner_name) : found.name,
+          };
+        }
+      }
+      const my_referral_code = form.username.toUpperCase().slice(0, 4) + Math.random().toString(36).slice(2, 6).toUpperCase();
+
       if (role === 'dealer') {
         await base44.entities.DealerInfo.create({
           dealer_name: form.dealer_name || form.username,
@@ -98,6 +122,9 @@ export default function Register() {
           phone: form.phone,
           region: form.region,
           referral_code: form.referral_code,
+          position: form.position,
+          my_referral_code,
+          ...parentInfo,
           role: 'dealer',
           status: 'pending',
           agreed_terms: true,
@@ -112,6 +139,10 @@ export default function Register() {
           phone: form.phone,
           team: form.team,
           employee_id: form.employee_id,
+          position: form.position,
+          my_referral_code,
+          referral_code: form.referral_code,
+          ...parentInfo,
           role: 'call_team',
           status: 'pending',
           agreed_terms: true,
@@ -126,6 +157,10 @@ export default function Register() {
           phone: form.phone,
           team: form.team,
           meta_ad_account: form.meta_ad_account,
+          position: form.position,
+          my_referral_code,
+          referral_code: form.referral_code,
+          ...parentInfo,
           agreed_terms: true,
           status: 'pending',
         });
@@ -367,13 +402,8 @@ export default function Register() {
                       <input value={form.region} onChange={handleForm('region')} placeholder="서울"
                         className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
                     </div>
-                    <div>
-                      <label className="text-xs text-gray-400 block mb-1">추천코드</label>
-                      <input value={form.referral_code} onChange={handleForm('referral_code')} placeholder="선택사항"
-                        className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-                    </div>
-                </>
-              ) : role === 'call_team' ? (
+                    </>
+                    ) : role === 'call_team' ? (
                 <>
                     <div>
                       <label className="text-xs text-gray-400 block mb-1">아이디 <span className="text-red-400">*</span></label>
@@ -424,7 +454,25 @@ export default function Register() {
                 </>
                 ) : null}
 
-              <div className="flex gap-2 mt-6">
+                {role && (
+                <>
+                 <div>
+                   <label className="text-xs text-gray-400 block mb-1">직책</label>
+                   <select value={form.position} onChange={handleForm('position')}
+                     className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs">
+                     <option value="">선택 (선택사항)</option>
+                     {(POSITION_OPTIONS[role] || []).map(p => <option key={p} value={p}>{p}</option>)}
+                   </select>
+                 </div>
+                 <div>
+                   <label className="text-xs text-gray-400 block mb-1">추천코드</label>
+                   <input value={form.referral_code} onChange={handleForm('referral_code')} placeholder="추천코드 입력 (선택)"
+                     className="w-full bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                 </div>
+                </>
+                )}
+
+                <div className="flex gap-2 mt-6">
                 <button onClick={handleBack}
                   className="flex-1 py-2.5 bg-white/5 text-gray-400 rounded-xl text-sm font-semibold hover:bg-white/10 transition-all">
                   이전
