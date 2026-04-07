@@ -84,6 +84,20 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (dealer?.dealer_name) {
+      Promise.all([
+        base44.entities.SalesOrder.list("-created_date", 100),
+        base44.entities.MeetingDispatchRequest.filter({ target_dealer_name: dealer.dealer_name }, "-requested_at", 50),
+      ])
+        .then(([allOrders, reqs]) => {
+          setOrders(allOrders.filter(o => o.dealer_name === dealer.dealer_name));
+          setDispatchRequests(reqs);
+        })
+        .catch(() => {
+          setOrders([]);
+          setDispatchRequests([]);
+        });
+    }
+  }, [dealer]);
 
   const thisMonth = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`; })();
   const monthRecords = records.filter(r => (r.sale_date || "").startsWith(thisMonth) && r.dealer_name === dealer?.dealer_name);

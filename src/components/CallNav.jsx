@@ -15,6 +15,7 @@ const NAV_ITEMS = [
   { path: "/call/scripts", label: "콜 스크립트" },
   { path: "/call/ai", label: "AI 영업 도우미" },
   { path: "/call/competition", label: "🏆 경쟁현황" },
+  { path: "/my-network", label: "🌐 네트워크" },
   { path: "/call/settings", label: "⚙️ 설정" },
 ];
 
