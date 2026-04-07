@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { Auth } from "@/lib/auth";
 import SFLogo from "./SFLogo";
 import NotificationCenter from "./NotificationCenter";
+import GlobalSearch from "./GlobalSearch";
 import { LogOut, Moon, Sun } from "lucide-react";
 
 export default function AdminHeader({ title, accent = "blue" }) {
@@ -45,6 +46,7 @@ export default function AdminHeader({ title, accent = "blue" }) {
         </div>
       </div>
       <div className="flex items-center gap-3">
+        <GlobalSearch />
         <NotificationCenter />
         <button
           onClick={toggleTheme}
