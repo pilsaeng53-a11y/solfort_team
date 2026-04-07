@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import { Auth } from "@/lib/auth";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
-import { Plus, X, ChevronDown, Send } from "lucide-react";
+import { Plus, X, ChevronDown, Send, Copy, Check, TrendingUp } from "lucide-react";
 
 const STATUS_OPTS = ["신규", "연락됨", "관심있음", "거절", "매출전환"];
 const COLOR_FILTERS = [
@@ -41,6 +41,10 @@ export default function CallLeads() {
   const me = Auth.getDealerName();
   const [leads, setLeads] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [myInfo, setMyInfo] = useState(null);
+  const [incentiveRate, setIncentiveRate] = useState(null);
+  const [downlineCount, setDownlineCount] = useState(0);
+  const [copied, setCopied] = useState(false);
   const [tab, setTab] = useState("전체");
   const [colorFilter, setColorFilter] = useState("전체");
   const [search, setSearch] = useState("");
@@ -55,7 +59,29 @@ export default function CallLeads() {
   useEffect(() => {
     document.title = "SolFort - 고객 리드";
     load();
+    loadMyInfo();
   }, []);
+
+  const loadMyInfo = async () => {
+    const user = await base44.auth.me();
+    const stored = JSON.parse(localStorage.getItem('sf_dealer') || '{}');
+    setMyInfo(stored);
+    // incentive rate
+    if (stored?.id || stored?.username) {
+      const settings = await base44.entities.IncentiveSetting.filter({ member_id: stored.id }, '-set_at', 1);
+      if (settings.length > 0) setIncentiveRate(settings[0].rate_percent);
+      // downline count
+      const downline = await base44.entities.CallTeamMember.filter({ parent_id: stored.id }, '-created_date', 500);
+      setDownlineCount(downline.length);
+    }
+  };
+
+  const copyCode = () => {
+    if (!myInfo?.my_referral_code) return;
+    navigator.clipboard.writeText(myInfo.my_referral_code).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
 
   const load = async () => {
     const l = await base44.entities.CallLead.list("-created_date", 500);
@@ -134,6 +160,46 @@ export default function CallLeads() {
     <div className="min-h-screen bg-[#080a12]">
       <CallNav />
       <div className="p-4 md:p-6 space-y-4 max-w-4xl mx-auto">
+        {/* 내 정보 미니 카드 */}
+        {myInfo && (
+          <div className="bg-[#0d1020] border border-white/[0.07] rounded-2xl p-3.5 flex flex-wrap items-center gap-3">
+            <div className="flex items-center gap-2">
+              {myInfo.position && (
+                <span className="px-2.5 py-1 bg-blue-500/15 text-blue-400 border border-blue-500/20 rounded-full text-[10px] font-semibold">
+                  💼 {myInfo.position}
+                </span>
+              )}
+              {myInfo.team && (
+                <span className="px-2.5 py-1 bg-purple-500/15 text-purple-400 border border-purple-500/20 rounded-full text-[10px] font-semibold">
+                  🏢 {myInfo.team}
+                </span>
+              )}
+            </div>
+            <div className="flex items-center gap-2 flex-1 min-w-0">
+              {myInfo.my_referral_code ? (
+                <div className="flex items-center gap-1.5 bg-emerald-500/10 border border-emerald-500/20 rounded-lg px-2.5 py-1.5">
+                  <span className="text-emerald-400 font-mono font-bold text-xs tracking-widest">{myInfo.my_referral_code}</span>
+                  <button onClick={copyCode} className="text-emerald-400 hover:text-emerald-300 transition-all">
+                    {copied ? <Check className="h-3 w-3" /> : <Copy className="h-3 w-3" />}
+                  </button>
+                </div>
+              ) : (
+                <span className="text-[10px] text-gray-600">추천코드 없음</span>
+              )}
+              <span className="text-[10px] text-gray-500">하위 {downlineCount}명</span>
+              {incentiveRate !== null && (
+                <span className="flex items-center gap-1 text-[10px] text-yellow-400 bg-yellow-500/10 border border-yellow-500/20 px-2 py-1 rounded-lg">
+                  <TrendingUp className="h-3 w-3" /> {incentiveRate}%
+                </span>
+              )}
+            </div>
+            <button onClick={() => navigate('/incentive-settings')}
+              className="flex items-center gap-1 px-2.5 py-1.5 bg-purple-500/10 text-purple-400 border border-purple-500/20 rounded-lg text-[10px] font-medium hover:bg-purple-500/20 transition-all shrink-0">
+              📊 인센티브 현황
+            </button>
+          </div>
+        )}
+
         <div className="flex items-center justify-between">
           <h1 className="text-lg font-bold text-white">고객 리드 <span className="text-sm font-normal text-gray-500">({filtered.length})</span></h1>
           <button onClick={() => setShowModal(true)}
