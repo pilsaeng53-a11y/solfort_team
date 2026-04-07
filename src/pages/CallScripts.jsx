@@ -47,6 +47,11 @@ export default function CallScripts() {
   const [shareSaving, setShareSaving] = useState(false);
   const [likingId, setLikingId] = useState(null);
 
+  const [abTests, setAbTests] = useState([]);
+  const [showABModal, setShowABModal] = useState(false);
+  const [abForm, setAbForm] = useState({ title_a: '', content_a: '', title_b: '', content_b: '', ab_group_id: '' });
+  const [abSaving, setAbSaving] = useState(false);
+
   const [scripts, setScripts] = useState([]);
   const [loading, setLoading] = useState(true);
   const [catFilter, setCatFilter] = useState("전체");
@@ -60,11 +65,56 @@ export default function CallScripts() {
     document.title = "SolFort - 콜 스크립트";
     loadScripts();
     loadSharedScripts();
+    loadABTests();
   }, []);
 
   const loadSharedScripts = async () => {
     const data = await base44.entities.CallScript.list('-created_at', 200);
     setSharedScripts(data.filter(s => s.is_shared));
+  };
+
+  const loadABTests = async () => {
+    const data = await base44.entities.CallScript.list('-created_at', 500);
+    const abList = data.filter(s => s.is_ab_test);
+    setAbTests(abList);
+  };
+
+  const saveABTest = async () => {
+    if (!abForm.title_a || !abForm.content_a || !abForm.title_b || !abForm.content_b || !abForm.ab_group_id) return;
+    setAbSaving(true);
+    const groupId = abForm.ab_group_id;
+    await Promise.all([
+      base44.entities.CallScript.create({
+        title: abForm.title_a,
+        content: abForm.content_a,
+        category: '첫인사',
+        is_ab_test: true,
+        ab_group_id: groupId,
+        ab_variant: 'A',
+        success_count: 0,
+        usage_count: 0,
+        is_active: true,
+        created_by: storedUser.username || me,
+        created_at: new Date().toISOString(),
+      }),
+      base44.entities.CallScript.create({
+        title: abForm.title_b,
+        content: abForm.content_b,
+        category: '첫인사',
+        is_ab_test: true,
+        ab_group_id: groupId,
+        ab_variant: 'B',
+        success_count: 0,
+        usage_count: 0,
+        is_active: true,
+        created_by: storedUser.username || me,
+        created_at: new Date().toISOString(),
+      }),
+    ]);
+    await loadABTests();
+    setAbForm({ title_a: '', content_a: '', title_b: '', content_b: '', ab_group_id: '' });
+    setShowABModal(false);
+    setAbSaving(false);
   };
 
   const saveShared = async () => {
@@ -135,6 +185,70 @@ export default function CallScripts() {
     <div className="min-h-screen bg-[#080a12]">
       <CallNav />
       <div className="p-4 md:p-6 space-y-6 max-w-3xl mx-auto">
+
+        {/* A/B 테스트 */}
+        {abTests.length > 0 && (
+          <div>
+            <div className="flex items-center justify-between mb-3">
+              <h2 className="text-base font-bold text-white">🧪 A/B 테스트</h2>
+              {(myPosition.includes('팀장') || myPosition.includes('지사장') || isAdmin) && (
+                <button onClick={() => setShowABModal(true)}
+                  className="flex items-center gap-1.5 px-3 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs hover:bg-blue-500/30 transition-all">
+                  <Plus className="h-3.5 w-3.5" /> A/B 테스트 등록
+                </button>
+              )}
+            </div>
+            <ABTestSection abTests={abTests} setAbTests={setAbTests} />
+          </div>
+        )}
+
+        {/* A/B 테스트 등록 모달 */}
+        {showABModal && (
+          <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50 p-4">
+            <SFCard className="w-full max-w-lg border border-blue-500/20">
+              <div className="flex items-center justify-between mb-4">
+                <h3 className="text-sm font-bold text-white">A/B 테스트 등록</h3>
+                <button onClick={() => setShowABModal(false)}><X className="h-4 w-4 text-gray-500" /></button>
+              </div>
+              <div className="space-y-3 max-h-96 overflow-y-auto">
+                <div>
+                  <label className="text-[10px] text-gray-400">그룹 ID *</label>
+                  <input value={abForm.ab_group_id} onChange={e => setAbForm(p => ({ ...p, ab_group_id: e.target.value }))}
+                    placeholder="예: test_001" className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
+                </div>
+                <div className="grid grid-cols-2 gap-3">
+                  <div>
+                    <label className="text-[10px] text-gray-400">Script A 제목 *</label>
+                    <input value={abForm.title_a} onChange={e => setAbForm(p => ({ ...p, title_a: e.target.value }))}
+                      className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+                  </div>
+                  <div>
+                    <label className="text-[10px] text-gray-400">Script B 제목 *</label>
+                    <input value={abForm.title_b} onChange={e => setAbForm(p => ({ ...p, title_b: e.target.value }))}
+                      className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs" />
+                  </div>
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400">Script A 내용 *</label>
+                  <textarea value={abForm.content_a} onChange={e => setAbForm(p => ({ ...p, content_a: e.target.value }))}
+                    rows={4} className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs resize-none" />
+                </div>
+                <div>
+                  <label className="text-[10px] text-gray-400">Script B 내용 *</label>
+                  <textarea value={abForm.content_b} onChange={e => setAbForm(p => ({ ...p, content_b: e.target.value }))}
+                    rows={4} className="w-full mt-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs resize-none" />
+                </div>
+              </div>
+              <div className="flex gap-2 mt-4">
+                <button onClick={saveABTest} disabled={abSaving || !abForm.title_a || !abForm.content_a || !abForm.title_b || !abForm.content_b || !abForm.ab_group_id}
+                  className="px-5 py-2 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs font-semibold disabled:opacity-40 hover:bg-blue-500/30 transition-all">
+                  {abSaving ? '저장 중...' : 'A/B 테스트 시작'}
+                </button>
+                <button onClick={() => setShowABModal(false)} className="px-4 py-2 bg-white/5 text-gray-400 rounded-lg text-xs">취소</button>
+              </div>
+            </SFCard>
+          </div>
+        )}
 
         {/* 팀 공유 스크립트 */}
         <div>
@@ -320,6 +434,84 @@ export default function CallScripts() {
           ))}
         </div>
       </div>
+    </div>
+  );
+}
+
+function ABTestSection({ abTests, setAbTests }) {
+  const grouped = {};
+  abTests.forEach(s => {
+    const gid = s.ab_group_id;
+    if (!grouped[gid]) grouped[gid] = [];
+    grouped[gid].push(s);
+  });
+
+  return (
+    <div className="space-y-4">
+      {Object.entries(grouped).map(([groupId, scripts]) => {
+        const scriptA = scripts.find(s => s.ab_variant === 'A');
+        const scriptB = scripts.find(s => s.ab_variant === 'B');
+        if (!scriptA || !scriptB) return null;
+
+        const rateA = scriptA.usage_count > 0 ? ((scriptA.success_count / scriptA.usage_count) * 100).toFixed(1) : 0;
+        const rateB = scriptB.usage_count > 0 ? ((scriptB.success_count / scriptB.usage_count) * 100).toFixed(1) : 0;
+        const isAWinner = parseFloat(rateA) > parseFloat(rateB);
+
+        return (
+          <div key={groupId} className="bg-white/5 border border-white/10 rounded-xl p-4">
+            <p className="text-xs text-gray-500 mb-3">그룹: {groupId}</p>
+            <div className="grid grid-cols-2 gap-4">
+              {[scriptA, scriptB].map((s, idx) => {
+                const variant = s.ab_variant;
+                const rate = variant === 'A' ? rateA : rateB;
+                const isWinner = variant === 'A' ? isAWinner : !isAWinner;
+                const hasData = s.usage_count > 0;
+
+                return (
+                  <div
+                    key={s.id}
+                    className={`p-4 rounded-xl border-2 transition-all ${
+                      hasData && isWinner
+                        ? 'bg-emerald-500/10 border-emerald-500/40'
+                        : 'bg-white/[0.02] border-white/10'
+                    }`}
+                  >
+                    <div className="flex items-start justify-between mb-3">
+                      <div>
+                        <span className="text-sm font-bold text-white">Script {variant}</span>
+                        <p className="text-xs text-gray-400 mt-1">{s.title}</p>
+                      </div>
+                      {hasData && isWinner && (
+                        <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-1 rounded-lg font-semibold">🏆 승자</span>
+                      )}
+                    </div>
+                    <p className="text-xs text-gray-500 line-clamp-3 mb-3 leading-relaxed">{s.content}</p>
+                    <div className="space-y-1.5 text-[10px]">
+                      <div className="flex justify-between text-gray-400">
+                        <span>사용: {s.usage_count || 0}회</span>
+                        <span>성공: {s.success_count || 0}회</span>
+                      </div>
+                      <div className="bg-white/10 rounded-full h-2 overflow-hidden">
+                        <div
+                          className={`h-full transition-all ${
+                            hasData && isWinner ? 'bg-emerald-500' : 'bg-blue-500'
+                          }`}
+                          style={{ width: `${Math.min(parseFloat(rate), 100)}%` }}
+                        />
+                      </div>
+                      <p className={`font-bold ${
+                        hasData && isWinner ? 'text-emerald-400' : 'text-blue-400'
+                      }`}>
+                        전환율: {rate}%
+                      </p>
+                    </div>
+                  </div>
+                );
+              })}
+            </div>
+          </div>
+        );
+      })}
     </div>
   );
 }
