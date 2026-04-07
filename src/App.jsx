@@ -39,6 +39,7 @@ import OnlinePerformance from './pages/OnlinePerformance';
 import OnlineRegister from './pages/OnlineRegister';
 import OnlineAds from './pages/OnlineAds';
 import IncentiveSettings from './pages/IncentiveSettings';
+import LeadExcelUpload from './pages/LeadExcelUpload';
 import Register from './pages/Register';
 import InitAdmin from './pages/InitAdmin';
 
@@ -122,6 +123,7 @@ const AppContent = () => {
           <Route path="/online/ads" element={<ProtectedRoute roles={['online_team','online_director','super_admin']}><OnlineAds /></ProtectedRoute>} />
           <Route path="/manager" element={<ProtectedRoute roles={['manager']}><ManagerPage /></ProtectedRoute>} />
           <Route path="/incentive-settings" element={<ProtectedRoute roles={['dealer','call_team','online_team','dealer_admin','call_admin','super_admin','manager','online_director']}><IncentiveSettings /></ProtectedRoute>} />
+          <Route path="/lead-upload" element={<ProtectedRoute roles={['dealer','call_team','call_admin','super_admin']}><LeadExcelUpload /></ProtectedRoute>} /> element={<ProtectedRoute roles={['dealer','call_team','call_admin','super_admin']}><LeadExcelUpload /></ProtectedRoute>} /> element={<ProtectedRoute roles={['dealer','call_team','online_team','dealer_admin','call_admin','super_admin','manager','online_director']}><IncentiveSettings /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
