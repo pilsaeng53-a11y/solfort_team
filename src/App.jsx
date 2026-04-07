@@ -34,6 +34,10 @@ import AdminSuper from './pages/AdminSuper';
 import AnalyticsDashboard from './pages/AnalyticsDashboard';
 import ManagerPage from './pages/ManagerPage';
 import OnlineDirector from './pages/OnlineDirector';
+import OnlineDashboard from './pages/OnlineDashboard';
+import OnlinePerformance from './pages/OnlinePerformance';
+import OnlineRegister from './pages/OnlineRegister';
+import OnlineAds from './pages/OnlineAds';
 import Register from './pages/Register';
 import InitAdmin from './pages/InitAdmin';
 
@@ -111,6 +115,10 @@ const AppContent = () => {
           <Route path="/admin/super" element={<ProtectedRoute roles={['super_admin']}><AdminSuper /></ProtectedRoute>} />
           <Route path="/analytics" element={<ProtectedRoute roles={['super_admin','dealer_admin','call_admin']}><AnalyticsDashboard /></ProtectedRoute>} />
           <Route path="/online-director" element={<ProtectedRoute roles={['super_admin','online_director']}><OnlineDirector /></ProtectedRoute>} />
+          <Route path="/online/dashboard" element={<ProtectedRoute roles={['online_team','online_director','super_admin']}><OnlineDashboard /></ProtectedRoute>} />
+          <Route path="/online/performance" element={<ProtectedRoute roles={['online_team','online_director','super_admin']}><OnlinePerformance /></ProtectedRoute>} />
+          <Route path="/online/register" element={<ProtectedRoute roles={['online_team','online_director','super_admin']}><OnlineRegister /></ProtectedRoute>} />
+          <Route path="/online/ads" element={<ProtectedRoute roles={['online_team','online_director','super_admin']}><OnlineAds /></ProtectedRoute>} />
           <Route path="/manager" element={<ProtectedRoute roles={['manager']}><ManagerPage /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
