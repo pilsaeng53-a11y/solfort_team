@@ -1,0 +1,32 @@
+{
+  "name": "AuditLog",
+  "type": "object",
+  "properties": {
+    "actor": {
+      "type": "string",
+      "title": "사용자명"
+    },
+    "actor_role": {
+      "type": "string",
+      "title": "역할"
+    },
+    "action": {
+      "type": "string",
+      "title": "액션",
+      "enum": ["승인", "퇴출", "등급변경"]
+    },
+    "target_name": {
+      "type": "string",
+      "title": "대상명"
+    },
+    "detail": {
+      "type": "string",
+      "title": "상세내용"
+    },
+    "created_at": {
+      "type": "string",
+      "title": "생성시간"
+    }
+  },
+  "required": ["actor", "action", "target_name"]
+}

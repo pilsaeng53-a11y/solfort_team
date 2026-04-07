@@ -1,0 +1,28 @@
+{
+  "name": "TeamChallenge",
+  "type": "object",
+  "properties": {
+    "title": {
+      "type": "string",
+      "title": "챌린지 제목"
+    },
+    "start_date": {
+      "type": "string",
+      "title": "시작일"
+    },
+    "end_date": {
+      "type": "string",
+      "title": "종료일"
+    },
+    "prize_description": {
+      "type": "string",
+      "title": "상품 설명"
+    },
+    "is_active": {
+      "type": "boolean",
+      "title": "활성화",
+      "default": true
+    }
+  },
+  "required": ["title", "start_date", "end_date"]
+}
