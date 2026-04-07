@@ -47,7 +47,7 @@ export default function IncentivePanel() {
       } else {
         await base44.entities.SystemSettings.create({
           setting_key: "incentive_per_count",
-          setting_label: "ë§¤ì¶ì í ê±´ë¹ ì¸ì¼í°ë¸",
+          setting_label: "Ã«Â§Â¤Ã¬Â¶ÂÃ¬Â ÂÃ­ÂÂ ÃªÂ±Â´Ã«ÂÂ¹ Ã¬ÂÂ¸Ã¬ÂÂ¼Ã­ÂÂ°Ã«Â¸Â",
           setting_value: perCount,
           updated_at: new Date().toISOString(),
         });
@@ -57,7 +57,7 @@ export default function IncentivePanel() {
       } else {
         await base44.entities.SystemSettings.create({
           setting_key: "incentive_pct_amount",
-          setting_label: "ë§¤ì¶ê¸ì¡ ì¸ì¼í°ë¸ %",
+          setting_label: "Ã«Â§Â¤Ã¬Â¶ÂÃªÂ¸ÂÃ¬ÂÂ¡ Ã¬ÂÂ¸Ã¬ÂÂ¼Ã­ÂÂ°Ã«Â¸Â %",
           setting_value: pctAmount,
           updated_at: new Date().toISOString(),
         });
@@ -72,7 +72,7 @@ export default function IncentivePanel() {
 
   const incentives = {};
   monthSales.forEach(s => {
-    const key = s.created_by || "ë¯¸ì§ì ";
+    const key = s.created_by || "Ã«Â¯Â¸Ã¬Â§ÂÃ¬Â Â";
     if (!incentives[key]) {
       incentives[key] = { name: key, count: 0, total: 0, paid: [] };
     }
@@ -105,7 +105,7 @@ export default function IncentivePanel() {
         }),
         created_at: new Date().toISOString(),
       });
-      alert("ì¸ì¼í°ë¸ ì§ê¸ì´ ê¸°ë¡ëììµëë¤.");
+      alert("Ã¬ÂÂ¸Ã¬ÂÂ¼Ã­ÂÂ°Ã«Â¸Â Ã¬Â§ÂÃªÂ¸ÂÃ¬ÂÂ´ ÃªÂ¸Â°Ã«Â¡ÂÃ«ÂÂÃ¬ÂÂÃ¬ÂÂµÃ«ÂÂÃ«ÂÂ¤.");
       const h = await base44.entities.SystemLog.filter({ action: "incentive_paid" });
       setPayHistory(h);
     } catch {}
@@ -118,10 +118,10 @@ export default function IncentivePanel() {
     <div className="space-y-6">
       {/* Settings */}
       <SFCard>
-        <h3 className="text-sm font-semibold text-white mb-4">ì¸ì¼í°ë¸ ê¸°ì¤ ì¤ì </h3>
+        <h3 className="text-sm font-semibold text-white mb-4">Ã¬ÂÂ¸Ã¬ÂÂ¼Ã­ÂÂ°Ã«Â¸Â ÃªÂ¸Â°Ã¬Â¤Â Ã¬ÂÂ¤Ã¬Â Â</h3>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-gray-400 block mb-1">ë§¤ì¶ì í ê±´ë¹ ì¸ì¼í°ë¸</label>
+            <label className="text-xs text-gray-400 block mb-1">Ã«Â§Â¤Ã¬Â¶ÂÃ¬Â ÂÃ­ÂÂ ÃªÂ±Â´Ã«ÂÂ¹ Ã¬ÂÂ¸Ã¬ÂÂ¼Ã­ÂÂ°Ã«Â¸Â</label>
             <input
               type="number"
               value={perCount}
@@ -130,7 +130,7 @@ export default function IncentivePanel() {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-400 block mb-1">ë§¤ì¶ê¸ì¡ Ã (%) ì¸ì¼í°ë¸</label>
+            <label className="text-xs text-gray-400 block mb-1">Ã«Â§Â¤Ã¬Â¶ÂÃªÂ¸ÂÃ¬ÂÂ¡ ÃÂ (%) Ã¬ÂÂ¸Ã¬ÂÂ¼Ã­ÂÂ°Ã«Â¸Â</label>
             <input
               type="number"
               value={pctAmount}
@@ -143,23 +143,23 @@ export default function IncentivePanel() {
             disabled={saving}
             className="w-full py-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-xs font-semibold hover:bg-purple-500/30 disabled:opacity-50"
           >
-            {saving ? "ì ì¥ ì¤..." : "ì ì¥"}
+            {saving ? "Ã¬Â ÂÃ¬ÂÂ¥ Ã¬Â¤Â..." : "Ã¬Â ÂÃ¬ÂÂ¥"}
           </button>
         </div>
       </SFCard>
 
       {/* Calculation */}
       <SFCard>
-        <h3 className="text-sm font-semibold text-white mb-4">{month} ì¸ì¼í°ë¸ ê³ì°</h3>
+        <h3 className="text-sm font-semibold text-white mb-4">{month} Ã¬ÂÂ¸Ã¬ÂÂ¼Ã­ÂÂ°Ã«Â¸Â ÃªÂ³ÂÃ¬ÂÂ°</h3>
         {incentiveList.length === 0 ? (
-          <p className="text-xs text-gray-600 text-center py-4">ì´ë² ë¬ ë§¤ì¶ì´ ììµëë¤</p>
+          <p className="text-xs text-gray-600 text-center py-4">Ã¬ÂÂ´Ã«Â²Â Ã«ÂÂ¬ Ã«Â§Â¤Ã¬Â¶ÂÃ¬ÂÂ´ Ã¬ÂÂÃ¬ÂÂµÃ«ÂÂÃ«ÂÂ¤</p>
         ) : (
           <>
             <div className="overflow-x-auto mb-4">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-gray-500 border-b border-white/[0.06]">
-                    {["íìëª", "ê±´ì", "ì´ë§¤ì¶", "ê±´ìì¸ì¼", "ê¸ì¡ì¸ì¼", "í©ê³"].map(h => (
+                    {["Ã­ÂÂÃ¬ÂÂÃ«ÂªÂ", "ÃªÂ±Â´Ã¬ÂÂ", "Ã¬Â´ÂÃ«Â§Â¤Ã¬Â¶Â", "ÃªÂ±Â´Ã¬ÂÂÃ¬ÂÂ¸Ã¬ÂÂ¼", "ÃªÂ¸ÂÃ¬ÂÂ¡Ã¬ÂÂ¸Ã¬ÂÂ¼", "Ã­ÂÂ©ÃªÂ³Â"].map(h => (
                       <th key={h} className="text-left py-2 px-2 font-medium whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -169,25 +169,25 @@ export default function IncentivePanel() {
                     <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                       <td className="py-2 px-2 text-white">{i.name}</td>
                       <td className="py-2 px-2 text-gray-400">{i.count}</td>
-                      <td className="py-2 px-2 text-white">â©{i.total.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-emerald-400">â©{i.countIncentive.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-emerald-400">â©{i.amountIncentive.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-yellow-400 font-semibold">â©{i.totalIncentive.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-white">Ã¢ÂÂ©{i.total.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-emerald-400">Ã¢ÂÂ©{i.countIncentive.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-emerald-400">Ã¢ÂÂ©{i.amountIncentive.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-yellow-400 font-semibold">Ã¢ÂÂ©{i.totalIncentive.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <div className="flex justify-end gap-2 text-sm">
-              <span className="text-gray-500">ì ì²´ í©ê³:</span>
-              <span className="text-yellow-400 font-bold">â©{totalIncentive.toLocaleString()}</span>
+              <span className="text-gray-500">Ã¬Â ÂÃ¬Â²Â´ Ã­ÂÂ©ÃªÂ³Â:</span>
+              <span className="text-yellow-400 font-bold">Ã¢ÂÂ©{totalIncentive.toLocaleString()}</span>
             </div>
             <button
               onClick={submitPayment}
               disabled={paying}
               className="w-full mt-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold hover:bg-emerald-500/30 disabled:opacity-50"
             >
-              {paying ? "ì²ë¦¬ ì¤..." : "ì§ê¸ ìë£ ì²ë¦¬"}
+              {paying ? "Ã¬Â²ÂÃ«Â¦Â¬ Ã¬Â¤Â..." : "Ã¬Â§ÂÃªÂ¸Â Ã¬ÂÂÃ«Â£Â Ã¬Â²ÂÃ«Â¦Â¬"}
             </button>
           </>
         )}
@@ -196,12 +196,12 @@ export default function IncentivePanel() {
       {/* History */}
       {payHistory.length > 0 && (
         <SFCard>
-          <h3 className="text-sm font-semibold text-white mb-3">ì§ê¸ ì´ë ¥</h3>
+          <h3 className="text-sm font-semibold text-white mb-3">Ã¬Â§ÂÃªÂ¸Â Ã¬ÂÂ´Ã«Â Â¥</h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {payHistory.slice(0, 20).map(h => (
               <div key={h.id} className="text-xs text-gray-400 pb-2 border-b border-white/[0.04]">
                 <p className="text-white font-medium">{(h.created_at || "").split("T")[0]}</p>
-                <p>{h.actor} ì²ë¦¬</p>
+                <p>{h.actor} Ã¬Â²ÂÃ«Â¦Â¬</p>
               </div>
             ))}
           </div>
