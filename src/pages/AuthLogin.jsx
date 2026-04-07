@@ -15,6 +15,36 @@ export default function AuthLogin() {
   const [error, setError] = useState("");
   const [loading, setLoading] = useState(false);
   const [showForgotModal, setShowForgotModal] = useState(false);
+  const [noticesToShow, setNoticesToShow] = useState([]);
+  const [noticeIndex, setNoticeIndex] = useState(0);
+
+  const checkAndShowNotices = async () => {
+    try {
+      const notices = await base44.entities.Notice.list('-created_at', 100);
+      const now = new Date().toISOString();
+      const important = notices.filter(n => n.is_important === true && n.expires_at && n.expires_at > now);
+      const unseen = important.filter(n => !localStorage.getItem(`sf_notice_seen_${n.id}`));
+      if (unseen.length > 0) {
+        setNoticesToShow(unseen);
+        setNoticeIndex(0);
+        return true;
+      }
+    } catch {}
+    return false;
+  };
+
+  const handleNoticeConfirm = () => {
+    if (noticeIndex < noticesToShow.length) {
+      const current = noticesToShow[noticeIndex];
+      localStorage.setItem(`sf_notice_seen_${current.id}`, 'true');
+      if (noticeIndex + 1 < noticesToShow.length) {
+        setNoticeIndex(noticeIndex + 1);
+      } else {
+        setNoticesToShow([]);
+        navigate(Auth.getHomeRoute());
+      }
+    }
+  };
 
   const getRoleLabel = (role, extraData) => {
     const roleMap = {
@@ -80,7 +110,10 @@ export default function AuthLogin() {
           created_at: new Date().toISOString()
         });
       } catch(e) { }
-      navigate(Auth.getHomeRoute());
+      const hasNotices = await checkAndShowNotices();
+      if (!hasNotices) {
+        navigate(Auth.getHomeRoute());
+      }
       setLoading(false);
       return;
     }
@@ -123,7 +156,10 @@ export default function AuthLogin() {
       }
       if (dealer.role === 'general_manager') { navigate('/manager'); setLoading(false); return; }
       if (dealer.role === 'online_director') { navigate('/online-director'); setLoading(false); return; }
-      navigate(Auth.getHomeRoute());
+      const hasNotices = await checkAndShowNotices();
+      if (!hasNotices) {
+        navigate(Auth.getHomeRoute());
+      }
       setLoading(false);
       return;
     }
@@ -171,7 +207,10 @@ export default function AuthLogin() {
           created_at: new Date().toISOString()
         });
       } catch(e) { }
-      navigate(Auth.getHomeRoute());
+      const hasNotices = await checkAndShowNotices();
+      if (!hasNotices) {
+        navigate(Auth.getHomeRoute());
+      }
       setLoading(false);
       return;
     }
@@ -277,6 +316,28 @@ export default function AuthLogin() {
             >
               닫기
             </button>
+          </div>
+        </div>
+      )}
+
+      {noticesToShow.length > 0 && noticeIndex < noticesToShow.length && (
+        <div className="fixed inset-0 bg-black/80 flex items-center justify-center z-50 px-4">
+          <div className="bg-[#0a0c15] border border-blue-500/30 rounded-2xl max-w-lg w-full max-h-96 flex flex-col">
+            <div className="p-6 flex-1 overflow-y-auto">
+              <h2 className="text-xl font-bold text-white mb-3">{noticesToShow[noticeIndex].title}</h2>
+              <p className="text-sm text-gray-300 whitespace-pre-wrap">{noticesToShow[noticeIndex].content}</p>
+            </div>
+            <div className="flex gap-3 p-6 border-t border-white/[0.06]">
+              {noticeIndex + 1 < noticesToShow.length && (
+                <span className="text-xs text-gray-500 self-center flex-1">공지 {noticeIndex + 1} / {noticesToShow.length}</span>
+              )}
+              <button
+                onClick={handleNoticeConfirm}
+                className="px-6 py-2.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-xl font-semibold hover:bg-blue-500/30 transition-all"
+              >
+                확인
+              </button>
+            </div>
           </div>
         </div>
       )}
