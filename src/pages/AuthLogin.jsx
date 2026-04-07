@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { Auth } from "@/lib/auth";
-import { base44 } from "@/api/base44Client";
+import api from "@/api/client";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import SFLogo from "../components/SFLogo";
@@ -19,17 +19,6 @@ export default function AuthLogin() {
   const [noticeIndex, setNoticeIndex] = useState(0);
 
   const checkAndShowNotices = async () => {
-    try {
-      const notices = await base44.entities.Notice.list('-created_at', 100);
-      const now = new Date().toISOString();
-      const important = notices.filter(n => n.is_important === true && n.expires_at && n.expires_at > now);
-      const unseen = important.filter(n => !localStorage.getItem(`sf_notice_seen_${n.id}`));
-      if (unseen.length > 0) {
-        setNoticesToShow(unseen);
-        setNoticeIndex(0);
-        return true;
-      }
-    } catch {}
     return false;
   };
 
@@ -61,205 +50,38 @@ export default function AuthLogin() {
   };
 
   const handleLogin = async () => {
-    const LOCK_KEY = 'sf_login_lock';
-    const FAIL_KEY = 'sf_login_fails';
-
     if (!username || !password) {
       setError("아이디와 비밀번호를 입력하세요");
-      return;
-    }
-
-    // Check login lockout
-    const lockUntil = localStorage.getItem(LOCK_KEY);
-    if (lockUntil && Date.now() < parseInt(lockUntil)) {
-      const mins = Math.ceil((parseInt(lockUntil) - Date.now()) / 60000);
-      setError(`로그인이 잠겼습니다. ${mins}분 후 다시 시도하세요.`);
       return;
     }
 
     setLoading(true);
     setError("");
 
-    // 1. SuperAdmin 체크
-    const admins = await base44.entities.SuperAdmin.list();
-    const admin = admins.find(a => a.username === username && a.password === password && a.status === 'active');
-    if (admin) {
-      if (admin.status === 'dormant') {
-        setError('휴면 계정입니다. 관리자에게 문의하세요.');
-        setLoading(false);
-        return;
-      }
-      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
-      localStorage.setItem('sf_session_token', sessionToken);
-      localStorage.setItem('sf_session_id', admin.id);
-      localStorage.removeItem(FAIL_KEY);
-      localStorage.removeItem(LOCK_KEY);
-      Auth.login({ token: 'admin_' + admin.id, role: 'super_admin', dealer_name: admin.name, user_id: admin.id });
-      toast(`환영합니다, ${getRoleLabel('super_admin')} ${admin.name}님!`);
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const { ip } = await ipRes.json();
-        await base44.entities.SystemLog.create({
-          log_type: 'login',
-          actor: username,
-          actor_role: 'super_admin',
-          target: username,
-          action: '로그인 성공 - IP: ' + ip,
-          after_value: ip,
-          ip_address: ip,
-          created_at: new Date().toISOString()
-        });
-      } catch(e) { }
-      const hasNotices = await checkAndShowNotices();
-      if (!hasNotices) {
-        navigate(Auth.getHomeRoute());
-      }
-      setLoading(false);
-      return;
-    }
+    try {
+      const result = await api.post('/api/auth/login', { username, password });
+      localStorage.setItem('sf_token', result.token);
+      localStorage.setItem('sf_user', JSON.stringify(result.user));
 
-    // 2. DealerInfo 체크
-    const dealers = await base44.entities.DealerInfo.list();
-    const dealer = dealers.find(d => d.username === username && d.password === password);
-    if (dealer) {
-      if (dealer.status === 'dormant') {
-        setError('휴면 계정입니다. 관리자에게 문의하세요.');
-        setLoading(false);
-        return;
-      }
-      if (dealer.status !== 'active') {
-        const fails = parseInt(localStorage.getItem(FAIL_KEY) || '0') + 1;
-        localStorage.setItem(FAIL_KEY, String(fails));
-        if (fails >= 5) {
-          localStorage.setItem(LOCK_KEY, String(Date.now() + 10 * 60 * 1000));
-          localStorage.removeItem(FAIL_KEY);
-          setError('로그인 5회 실패. 10분간 잠금됩니다.');
-        } else {
-          setError(`아이디 또는 비밀번호가 올바르지 않습니다. (${fails}/5)`);
-        }
-        setLoading(false);
-        return;
-      }
-      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
-      const currentTime = new Date().toISOString();
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const { ip: currentIP } = await ipRes.json();
-        const lastIP = dealer.last_login_ip;
-        const updateData = { session_token: sessionToken, last_login_at: currentTime, last_login_ip: currentIP };
-        await base44.entities.DealerInfo.update(dealer.id, updateData);
-        if (lastIP && lastIP !== currentIP) {
-          const msg = `⚠️ 새로운 IP 접속 감지\n계정: ${username}\n이전IP: ${lastIP}\n새IP: ${currentIP}\n시각: ${currentTime}`;
-          fetch('https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: '5757341051', text: msg })
-          }).catch(() => {});
-        }
-      } catch(e) {
-        await base44.entities.DealerInfo.update(dealer.id, { session_token: sessionToken, last_login_at: currentTime });
-      }
-      localStorage.setItem('sf_session_token', sessionToken);
-      localStorage.setItem('sf_session_id', dealer.id);
-      localStorage.removeItem(FAIL_KEY);
-      localStorage.removeItem(LOCK_KEY);
-      Auth.login({ token: 'dealer_' + dealer.id, role: dealer.role || 'dealer', dealer_name: dealer.dealer_name, user_id: dealer.id, region_scope: dealer.region_scope || '' });
-      toast(`환영합니다, ${getRoleLabel(dealer.role || 'dealer', { grade: dealer.grade })} ${dealer.dealer_name}님!`);
-      if (dealer.role === 'manager') {
-        localStorage.setItem('sf_assigned_dealer', dealer.assigned_dealer || '');
-      }
-      if (dealer.role === 'general_manager') {
-        localStorage.setItem('sf_assigned_dealer', dealer.assigned_dealer || '');
-      }
-      if (dealer.role === 'general_manager') { navigate('/manager'); setLoading(false); return; }
-      if (dealer.role === 'online_director') { navigate('/online-director'); setLoading(false); return; }
-      const hasNotices = await checkAndShowNotices();
-      if (!hasNotices) {
-        navigate(Auth.getHomeRoute());
-      }
-      setLoading(false);
-      return;
-    }
+      const roleNavigateMap = {
+        'super_admin': '/admin/super',
+        'dealer_admin': '/admin/dealer',
+        'call_admin': '/admin/call',
+        'dealer': '/',
+        'call_team': '/call/dashboard',
+        'online_team': '/online/dashboard',
+        'manager': '/manager',
+        'online_director': '/online-director'
+      };
 
-    // 3. CallTeamMember 체크
-    const callMembers = await base44.entities.CallTeamMember.list();
-    const member = callMembers.find(m => m.username === username && m.password === password);
-    if (member) {
-      if (member.status === 'dormant') {
-        setError('휴면 계정입니다. 관리자에게 문의하세요.');
-        setLoading(false);
-        return;
-      }
-      if (member.status !== 'active') {
-        const fails = parseInt(localStorage.getItem(FAIL_KEY) || '0') + 1;
-        localStorage.setItem(FAIL_KEY, String(fails));
-        if (fails >= 5) {
-          localStorage.setItem(LOCK_KEY, String(Date.now() + 10 * 60 * 1000));
-          localStorage.removeItem(FAIL_KEY);
-          setError('로그인 5회 실패. 10분간 잠금됩니다.');
-        } else {
-          setError(`아이디 또는 비밀번호가 올바르지 않습니다. (${fails}/5)`);
-        }
-        setLoading(false);
-        return;
-      }
-      const sessionToken = Date.now() + '_' + Math.random().toString(36).slice(2);
-      const currentTime = new Date().toISOString();
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const { ip: currentIP } = await ipRes.json();
-        const lastIP = member.last_login_ip;
-        const updateData = { session_token: sessionToken, last_login_at: currentTime, last_login_ip: currentIP };
-        await base44.entities.CallTeamMember.update(member.id, updateData);
-        if (lastIP && lastIP !== currentIP) {
-          const msg = `⚠️ 새로운 IP 접속 감지\n계정: ${username}\n이전IP: ${lastIP}\n새IP: ${currentIP}\n시각: ${currentTime}`;
-          fetch('https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage', {
-            method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ chat_id: '5757341051', text: msg })
-          }).catch(() => {});
-        }
-      } catch(e) {
-        await base44.entities.CallTeamMember.update(member.id, { session_token: sessionToken, last_login_at: currentTime });
-      }
-      localStorage.setItem('sf_session_token', sessionToken);
-      localStorage.setItem('sf_session_id', member.id);
-      localStorage.removeItem(FAIL_KEY);
-      localStorage.removeItem(LOCK_KEY);
-      Auth.login({ token: 'call_' + member.id, role: member.role || 'call_team', dealer_name: member.name, user_id: member.id });
-      toast(`환영합니다, ${getRoleLabel(member.role || 'call_team')} ${member.name}님!`);
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const { ip } = await ipRes.json();
-        await base44.entities.SystemLog.create({
-          log_type: 'login',
-          actor: username,
-          actor_role: member.role || 'call_team',
-          target: username,
-          action: '로그인 성공 - IP: ' + ip,
-          ip_address: ip,
-          created_at: new Date().toISOString()
-        });
-      } catch(e) { }
-      const hasNotices = await checkAndShowNotices();
-      if (!hasNotices) {
-        navigate(Auth.getHomeRoute());
-      }
+      const path = roleNavigateMap[result.user.role] || '/';
+      toast(`환영합니다, ${result.user.name || result.user.username}님!`);
+      navigate(path);
+    } catch (err) {
+      setError(err.message || '로그인 실패');
+    } finally {
       setLoading(false);
-      return;
     }
-
-    // Login failure
-    const fails = parseInt(localStorage.getItem(FAIL_KEY) || '0') + 1;
-    localStorage.setItem(FAIL_KEY, String(fails));
-    if (fails >= 5) {
-      localStorage.setItem(LOCK_KEY, String(Date.now() + 10 * 60 * 1000));
-      localStorage.removeItem(FAIL_KEY);
-      setError('로그인 5회 실패. 10분간 잠금됩니다.');
-    } else {
-      setError(`아이디 또는 비밀번호가 올바르지 않습니다. (${fails}/5)`);
-    }
-    setLoading(false);
   };
 
   const handleKey = (e) => {
