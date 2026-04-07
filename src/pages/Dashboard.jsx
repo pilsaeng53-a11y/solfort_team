@@ -204,6 +204,20 @@ export default function Dashboard() {
           </div>
         )}
 
+        {/* Quick Menu */}
+        <div className="grid grid-cols-3 gap-2">
+          {[
+            { label: "🌐 내 네트워크", path: "/my-network" },
+            { label: "💰 인센티브 설정", path: "/incentive-settings" },
+            { label: "📊 리드 업로드", path: "/lead-upload" },
+          ].map(btn => (
+            <button key={btn.path} onClick={() => navigate(btn.path)}
+              className="py-2 px-1 text-[10px] font-medium text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 rounded-xl hover:bg-emerald-500/20 transition-all text-center leading-tight">
+              {btn.label}
+            </button>
+          ))}
+        </div>
+
         {/* USDT Rate */}
         <UsdtBanner rate={rate} source={source} loading={rateLoading} onRefresh={fetchRate} />
 
