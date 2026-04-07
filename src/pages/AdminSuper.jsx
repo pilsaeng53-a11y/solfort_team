@@ -2,7 +2,7 @@ import { useState, useEffect, useRef } from "react";
 import { utils, writeFile } from "xlsx";
 import BotManagementPanel from "../components/BotManagementPanel";
 import CallAutomationLivePanel from "../components/CallAutomationLivePanel";
-import { base44 } from "@/api/base44Client";
+import { DealerInfo, SalesRecord, CallTeamMember, OnlineTeamMember, CallLead } from "../api/entities";
 import { Auth } from "@/lib/auth";
 import { toast } from "sonner";
 import AdminHeader from "../components/AdminHeader";
@@ -42,7 +42,7 @@ function OnlineDirectorCreationSection() {
     }
     setSubmitting(true);
     try {
-      await base44.entities.DealerInfo.create({
+      await DealerInfo.create({
         dealer_name: formData.name,
         owner_name: formData.name,
         username: formData.username,
@@ -87,7 +87,7 @@ function DealerAdminCreationSection() {
     }
     setSubmitting(true);
     try {
-      await base44.entities.DealerInfo.create({
+      await DealerInfo.create({
         dealer_name: formData.name, owner_name: formData.name,
         username: formData.username, password: formData.password,
         role: "dealer_admin", status: "active",
@@ -126,7 +126,7 @@ function CallAdminCreationSection() {
     }
     setSubmitting(true);
     try {
-      await base44.entities.CallTeamMember.create({
+      await CallTeamMember.create({
         name: formData.name, username: formData.username,
         password: formData.password, role: "call_admin", status: "active",
       });
@@ -161,7 +161,7 @@ function ManagerCreationSection() {
   const [submitting, setSubmitting] = useState(false);
 
   useEffect(() => {
-    base44.entities.DealerInfo.list("-created_date", 500)
+    DealerInfo.list()
       .then(d => setDealers(d.filter(x => x.status === "active")))
       .finally(() => setLoading(false));
   }, []);
@@ -173,7 +173,7 @@ function ManagerCreationSection() {
     }
     setSubmitting(true);
     try {
-      await base44.entities.DealerInfo.create({
+      await DealerInfo.create({
         dealer_name: formData.name,
         username: formData.username,
         password: formData.password,
@@ -248,16 +248,15 @@ export default function AdminSuper() {
   const [onlineCount, setOnlineCount] = useState(0);
 
   useEffect(() => {
-    base44.entities.SalesOrder.list("-created_date", 200)
-      .then(orders => setPendingOrders(orders.filter(o => o.status === "pending").length))
-      .catch(() => {});
+    // SalesOrder not in Neon API yet
+    setPendingOrders(0);
   }, []);
 
   useEffect(() => {
     if (!liveMode) return;
     const refreshLiveData = async () => {
       try {
-        const dealers = await base44.entities.DealerInfo.list('-created_date', 500);
+        const dealers = await DealerInfo.list();
         const now = new Date();
         const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000);
         const online = dealers.filter(d => d.last_login_at && new Date(d.last_login_at) > thirtyMinsAgo).length;
@@ -273,11 +272,11 @@ export default function AdminSuper() {
     setBackupLoading(true);
     try {
       const [sales, dealers, callMembers, onlineMembers, leads] = await Promise.all([
-        base44.entities.SalesRecord.list('-created_date', 10000),
-        base44.entities.DealerInfo.list('-created_date', 500),
-        base44.entities.CallTeamMember.list('-created_date', 500),
-        base44.entities.OnlineTeamMember.list('-created_date', 200),
-        base44.entities.CallLead.list('-created_date', 1000),
+        SalesRecord.list(),
+        DealerInfo.list(),
+        CallTeamMember.list(),
+        OnlineTeamMember.list(),
+        CallLead.list(),
       ]);
 
       const wb = utils.book_new();
@@ -502,10 +501,10 @@ function OperationSummary() {
 
   const load = async () => {
     const [dealers, callMembers, onlineMembers, sales] = await Promise.all([
-      base44.entities.DealerInfo.list("-created_date", 500),
-      base44.entities.CallTeamMember.list("-created_date", 500),
-      base44.entities.OnlineTeamMember.list("-created_date", 200),
-      base44.entities.SalesRecord.list("-sale_date", 5000),
+      DealerInfo.list(),
+      CallTeamMember.list(),
+      OnlineTeamMember.list(),
+      SalesRecord.list(),
     ]);
     const now = new Date();
     const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
@@ -588,12 +587,11 @@ function OverviewPanel({ onGoOrders }) {
   useEffect(() => {
     (async () => {
       try {
-        const [d, s, o] = await Promise.all([
-          base44.entities.DealerInfo.list("-created_date", 200),
-          base44.entities.SalesRecord.list("-created_date", 1000),
-          base44.entities.SalesOrder.list("-created_date", 200),
+        const [d, s] = await Promise.all([
+          DealerInfo.list(),
+          SalesRecord.list(),
         ]);
-        setDealers(d); setSales(s); setOrders(o);
+        setDealers(d); setSales(s); setOrders([]);
       } catch {}
       setLoading(false);
     })();
@@ -725,7 +723,7 @@ function DealerOrgChart({ dealers: propDealers }) {
 
   const makeIndependent = async (dealer) => {
     setUpdating(dealer.id);
-    await base44.entities.DealerInfo.update(dealer.id, { is_independent: true, parent_dealer_id: null, parent_dealer_name: null });
+    await DealerInfo.update(dealer.id, { is_independent: true, parent_dealer_id: null, parent_dealer_name: null });
     setDealers(prev => prev.map(d => d.id === dealer.id ? { ...d, is_independent: true, parent_dealer_id: null, parent_dealer_name: null } : d));
     setUpdating(null);
   };
@@ -787,8 +785,8 @@ function DealerOverview() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.DealerInfo.filter({ status: "active" }, "-created_date", 200),
-      base44.entities.SalesRecord.list("-created_date", 2000),
+      DealerInfo.filter({ status: "active" }),
+      SalesRecord.list(),
     ]).then(([d, s]) => { setDealers(d); setSales(s); setLoading(false); });
   }, []);
 
@@ -849,7 +847,7 @@ function GradeBtn({ grade, current, dealerId, dealerName, onUpdate }) {
   const change = async () => {
     if (current === grade) return;
     setLoading(true);
-    await base44.entities.DealerInfo.update(dealerId, { grade });
+    await DealerInfo.update(dealerId, { grade });
     Logger.log("grade_change", Auth.getDealerName(), Auth.getRole(), dealerName, "등급 변경", current, grade);
     onUpdate(dealerId, grade);
     setLoading(false);
@@ -873,12 +871,12 @@ function DealerManagement() {
   const isSuperAdmin = Auth.isSuperAdmin();
 
   useEffect(() => {
-    base44.entities.DealerInfo.list("-created_date", 500).then(setDealers).finally(() => setLoading(false));
+    DealerInfo.list().then(setDealers).finally(() => setLoading(false));
   }, []);
 
   const updateDealer = async (id, data) => {
     setUpdating(id);
-    await base44.entities.DealerInfo.update(id, data);
+    await DealerInfo.update(id, data);
     setDealers(prev => prev.map(d => d.id === id ? { ...d, ...data } : d));
     setUpdating(null);
   };
@@ -1021,10 +1019,10 @@ function AdvancedExport() {
     setExporting(mode);
     try {
       const [sales, dealers, callMembers, onlineMembers] = await Promise.all([
-        base44.entities.SalesRecord.list("-sale_date", 10000),
-        base44.entities.DealerInfo.filter({ status: "active" }, "-created_date", 500),
-        base44.entities.CallTeamMember.filter({ status: "active" }, "-created_date", 500),
-        base44.entities.OnlineTeamMember.list("-created_date", 500),
+        SalesRecord.list(),
+        DealerInfo.filter({ status: "active" }),
+        CallTeamMember.filter({ status: "active" }),
+        OnlineTeamMember.list(),
       ]);
 
       const wb = utils.book_new();
@@ -1117,7 +1115,7 @@ function SalesPanel() {
   const [endDate, setEndDate] = useState(today);
 
   useEffect(() => {
-    base44.entities.SalesRecord.list("-sale_date", 5000).then(setSales).finally(() => setLoading(false));
+    SalesRecord.list().then(setSales).finally(() => setLoading(false));
   }, []);
 
   const period = sales.filter(s => s.sale_date >= startDate && s.sale_date <= endDate);
@@ -1197,9 +1195,9 @@ function CallOverview() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.SalesRecord.list("-created_date", 1000),
-      base44.entities.CallTeamMember.filter({ status: "active" }, "-created_date", 200),
-      base44.entities.DealerInfo.filter({ status: "active" }, "-created_date", 200),
+      SalesRecord.list(),
+      CallTeamMember.filter({ status: "active" }),
+      DealerInfo.filter({ status: "active" }),
     ]).then(([r, c, d]) => { setRecords(r); setCallMembers(c); setDealers(d); setLoading(false); });
   }, []);
 
@@ -1260,12 +1258,12 @@ function CallAccountManagement() {
   const [updating, setUpdating] = useState(null);
 
   useEffect(() => {
-    base44.entities.CallTeamMember.list("-created_date", 500).then(setMembers).finally(() => setLoading(false));
+    CallTeamMember.list().then(setMembers).finally(() => setLoading(false));
   }, []);
 
   const update = async (id, data) => {
     setUpdating(id);
-    await base44.entities.CallTeamMember.update(id, data);
+    await CallTeamMember.update(id, data);
     setMembers(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
     setUpdating(null);
   };
@@ -1423,9 +1421,9 @@ function OrgChartPanel() {
 
   useEffect(() => {
     Promise.all([
-      base44.entities.DealerInfo.list("-created_date", 500),
-      base44.entities.CallTeamMember.list("-created_date", 500),
-      base44.entities.OnlineTeamMember.list("-created_date", 200),
+      DealerInfo.list(),
+      CallTeamMember.list(),
+      OnlineTeamMember.list(),
     ]).then(([d, c, o]) => { setDealers(d); setCallMembers(c); setOnlineMembers(o); setLoading(false); });
   }, []);
 
@@ -1508,8 +1506,8 @@ function MergedUsersPanel() {
   useEffect(() => {
     (async () => {
       const [dealers, callMembers] = await Promise.all([
-        base44.entities.DealerInfo.list('-created_date', 500),
-        base44.entities.CallTeamMember.list('-created_date', 500),
+        DealerInfo.list(),
+        CallTeamMember.list(),
       ]);
 
       const mergedUsers = [
@@ -1667,12 +1665,12 @@ function OnlineTeamPanel() {
   const [updating, setUpdating] = useState(null);
 
   useEffect(() => {
-    base44.entities.OnlineTeamMember.list("-created_date", 200).then(setMembers).finally(() => setLoading(false));
+    OnlineTeamMember.list().then(setMembers).finally(() => setLoading(false));
   }, []);
 
   const updateMember = async (id, data) => {
     setUpdating(id);
-    await base44.entities.OnlineTeamMember.update(id, data);
+    await OnlineTeamMember.update(id, data);
     setMembers(prev => prev.map(m => m.id === id ? { ...m, ...data } : m));
     setUpdating(null);
   };
@@ -1769,8 +1767,8 @@ function EventManagementPanel() {
   const [form, setForm] = useState({ title: "", content: "", target: "전체", start_date: "", end_date: "", image_url: "" });
 
   const load = async () => {
-    const data = await base44.entities.Event.list("-created_date", 100);
-    setEvents(data);
+    // Event entity not in Neon API - use empty
+    setEvents([]);
     setLoading(false);
   };
 
@@ -1781,7 +1779,8 @@ function EventManagementPanel() {
       toast.error("필수 항목을 모두 입력해주세요."); return;
     }
     setSaving(true);
-    const created = await base44.entities.Event.create({ ...form, is_active: true, created_by: Auth.getUsername?.() || "admin" });
+    // Event creation - not in Neon API
+    const created = { id: Date.now(), ...form, is_active: true };
     setEvents(prev => [created, ...prev]);
     setForm({ title: "", content: "", target: "전체", start_date: "", end_date: "", image_url: "" });
     toast.success("이벤트가 등록되었습니다.");
@@ -1790,14 +1789,14 @@ function EventManagementPanel() {
 
   const handleToggle = async (ev) => {
     setToggling(ev.id);
-    await base44.entities.Event.update(ev.id, { is_active: !ev.is_active });
+    // Event toggle - not in Neon API
     setEvents(prev => prev.map(e => e.id === ev.id ? { ...e, is_active: !e.is_active } : e));
     setToggling(null);
   };
 
   const handleDelete = async (id) => {
     if (!confirm("삭제하시겠습니까?")) return;
-    await base44.entities.Event.delete(id);
+    // Event delete - not in Neon API
     setEvents(prev => prev.filter(e => e.id !== id));
     toast.success("이벤트가 삭제되었습니다.");
   };

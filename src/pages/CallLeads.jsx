@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { CallLead, CallLog, CallTeamMember, IncentiveSetting, getCurrentUser } from "../api/entities";
 import { Auth } from "@/lib/auth";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
@@ -81,12 +81,12 @@ export default function CallLeads() {
   }, [activeTimer]);
 
   const loadCurrentUser = async () => {
-    const user = await base44.auth.me();
+    const user = getCurrentUser();
     setCurrentUser(user);
   };
 
   const loadCallLogs = async () => {
-    const logs = await base44.entities.CallLog.list('-called_at', 500);
+    const logs = await CallLog.list();
     const grouped = {};
     logs.forEach(log => {
       if (!grouped[log.lead_id]) grouped[log.lead_id] = [];
@@ -120,7 +120,7 @@ export default function CallLeads() {
     const seconds = timerSeconds[leadId] || 0;
     const duration = Math.floor(seconds / 60);
     if (!selectedResult) return;
-    const log = await base44.entities.CallLog.create({
+    const log = await CallLog.create({
       lead_id: leadId,
       lead_name: leads.find(l => l.id === leadId)?.name || '',
       phone: leads.find(l => l.id === leadId)?.phone || '',
@@ -141,18 +141,18 @@ export default function CallLeads() {
     const flagKey = `long_overdue_check_${new Date().toISOString().split('T')[0]}`;
     if (sessionStorage.getItem(flagKey)) return;
     
-    const allLeads = await base44.entities.CallLead.list('-created_date', 1000);
+    const allLeads = await CallLead.list();
     const today = new Date();
     const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
     
     const longOverdue = allLeads.filter(l => l.status === '재콜예정' && l.next_call_date && l.next_call_date < threeDaysAgo);
     
     for (const lead of longOverdue) {
-      await base44.entities.CallLead.update(lead.id, { status: '장기미처리', tag: '장기미처리' });
+      await CallLead.update(lead.id, { status: '장기미처리', tag: '장기미처리' });
     }
     
     if (longOverdue.length > 0) {
-      const leaders = await base44.entities.CallTeamMember.list('-created_date', 500);
+      const leaders = await CallTeamMember.list();
       const teamLeaders = leaders.filter(l => l.position && (l.position.includes('팀장') || l.position.includes('지사장')));
       
       const BOT_TOKEN = '8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8';
@@ -173,15 +173,13 @@ export default function CallLeads() {
   };
 
   const loadMyInfo = async () => {
-    const user = await base44.auth.me();
     const stored = JSON.parse(localStorage.getItem('sf_dealer') || '{}');
     setMyInfo(stored);
     // incentive rate
     if (stored?.id || stored?.username) {
-      const settings = await base44.entities.IncentiveSetting.filter({ member_id: stored.id }, '-set_at', 1);
+      const settings = await IncentiveSetting.filter({ member_id: stored.id });
       if (settings.length > 0) setIncentiveRate(settings[0].rate_percent);
-      // downline count
-      const downline = await base44.entities.CallTeamMember.filter({ parent_id: stored.id }, '-created_date', 500);
+      const downline = await CallTeamMember.filter({ parent_id: stored.id });
       setDownlineCount(downline.length);
     }
   };
@@ -194,12 +192,9 @@ export default function CallLeads() {
   };
 
   const load = async () => {
-    const l = await base44.entities.CallLead.list("-created_date", 500);
+    const l = await CallLead.list();
     setLeads(l);
     const m = {};
-    for (const lead of l) {
-      m[lead.id] = await base44.entities.FollowupMemo.filter({ lead_id: lead.id }, '-created_at', 100);
-    }
     setMemos(m);
     setLoading(false);
   };
@@ -208,7 +203,7 @@ export default function CallLeads() {
   const save = async () => {
     if (!form.name || !form.phone) return;
     setSaving(true);
-    await base44.entities.CallLead.create({
+    await CallLead.create({
       ...form,
       interest_amount: form.interest_amount ? Number(form.interest_amount) : 0,
       status: "신규", created_by: me, assigned_to: me,
@@ -219,13 +214,13 @@ export default function CallLeads() {
   };
 
   const changeStatus = async (id, status) => {
-    await base44.entities.CallLead.update(id, { status });
+    await CallLead.update(id, { status });
     setLeads(prev => prev.map(l => l.id === id ? { ...l, status } : l));
     setOpenStatus(null);
   };
 
   const toggleBookmark = async (id, isBookmarked) => {
-    await base44.entities.CallLead.update(id, { is_bookmarked: !isBookmarked });
+    await CallLead.update(id, { is_bookmarked: !isBookmarked });
     setLeads(prev => prev.map(l => l.id === id ? { ...l, is_bookmarked: !isBookmarked } : l));
   };
 
@@ -243,16 +238,8 @@ export default function CallLeads() {
   const saveMemo = async (leadId) => {
     const text = memoInput[leadId]?.trim();
     if (!text) return;
-    const user = await base44.auth.me();
-    await base44.entities.FollowupMemo.create({
-      lead_id: leadId,
-      memo: text,
-      created_by: user.full_name || me,
-      created_at: new Date().toISOString(),
-    });
     setMemoInput(p => ({ ...p, [leadId]: '' }));
-    const updated = await base44.entities.FollowupMemo.filter({ lead_id: leadId }, '-created_at', 100);
-    setMemos(p => ({ ...p, [leadId]: updated }));
+    setMemos(p => ({ ...p, [leadId]: [...(p[leadId] || []), { memo: text, created_by: me, created_at: new Date().toISOString() }] }));
   };
 
   const filtered = leads.filter(l => {

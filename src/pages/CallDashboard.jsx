@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { CallLead, CallLog, SalesRecord, AttendanceLog, getCurrentUser } from "../api/entities";
 import { Flame } from "lucide-react";
 import { Auth } from "@/lib/auth";
 import CallNav from "@/components/CallNav";
@@ -49,13 +49,12 @@ export default function CallDashboard() {
     document.title = "SolFort - 콜 대시보드";
     loadUser();
     load();
-    base44.entities.Event.list("-created_date", 50)
-      .then(evs => setActiveEvents(evs.filter(e => e.is_active && (e.target === "전체" || e.target === "콜팀"))))
-      .catch(() => {});
+    // Event entity not in Neon API
+    setActiveEvents([]);
   }, []);
 
   const loadUser = async () => {
-    const u = await base44.auth.me();
+    const u = getCurrentUser();
     setUser(u);
     if (u?.id) loadAttendance(u);
   };
@@ -67,11 +66,7 @@ export default function CallDashboard() {
     const statusData = JSON.parse(localStorage.getItem(statusKey) || '{}');
 
     // Load today's logs
-    const todayLogs = await base44.entities.AttendanceLog.filter(
-      { username: currentUser.username, work_date: todayStr },
-      "created_date",
-      10
-    ).catch(() => []);
+    const todayLogs = await AttendanceLog.filter({ username: currentUser.username, work_date: todayStr }).catch(() => []);
 
     const checkInLog = todayLogs.find(l => l.type === "출근");
     const checkOutLog = todayLogs.find(l => l.type === "퇴근");
@@ -88,11 +83,7 @@ export default function CallDashboard() {
     }
 
     // Load 7-day history
-    const allLogs = await base44.entities.AttendanceLog.filter(
-      { username: currentUser.username },
-      "-work_date",
-      100
-    ).catch(() => []);
+    const allLogs = await AttendanceLog.filter({ username: currentUser.username }).catch(() => []);
 
     const historyMap = {};
     allLogs.forEach(log => {
@@ -128,7 +119,7 @@ export default function CallDashboard() {
     try {
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      await base44.entities.AttendanceLog.create({
+      await AttendanceLog.create({
         username: user.username,
         user_id: user.id,
         work_date: today,
@@ -152,7 +143,7 @@ export default function CallDashboard() {
     try {
       const now = new Date();
       const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
-      await base44.entities.AttendanceLog.create({
+      await AttendanceLog.create({
         username: user.username,
         user_id: user.id,
         work_date: today,
@@ -195,7 +186,7 @@ export default function CallDashboard() {
       if (sessionStorage.getItem(flagKey)) return;
       const stored = JSON.parse(localStorage.getItem('sf_dealer') || '{}');
       const userName = stored.name || stored.dealer_name || '담당자';
-      const recallLeads = await base44.entities.CallLead.filter({ next_call_date: today, status: '재콜예정' }, '-created_date', 100).catch(() => []);
+      const recallLeads = await CallLead.filter({ next_call_date: today, status: '재콜예정' }).catch(() => []);
       if (recallLeads.length === 0) return;
       const BOT_TOKEN = '8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8';
       const CHAT_ID = '5757341051';
@@ -217,9 +208,9 @@ export default function CallDashboard() {
 
   const load = () =>
     Promise.all([
-      base44.entities.CallLead.list("-created_date", 500),
-      base44.entities.CallLog.list("-called_at", 100),
-      base44.entities.SalesRecord.list("-created_date", 1000),
+      CallLead.list(),
+      CallLog.list(),
+      SalesRecord.list(),
     ]).then(([l, lg, s]) => { setLeads(l); setLogs(lg); setSales(s); setLoading(false); });
 
   const thisMonth = today.slice(0, 7);
@@ -248,7 +239,7 @@ export default function CallDashboard() {
     .sort((a, b) => new Date(a.next_call_date) - new Date(b.next_call_date))[0];
   
   const updateUrgentDate = async (leadId, newDate) => {
-    await base44.entities.CallLead.update(leadId, { next_call_date: newDate });
+    await CallLead.update(leadId, { next_call_date: newDate });
     setLeads(prev => prev.map(l => l.id === leadId ? { ...l, next_call_date: newDate } : l));
   };
 

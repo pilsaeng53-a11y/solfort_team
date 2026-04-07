@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { DealerInfo, SalesRecord } from "../api/entities";
 import { Auth } from "@/lib/auth";
 import AdminHeader from "../components/AdminHeader";
 import GradeBadge from "../components/GradeBadge";
@@ -49,8 +49,8 @@ function OverviewPanel() {
 
     (async () => {
       const [d, s] = await Promise.all([
-        base44.entities.DealerInfo.list("-created_date", 500),
-        base44.entities.SalesRecord.list("-created_date", 2000),
+        DealerInfo.list(),
+        SalesRecord.list(),
       ]);
       setDealers(d); setSales(s); setLoading(false);
     })();
@@ -147,7 +147,7 @@ function DealerAccountPanel() {
     const regions = regionScope.trim() ? regionScope.split(",").map(r => r.trim()) : [];
     setAllowedRegions(regions);
 
-    base44.entities.DealerInfo.list("-created_date", 500)
+    DealerInfo.list()
       .then(d => {
         setDealers(d);
         const gm = {}; d.filter(x => x.status === "pending").forEach(x => gm[x.id] = "GREEN");
@@ -158,7 +158,7 @@ function DealerAccountPanel() {
 
   const updateDealer = async (id, data) => {
     setUpdating(id);
-    await base44.entities.DealerInfo.update(id, data);
+    await DealerInfo.update(id, data);
     setDealers(prev => prev.map(d => d.id === id ? { ...d, ...data } : d));
     setUpdating(null);
   };
@@ -303,7 +303,7 @@ function SalesDataPanel() {
   const [statusFilter, setStatusFilter] = useState("all");
 
   useEffect(() => {
-    base44.entities.SalesRecord.list("-sale_date", 5000).then(setAllSales).finally(() => setLoading(false));
+    SalesRecord.list().then(setAllSales).finally(() => setLoading(false));
   }, []);
 
   const periodSales = allSales.filter(s => s.sale_date >= startDate && s.sale_date <= endDate);
@@ -431,7 +431,7 @@ function NotifyPanel() {
   const [dlDealer, setDlDealer] = useState("전체");
 
   useEffect(() => {
-    base44.entities.DealerInfo.list("-created_date", 200).then(setDealers);
+    DealerInfo.list().then(setDealers);
   }, []);
 
   const log = (msg) => setLogs(prev => [`[${new Date().toLocaleTimeString("ko-KR")}] ${msg}`, ...prev]);

@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { CustomerReview, getCurrentUser } from "../api/entities";
 import SFCard from "@/components/SFCard";
 import { toast } from "sonner";
 import { Star } from "lucide-react";
@@ -23,11 +23,11 @@ export default function CustomerSatisfaction() {
   useEffect(() => {
     const initData = async () => {
       try {
-        const currentUser = await base44.auth.me();
+        const currentUser = getCurrentUser();
         setUser(currentUser);
 
         // Load reviews
-        const allReviews = await base44.entities.CustomerReview.list("-reviewed_at", 200).catch(() => []);
+        const allReviews = await CustomerReview.list().catch(() => []);
         const filtered = currentUser.role === "super_admin" 
           ? allReviews 
           : allReviews.filter(r => r.created_by === currentUser.email || r.created_by === currentUser.username);
@@ -53,8 +53,8 @@ export default function CustomerSatisfaction() {
 
     setSending(true);
     try {
-      // Create request record
-      await base44.entities.SatisfactionRequest.create({
+      // Create request record - logging via CustomerReview
+      await CustomerReview.create({
         customer_name: form.customer_name,
         phone: form.phone,
         staff_name: form.staff_name,

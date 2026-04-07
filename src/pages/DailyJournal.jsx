@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { DailyJournal as DailyJournalEntity, getCurrentUser } from "../api/entities";
 import SFCard from "@/components/SFCard";
 import { toast } from "sonner";
 
@@ -24,20 +24,16 @@ export default function DailyJournal() {
   useEffect(() => {
     const initData = async () => {
       try {
-        const currentUser = await base44.auth.me();
+        const currentUser = getCurrentUser();
         setUser(currentUser);
 
         // Load user's journals
-        const userJournals = await base44.entities.DailyJournal.filter(
-          { created_by: currentUser.email || currentUser.username },
-          "-written_at",
-          100
-        );
+        const userJournals = await DailyJournalEntity.filter({ created_by: currentUser?.username });
         setJournals(userJournals);
 
         // Load all journals for super_admin/managers
-        if (currentUser.role === "super_admin" || currentUser.role === "manager" || currentUser.role === "call_admin" || currentUser.role === "dealer_admin") {
-          const all = await base44.entities.DailyJournal.list("-written_at", 500);
+        if (currentUser?.role === "super_admin" || currentUser?.role === "manager" || currentUser?.role === "call_admin" || currentUser?.role === "dealer_admin") {
+          const all = await DailyJournalEntity.list();
           setAllJournals(all);
         }
       } catch (e) {
@@ -70,7 +66,7 @@ export default function DailyJournal() {
         parent_name: user?.parent_name || "",
       };
 
-      const created = await base44.entities.DailyJournal.create(entry);
+      const created = await DailyJournalEntity.create(entry);
       setJournals([created, ...journals]);
 
       // Send Telegram

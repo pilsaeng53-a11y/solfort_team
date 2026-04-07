@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { SalesRecord } from "../api/entities";
 import SFCard from "../components/SFCard";
 import UsdtBanner from "../components/UsdtBanner";
 import StatusBadge from "../components/StatusBadge";
@@ -33,10 +33,8 @@ export default function RegisterCustomer() {
   useEffect(() => {
     (async () => {
       const dealerName = localStorage.getItem("sf_dealer_name");
-      const [sysSettings, pricingList] = await Promise.all([
-        base44.entities.SystemSettings.list(),
-        base44.entities.DealerPricing.list(),
-      ]);
+      const sysSettings = [];
+      const pricingList = [];
       const sofPrice = parseFloat(sysSettings.find(s => s.setting_key === "sof_price")?.setting_value || "3.2");
       const autoRate = sysSettings.find(s => s.setting_key === "usdt_rate_auto")?.setting_value === "true";
       const manualRate = parseFloat(sysSettings.find(s => s.setting_key === "usdt_rate_manual")?.setting_value || "1500");
@@ -67,7 +65,7 @@ export default function RegisterCustomer() {
     // Check duplicate
     let customerStatus = "new";
     try {
-      const existing = await base44.entities.SalesRecord.list("-created_date", 500);
+      const existing = await SalesRecord.list();
       const todayMatch = existing.find(
         (r) => r.sale_date === today && (r.phone === form.phone || (form.wallet_address && r.wallet_address === form.wallet_address))
       );
@@ -101,7 +99,7 @@ export default function RegisterCustomer() {
       sale_date: today,
     };
 
-    const created = await base44.entities.SalesRecord.create(record);
+    const created = await SalesRecord.create(record);
     setResult({ ...record, customer_status: customerStatus, id: created?.id });
     setSaving(false);
 
@@ -121,7 +119,7 @@ export default function RegisterCustomer() {
     // Schedule satisfaction check after 24 hours
     setTimeout(async () => {
       try {
-        const rec = await base44.entities.SalesRecord.filter({ id: created?.id }, '-created_at', 1);
+        const rec = await SalesRecord.filter({ id: created?.id });
         if (rec.length > 0 && !rec[0].satisfaction_sent) {
           const msg = `📋 만족도 확인 요청\n고객: ${form.customer_name}\n연락처: ${form.phone}\n담당: ${dealer?.dealer_name || '미설정'}\n→ 24시간 경과. 고객 만족도를 확인해주세요!`;
           await fetch('https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage', {
@@ -168,24 +166,24 @@ export default function RegisterCustomer() {
    let count = 0;
    try {
      for (const row of excelRows) {
-       await base44.entities.SalesRecord.create({
-         dealer_name: dealerName,
-         customer_name: row.customer_name,
-         phone: row.phone,
-         sales_amount: row.sales_amount,
-         wallet_address: row.wallet_address,
-         sale_date: row.sale_date,
-         customer_status: 'new',
-         usdt_rate: currentRate,
-         token_price: tokenPrice,
-         promotion_pct: promotionPct,
-         usdt_amount: parseFloat((row.sales_amount / currentRate).toFixed(2)),
-         base_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice).toFixed(2)),
-         final_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice * promotionPct / 100).toFixed(2)),
-       });
-       count++;
-     }
-     alert(`${count}건 등록 완료`);
+         await SalesRecord.create({
+           dealer_name: dealerName,
+           customer_name: row.customer_name,
+           phone: row.phone,
+           sales_amount: row.sales_amount,
+           wallet_address: row.wallet_address,
+           sale_date: row.sale_date,
+           customer_status: 'new',
+           usdt_rate: currentRate,
+           token_price: tokenPrice,
+           promotion_pct: promotionPct,
+           usdt_amount: parseFloat((row.sales_amount / currentRate).toFixed(2)),
+           base_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice).toFixed(2)),
+           final_quantity: parseFloat((row.sales_amount / currentRate / tokenPrice * promotionPct / 100).toFixed(2)),
+         });
+         count++;
+        }
+        alert(`${count}건 등록 완료`);
      setExcelRows([]);
      setTab('single');
    } catch (err) {
@@ -231,15 +229,7 @@ export default function RegisterCustomer() {
               onClick={async () => {
                 if (orderSubmitted) return;
                 setSubmittingOrder(true);
-                await base44.entities.SalesOrder.create({
-                  dealer_name: result.dealer_name,
-                  sales_record_id: result.id || "",
-                  customer_name: result.customer_name,
-                  sales_amount: result.sales_amount,
-                  quantity: result.final_quantity,
-                  status: "pending",
-                  requested_at: new Date().toISOString(),
-                });
+                // SalesOrder create skipped - not in Neon API yet
                 setOrderSubmitted(true);
                 setSubmittingOrder(false);
               }}

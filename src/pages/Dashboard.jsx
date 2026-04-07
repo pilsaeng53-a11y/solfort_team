@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { DealerInfo, SalesRecord, CallLead } from "../api/entities";
 import { toast } from "sonner";
 import SFLogo from "../components/SFLogo";
 import SFCard from "../components/SFCard";
@@ -39,22 +39,19 @@ export default function Dashboard() {
 
   useEffect(() => {
     loadRecords();
-    base44.entities.Event.list("-created_date", 50)
-      .then(evs => setActiveEvents(evs.filter(e => e.is_active && (e.target === "전체" || e.target === "대리점"))))
-      .catch(() => {});
-    base44.entities.CallLead.list("-created_date", 500)
-      .then(leads => setRecallLeads(leads.filter(l => l.next_call_date === today && l.status === "재콜예정")))
+    CallLead.list({ next_call_date: today, status: '재콜예정' })
+      .then(leads => setRecallLeads(leads))
       .catch(() => {});
     calculateBadges();
   }, []);
 
   useEffect(() => {
     if (dealer?.id && (dealer.position === '대리점지사장' || dealer.position === '대리점장')) {
-      base44.entities.DealerInfo.filter({ parent_dealer_id: dealer.id }, '-created_date', 200)
+      DealerInfo.filter({ parent_dealer_id: dealer.id })
         .then(async (dealers) => {
           setConnectedDealers(dealers);
           if (dealers.length > 0) {
-            const sales = await base44.entities.SalesRecord.list('-sale_date', 5000);
+            const sales = await SalesRecord.list();
             const names = new Set(dealers.map(d => d.dealer_name));
             setConnectedSales(sales.filter(s => names.has(s.dealer_name)));
           }
@@ -66,7 +63,7 @@ export default function Dashboard() {
   const loadRecords = async () => {
     setLoading(true);
     try {
-      const all = await base44.entities.SalesRecord.list("-created_date", 500);
+      const all = await SalesRecord.list();
       setRecords(all);
     } catch {
       setRecords([]);
@@ -77,13 +74,13 @@ export default function Dashboard() {
 
   const calculateBadges = async () => {
     if (!dealer?.id) return;
-    const salesRecs = await base44.entities.SalesRecord.list('-created_date', 2000);
+    const salesRecs = await SalesRecord.list();
     const myRecords = salesRecs.filter(r => r.dealer_name === dealer.dealer_name);
     const thisMonth = new Date().toISOString().slice(0, 7);
     const thisMonthRecords = myRecords.filter(r => r.sale_date?.startsWith(thisMonth));
     const thisMonthSales = thisMonthRecords.reduce((a, r) => a + (r.sales_amount || 0), 0);
     
-    const allDealers = await base44.entities.DealerInfo.filter({ status: 'active' }, '-created_date', 500);
+    const allDealers = await DealerInfo.filter({ status: 'active' });
     const dealerSales = {};
     salesRecs.forEach(r => {
       if (!dealerSales[r.dealer_name]) dealerSales[r.dealer_name] = { month: 0, total: 0 };
@@ -154,18 +151,8 @@ export default function Dashboard() {
 
   useEffect(() => {
     if (dealer?.dealer_name) {
-      Promise.all([
-        base44.entities.SalesOrder.list("-created_date", 100),
-        base44.entities.MeetingDispatchRequest.filter({ target_dealer_name: dealer.dealer_name }, "-requested_at", 50),
-      ])
-        .then(([allOrders, reqs]) => {
-          setOrders(allOrders.filter(o => o.dealer_name === dealer.dealer_name));
-          setDispatchRequests(reqs);
-        })
-        .catch(() => {
-          setOrders([]);
-          setDispatchRequests([]);
-        });
+      setOrders([]);
+      setDispatchRequests([]);
     }
   }, [dealer]);
 
@@ -178,7 +165,7 @@ export default function Dashboard() {
   const saveGoal = async () => {
     const val = Number(goalInput.replace(/[^0-9]/g, ""));
     setSavingGoal(true);
-    await base44.entities.DealerInfo.update(dealer.id, { monthly_goal: val });
+    await DealerInfo.update(dealer.id, { monthly_goal: val });
     setMonthlyGoal(val);
     setEditingGoal(false);
     setSavingGoal(false);
@@ -209,7 +196,7 @@ export default function Dashboard() {
     setUpdating(id);
     try {
       const request = dispatchRequests.find(r => r.id === id);
-      await base44.entities.MeetingDispatchRequest.update(id, { status: newStatus });
+      // MeetingDispatchRequest not in Neon API yet
       setDispatchRequests(prev => prev.map(r => r.id === id ? { ...r, status: newStatus } : r));
       
       const statusLabel = newStatus === "accepted" ? "수락" : "거절";

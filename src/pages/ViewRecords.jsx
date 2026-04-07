@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { SalesRecord } from "../api/entities";
 import SFCard from "../components/SFCard";
 import StatusBadge from "../components/StatusBadge";
 import { Input } from "@/components/ui/input";
@@ -33,7 +33,7 @@ export default function ViewRecords() {
   const loadRecords = async () => {
     setLoading(true);
     try {
-      const all = await base44.entities.SalesRecord.list("-created_date", 500);
+      const all = await SalesRecord.list();
       setRecords(all);
     } catch {
       setRecords([]);
@@ -44,7 +44,7 @@ export default function ViewRecords() {
 
   const saveRating = async (recordId, rating) => {
     setSavingRating(recordId);
-    await base44.entities.SalesRecord.update(recordId, {
+    await SalesRecord.update(recordId, {
       satisfaction_sent: true,
       satisfaction_rating: rating,
     });
