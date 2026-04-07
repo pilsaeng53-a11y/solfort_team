@@ -7,13 +7,12 @@ const MAIN_ITEMS = [
   { icon: "👥", label: "고객", path: "/records" },
   { icon: "📊", label: "매출", path: "/daily" },
   { icon: "📢", label: "공지", path: "/notices" },
-  { icon: "⚙️", label: "더보기", action: "drawer" },
+  { icon: "🔑", label: "추천코드", path: "/referral-code" },
 ];
 
 const DRAWER_ITEMS = [
   { icon: "🌐", label: "재단", path: "/foundation" },
   { icon: "📝", label: "일지", path: "/daily-journal" },
-  { icon: "🏆", label: "경쟁", path: "/ranking" },
   { icon: "🌐", label: "네트워크", path: "/my-network" },
   { icon: "💰", label: "인센티브", path: "/incentive-settings" },
   { icon: "📁", label: "업로드", path: "/lead-upload" },

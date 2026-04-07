@@ -8,21 +8,19 @@ const NAV_ITEMS = [
   [
     { icon: "🏠", label: "홈", path: "/call/dashboard" },
     { icon: "📋", label: "리드", path: "/call/leads" },
-    { icon: "📊", label: "실적", path: "/records" },
-    { icon: "🏆", label: "경쟁", path: "/call/competition" },
+    { icon: "🌲", label: "조직도", path: "/my-network" },
+    { icon: "📢", label: "공지", path: "/notices" },
   ],
   // Row 2
   [
-    { icon: "📢", label: "공지", path: "/notices" },
-    { icon: "🌐", label: "재단", path: "/foundation" },
     { icon: "📝", label: "일지", path: "/daily-journal" },
+    { icon: "🔑", label: "추천코드", path: "/referral-code" },
     { icon: "⚙️", label: "더보기", action: "drawer" },
   ],
 ];
 
 const DRAWER_ITEMS = [
   { icon: "👥", label: "팀관리", path: "/team-management", roles: ["지사장", "팀장"] },
-  { icon: "🌐", label: "네트워크", path: "/my-network" },
   { icon: "💰", label: "인센티브", path: "/incentive-settings" },
   { icon: "📜", label: "스크립트", path: "/call/scripts" },
   { icon: "📥", label: "리드업로드", path: "/lead-upload" },
