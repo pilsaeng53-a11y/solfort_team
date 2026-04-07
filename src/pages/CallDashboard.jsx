@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { Flame } from "lucide-react";
 import { Auth } from "@/lib/auth";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
@@ -33,14 +34,82 @@ export default function CallDashboard() {
   const [sales, setSales] = useState([]);
   const [activeEvents, setActiveEvents] = useState([]);
   const [sentRecalls, setSentRecalls] = useState([]);
+  const [checkedIn, setCheckedIn] = useState(false);
+  const [streak, setStreak] = useState(0);
+  const [totalPoints, setTotalPoints] = useState(0);
+  const [checkingIn, setCheckingIn] = useState(false);
+  const [user, setUser] = useState(null);
 
   useEffect(() => {
     document.title = "SolFort - 콜 대시보드";
+    loadUser();
     load();
     base44.entities.Event.list("-created_date", 50)
       .then(evs => setActiveEvents(evs.filter(e => e.is_active && (e.target === "전체" || e.target === "콜팀"))))
       .catch(() => {});
   }, []);
+
+  const loadUser = async () => {
+    const u = await base44.auth.me();
+    setUser(u);
+    if (u?.id) loadAttendance(u);
+  };
+
+  const loadAttendance = async (currentUser) => {
+    if (!currentUser?.id) return;
+    const todayStr = today;
+    const checkinKey = `sf_checkin_${currentUser.id}_${todayStr}`;
+    if (localStorage.getItem(checkinKey)) {
+      setCheckedIn(true);
+    }
+    const logs = await base44.entities.AttendanceLog.filter({ username: currentUser.username }, '-check_in_at', 100).catch(() => []);
+    if (logs.length === 0) {
+      setStreak(0);
+      setTotalPoints(0);
+      return;
+    }
+    let currentStreak = 0;
+    let lastDate = null;
+    for (const log of logs) {
+      const logDate = log.check_in_at?.split('T')[0];
+      if (!logDate) continue;
+      if (!lastDate) {
+        lastDate = logDate;
+        currentStreak = 1;
+      } else {
+        const last = new Date(lastDate);
+        const curr = new Date(logDate);
+        if ((last.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24) === 1) {
+          currentStreak++;
+          lastDate = logDate;
+        } else {
+          break;
+        }
+      }
+    }
+    setStreak(currentStreak);
+    const pts = logs.length + (currentStreak >= 7 ? 5 : 0);
+    setTotalPoints(pts);
+  };
+
+  const handleCheckin = async () => {
+    if (!user?.id) return;
+    setCheckingIn(true);
+    try {
+      await base44.entities.AttendanceLog.create({
+        username: user.username,
+        user_id: user.id,
+        check_in_at: new Date().toISOString(),
+        member_name: user.full_name || user.username,
+      });
+      localStorage.setItem(`sf_checkin_${user.id}_${today}`, 'true');
+      setCheckedIn(true);
+      await loadAttendance(user);
+    } catch (e) {
+      console.error('Check-in failed', e);
+    }
+    setCheckingIn(false);
+  };
 
   useEffect(() => {
     const sendRecallAlerts = async () => {
@@ -111,6 +180,41 @@ export default function CallDashboard() {
     <div className="min-h-screen bg-[#080a12]">
       <CallNav/>
       <div className="p-4 md:p-6 space-y-5 max-w-5xl mx-auto">
+        {/* Attendance Check Section */}
+        {user && (
+          <div>
+            {checkedIn ? (
+              <SFCard className="bg-emerald-500/10 border border-emerald-500/30">
+                <div className="text-center">
+                  <p className="text-sm font-semibold text-emerald-400">✅ 올 출근 완료</p>
+                  {streak > 0 && (
+                    <p className="text-xs text-emerald-400 mt-1">🔥 {streak}일 연속 출근!</p>
+                  )}
+                  <p className="text-[10px] text-gray-500 mt-2">⭐ 총 {totalPoints}포인트</p>
+                </div>
+              </SFCard>
+            ) : (
+              <div className="space-y-3">
+                <button
+                  onClick={handleCheckin}
+                  disabled={checkingIn}
+                  className="w-full py-4 bg-gradient-to-r from-emerald-500/30 to-emerald-600/20 text-emerald-300 border border-emerald-500/50 rounded-xl font-semibold text-sm hover:from-emerald-500/40 hover:to-emerald-600/30 disabled:opacity-50 transition-all animate-pulse"
+                >
+                  ✅ 출근 체크
+                </button>
+                {streak > 0 && (
+                  <div className="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
+                    <div>
+                      <p className="text-xs font-semibold text-yellow-400">🔥 {streak}일 연속!</p>
+                      <p className="text-[10px] text-yellow-400/70">⭐ {totalPoints}포인트</p>
+                    </div>
+                    <Flame className="h-5 w-5 text-yellow-400" />
+                  </div>
+                )}
+              </div>
+            )}
+          </div>
+        )}
         {/* Active Events */}
         {activeEvents.length > 0 && (
           <div className="space-y-2">
