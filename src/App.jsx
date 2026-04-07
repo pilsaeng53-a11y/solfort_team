@@ -39,6 +39,7 @@ import OnlinePerformance from './pages/OnlinePerformance';
 import OnlineRegister from './pages/OnlineRegister';
 import OnlineAds from './pages/OnlineAds';
 import IncentiveSettings from './pages/IncentiveSettings';
+import TelegramBot from './pages/TelegramBot';
 import LeadExcelUpload from './pages/LeadExcelUpload';
 import Register from './pages/Register';
 import InitAdmin from './pages/InitAdmin';
@@ -124,6 +125,7 @@ const AppContent = () => {
           <Route path="/manager" element={<ProtectedRoute roles={['manager']}><ManagerPage /></ProtectedRoute>} />
           <Route path="/incentive-settings" element={<ProtectedRoute roles={['call_team','dealer','super_admin']}><IncentiveSettings /></ProtectedRoute>} />
           <Route path="/lead-upload" element={<ProtectedRoute roles={['call_team','dealer','super_admin']}><LeadExcelUpload /></ProtectedRoute>} />
+          <Route path="/telegram-bot" element={<ProtectedRoute roles={['super_admin']}><TelegramBot /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
