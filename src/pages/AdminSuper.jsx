@@ -205,7 +205,7 @@ export default function AdminSuper() {
             {callTab === 0 && <CallOverview />}
             {callTab === 1 && <CallAccountManagement />}
             {callTab === 2 && <CallAutomation />}
-            {callTab === 3 && <CallOrgChart />}
+            {callTab === 3 && <OrgChartPanel />}
             {callTab === 4 && <CallAutomationLive />}
           </>
         )}
@@ -1070,117 +1070,84 @@ function CallAutomation() {
   );
 }
 
-/* ── 콜팀 조직도 ── */
-function CallOrgChart() {
-  const [members, setMembers] = useState([]);
-  const [hierarchy, setHierarchy] = useState([]);
+/* ── 통합 조직도 ── */
+import OrgTree from "../components/OrgTree";
+
+function OrgChartPanel() {
+  const [subTab, setSubTab] = useState(0);
+  const [dealers, setDealers] = useState([]);
+  const [callMembers, setCallMembers] = useState([]);
+  const [onlineMembers, setOnlineMembers] = useState([]);
   const [loading, setLoading] = useState(true);
-  const [teamName, setTeamName] = useState("");
-  const [saving, setSaving] = useState(false);
-  const isSuperAdmin = Auth.isSuperAdmin();
-  const isCallAdmin = Auth.isCallAdmin();
-  const canEdit = isSuperAdmin || isCallAdmin;
 
   useEffect(() => {
     Promise.all([
-      base44.entities.CallTeamMember.filter({ status: "active" }, "-created_date", 200),
-      base44.entities.CallTeamHierarchy.list("-created_date", 200),
-    ]).then(([m, h]) => { setMembers(m); setHierarchy(h); setLoading(false); });
+      base44.entities.DealerInfo.list("-created_date", 500),
+      base44.entities.CallTeamMember.list("-created_date", 500),
+      base44.entities.OnlineTeamMember.list("-created_date", 200),
+    ]).then(([d, c, o]) => { setDealers(d); setCallMembers(c); setOnlineMembers(o); setLoading(false); });
   }, []);
-
-  const setLeader = async (member, team) => {
-    setSaving(member.id);
-    const existing = hierarchy.find(h => h.member_id === member.id);
-    const data = { member_id: member.id, member_name: member.name, username: member.username, position: "leader", team_name: team, status: "active" };
-    let updated;
-    if (existing) {
-      updated = await base44.entities.CallTeamHierarchy.update(existing.id, data);
-      setHierarchy(prev => prev.map(h => h.id === existing.id ? { ...h, ...data } : h));
-    } else {
-      updated = await base44.entities.CallTeamHierarchy.create(data);
-      setHierarchy(prev => [...prev, updated]);
-    }
-    setSaving(null);
-  };
-
-  const setVacant = async (team) => {
-    setSaving(team);
-    const data = { member_id: "", member_name: "공석", position: "leader", team_name: team, status: "vacant" };
-    const existing = hierarchy.find(h => h.team_name === team && h.position === "leader");
-    if (existing) {
-      await base44.entities.CallTeamHierarchy.update(existing.id, data);
-      setHierarchy(prev => prev.map(h => h.id === existing.id ? { ...h, ...data } : h));
-    } else {
-      const created = await base44.entities.CallTeamHierarchy.create(data);
-      setHierarchy(prev => [...prev, created]);
-    }
-    setSaving(null);
-  };
 
   if (loading) return <Loader />;
 
-  const teams = [...new Set([...hierarchy.map(h => h.team_name), ...members.map(m => m.team).filter(Boolean)])].filter(Boolean);
+  // 대리점 조직도: region → root, dealers → children
+  const regionMap = {};
+  dealers.filter(d => d.role !== "manager").forEach(d => {
+    const region = d.region || "미지정";
+    if (!regionMap[region]) regionMap[region] = [];
+    regionMap[region].push(d);
+  });
+  const dealerTree = Object.entries(regionMap).map(([region, list]) => ({
+    id: region,
+    name: region,
+    role: "manager",
+    children: list.map(d => ({ id: d.id, name: d.dealer_name, role: d.grade || "dealer", phone: d.phone, children: [] })),
+  }));
+
+  // 콜팀 조직도: team → root, members → children
+  const teamMap = {};
+  callMembers.forEach(m => {
+    const team = m.team || "미배정";
+    if (!teamMap[team]) teamMap[team] = [];
+    teamMap[team].push(m);
+  });
+  const callTree = Object.entries(teamMap).map(([team, list]) => {
+    const leader = list.find(m => m.role === "leader" || m.position === "leader");
+    return {
+      id: team,
+      name: team,
+      role: "leader",
+      phone: leader?.phone || "",
+      children: list.map(m => ({ id: m.id, name: m.name, role: m.role || "member", phone: m.phone, children: [] })),
+    };
+  });
+
+  // 온라인팀 평트 리스트
+  const onlineTree = onlineMembers.map(m => ({
+    id: m.id,
+    name: m.name,
+    role: "member",
+    phone: m.phone || m.meta_ad_account || "",
+    children: [],
+  }));
+
+  const SUB_TABS = ["대리점조직도", "콜팀조직도", "온라인팀조직도"];
 
   return (
-    <div className="space-y-5">
-      {canEdit && (
-        <SFCard>
-          <h3 className="text-xs font-semibold text-gray-400 mb-3">팀 추가</h3>
-          <div className="flex gap-2">
-            <input value={teamName} onChange={e => setTeamName(e.target.value)} placeholder="팀명 입력 (예: A팀)"
-              className="flex-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-2 text-xs placeholder:text-gray-600" />
-            <button onClick={() => { if (teamName) { setHierarchy(prev => [...prev, { id: `tmp_${Date.now()}`, team_name: teamName, position: "leader", status: "vacant", member_name: "공석" }]); setTeamName(""); }}}
-              className="px-4 py-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-xs">추가</button>
-          </div>
-        </SFCard>
-      )}
-
-      <div className="space-y-4">
-        {teams.map(team => {
-          const leader = hierarchy.find(h => h.team_name === team && h.position === "leader");
-          const teamMembers = members.filter(m => m.team === team);
-          return (
-            <SFCard key={team}>
-              <div className="flex items-center justify-between mb-3">
-                <h3 className="text-sm font-semibold text-white">👥 {team}</h3>
-              </div>
-              <div className="space-y-2">
-                {/* Leader */}
-                <div className="flex items-center gap-2">
-                  <span className="text-base">👑</span>
-                  <span className="text-xs text-gray-400">팀장:</span>
-                  {leader?.status === "vacant" || !leader ? (
-                    <span className="text-xs text-gray-600">공석</span>
-                  ) : (
-                    <span className="text-xs text-white font-medium">{leader.member_name}</span>
-                  )}
-                  {canEdit && (
-                    <div className="ml-auto flex gap-1">
-                      <select onChange={e => { const m = members.find(x => x.id === e.target.value); if (m) setLeader(m, team); }}
-                        className="bg-white/5 border border-white/10 text-white rounded px-2 py-1 text-[10px]" defaultValue="">
-                        <option value="" disabled>팀장 지정</option>
-                        {teamMembers.map(m => <option key={m.id} value={m.id}>{m.name}</option>)}
-                      </select>
-                      <button onClick={() => setVacant(team)} disabled={saving === team}
-                        className="px-2 py-1 bg-yellow-500/20 text-yellow-400 rounded text-[10px] hover:bg-yellow-500/30 disabled:opacity-50">공석</button>
-                    </div>
-                  )}
-                </div>
-                {/* Members */}
-                {teamMembers.map(m => (
-                  <div key={m.id} className="ml-6 flex items-center gap-2">
-                    <span className="text-gray-600 text-[10px]">└──</span>
-                    <span className="text-xs text-gray-300">{m.name}</span>
-                    <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-1.5 py-0.5 rounded-full">활성</span>
-                  </div>
-                ))}
-                {teamMembers.length === 0 && <p className="ml-6 text-[10px] text-gray-600">팀원 없음</p>}
-              </div>
-            </SFCard>
-          );
-        })}
-        {teams.length === 0 && <p className="text-xs text-gray-600 text-center py-8">콜팀 조직도 데이터 없음<br />CallTeamMember의 team 필드를 설정하세요</p>}
+    <div className="space-y-4">
+      <div className="flex gap-2">
+        {SUB_TABS.map((t, i) => (
+          <button key={i} onClick={() => setSubTab(i)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${subTab === i ? "bg-purple-500/20 text-purple-400 border border-purple-500/30" : "bg-white/5 text-gray-400 hover:text-white"}`}>
+            {t}
+          </button>
+        ))}
       </div>
+      <SFCard>
+        {subTab === 0 && <OrgTree data={dealerTree} title="🏪 대리점 지역별 조직도" />}
+        {subTab === 1 && <OrgTree data={callTree} title="📞 콜팀 조직도" />}
+        {subTab === 2 && <OrgTree data={onlineTree} title="💻 온라인팀 목록" />}
+      </SFCard>
     </div>
   );
 }
