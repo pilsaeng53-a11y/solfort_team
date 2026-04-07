@@ -1,96 +1,130 @@
-import { useState, useEffect } from "react";
+import { useState } from "react";
 import { useLocation, useNavigate } from "react-router-dom";
 import { Auth } from "@/lib/auth";
-import SFLogo from "./SFLogo";
-import AttendanceWidget from "./AttendanceWidget";
-import { LogOut } from "lucide-react";
+import { Menu, X } from "lucide-react";
 
 const NAV_ITEMS = [
-  { path: "/call/dashboard", label: "콜 대시보드" },
-  { path: "/call/leads", label: "고객 리드" },
-  { path: "/call/queue", label: "콜 큐" },
-  { path: "/call/logs", label: "콜 기록" },
-  { path: "/call/interest", label: "관심 고객" },
-  { path: "/call/convert", label: "매입 연결" },
-  { path: "/call/scripts", label: "콜 스크립트" },
-  { path: "/call/ai", label: "AI 영업 도우미" },
-  { path: "/call/competition", label: "🏆 경쟁현황" },
-  { path: "/my-network", label: "🌐 네트워크" },
-  { path: "/foundation", label: "🌐재단" },
-  { path: "/call/settings", label: "⚙️ 설정" },
+  // Row 1
+  [
+    { icon: "🏠", label: "홈", path: "/call/dashboard" },
+    { icon: "📋", label: "리드", path: "/call/leads" },
+    { icon: "📊", label: "실적", path: "/records" },
+    { icon: "🏆", label: "경쟁", path: "/call/competition" },
+  ],
+  // Row 2
+  [
+    { icon: "📢", label: "공지", path: "/notices" },
+    { icon: "🌐", label: "재단", path: "/foundation" },
+    { icon: "📝", label: "일지", path: "/daily-journal" },
+    { icon: "⚙️", label: "더보기", action: "drawer" },
+  ],
+];
+
+const DRAWER_ITEMS = [
+  { icon: "👥", label: "팀관리", path: "/team-management", roles: ["지사장", "팀장"] },
+  { icon: "🌐", label: "네트워크", path: "/my-network" },
+  { icon: "💰", label: "인센티브", path: "/incentive-settings" },
+  { icon: "📜", label: "스크립트", path: "/call/scripts" },
+  { icon: "📥", label: "리드업로드", path: "/lead-upload" },
+  { icon: "⏱️", label: "출퇴근", action: "attendance" },
 ];
 
 export default function CallNav() {
   const location = useLocation();
   const navigate = useNavigate();
-  const [now, setNow] = useState(new Date());
-  const stored = JSON.parse(localStorage.getItem('sf_dealer') || '{}');
-  const position = stored.position || '';
-  const showTeamMgmt = position.includes('지사장') || position.includes('팀장');
+  const [drawerOpen, setDrawerOpen] = useState(false);
+  const stored = JSON.parse(localStorage.getItem("sf_dealer") || "{}");
+  const position = stored.position || "";
 
-  useEffect(() => {
-    const t = setInterval(() => setNow(new Date()), 1000);
-    return () => clearInterval(t);
-  }, []);
+  const handleNavClick = (item) => {
+    if (item.action === "drawer") {
+      setDrawerOpen(true);
+    } else if (item.path) {
+      navigate(item.path);
+      setDrawerOpen(false);
+    }
+  };
 
-  const fmt = now.toLocaleString("ko-KR", {
-    year: "numeric", month: "2-digit", day: "2-digit",
-    hour: "2-digit", minute: "2-digit", second: "2-digit",
-  });
+  const canAccessTeamMgmt = position.includes("지사장") || position.includes("팀장");
+
+  const isActive = (path) => location.pathname === path;
 
   return (
-    <div className="sticky top-0 z-30 bg-[#080a12] border-b border-white/[0.06]">
-      {/* Top bar */}
-      <div className="flex items-center justify-between px-4 py-3">
-        <div className="flex items-center gap-2.5">
-          <SFLogo size="sm" />
-          <div>
-            <p className="text-xs font-bold text-white leading-tight">콜팀 운영센터</p>
-            <p className="text-[10px] text-gray-500">{Auth.getDealerName()}</p>
-          </div>
-        </div>
-        <div className="flex items-center gap-3">
-          <span className="hidden md:block text-[10px] text-gray-500">{fmt}</span>
-          <AttendanceWidget />
-          <button
-            onClick={Auth.logout}
-            className="flex items-center gap-1 text-[10px] text-red-400 bg-red-500/10 px-2.5 py-1.5 rounded-lg hover:bg-red-500/20 transition-all"
-          >
-            <LogOut className="h-3 w-3" /> 로그아웃
-          </button>
+    <>
+      {/* Navigation Grid */}
+      <div className="fixed bottom-0 left-0 right-0 bg-[#080a12] border-t border-white/[0.06] px-4 py-3 z-40">
+        <div className="max-w-6xl mx-auto space-y-2">
+          {NAV_ITEMS.map((row, rowIdx) => (
+            <div key={rowIdx} className="grid grid-cols-4 gap-2">
+              {row.map((item) => (
+                <button
+                  key={item.label}
+                  onClick={() => handleNavClick(item)}
+                  className={`flex flex-col items-center justify-center py-2.5 rounded-lg text-[10px] font-medium transition-all ${
+                    item.path && isActive(item.path)
+                      ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                      : "text-gray-400 hover:text-gray-200"
+                  }`}
+                >
+                  <span className="text-lg mb-0.5">{item.icon}</span>
+                  <span className="whitespace-nowrap">{item.label}</span>
+                </button>
+              ))}
+            </div>
+          ))}
         </div>
       </div>
-      {/* Tab nav */}
-      <div className="flex overflow-x-auto gap-0.5 px-3 pb-0 scrollbar-hide">
-        {NAV_ITEMS.map(item => {
-          const active = location.pathname === item.path;
-          return (
-            <button
-              key={item.path}
-              onClick={() => navigate(item.path)}
-              className={`shrink-0 px-4 py-2.5 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
-                active
-                  ? "border-emerald-400 text-emerald-400"
-                  : "border-transparent text-gray-500 hover:text-gray-300"
-              }`}
-            >
-              {item.label}
-            </button>
-          );
-        })}
-        {showTeamMgmt && (
+
+      {/* Drawer Overlay */}
+      {drawerOpen && (
+        <div
+          className="fixed inset-0 bg-black/50 z-50"
+          onClick={() => setDrawerOpen(false)}
+        />
+      )}
+
+      {/* Side Drawer */}
+      <div
+        className={`fixed right-0 top-0 bottom-0 w-64 bg-[#0a0c15] border-l border-white/[0.06] z-50 transform transition-transform duration-300 ${
+          drawerOpen ? "translate-x-0" : "translate-x-full"
+        }`}
+      >
+        {/* Drawer Header */}
+        <div className="flex items-center justify-between p-4 border-b border-white/[0.06]">
+          <h2 className="text-sm font-bold text-white">더 보기</h2>
           <button
-            onClick={() => navigate('/team-management')}
-            className={`shrink-0 px-4 py-2.5 text-xs font-medium border-b-2 transition-all whitespace-nowrap ${
-              location.pathname === '/team-management'
-                ? 'border-emerald-400 text-emerald-400'
-                : 'border-transparent text-gray-500 hover:text-gray-300'
-            }`}
+            onClick={() => setDrawerOpen(false)}
+            className="p-1 hover:bg-white/10 rounded transition-all"
           >
-            👥 팀관리
+            <X className="h-4 w-4 text-gray-400" />
           </button>
-        )}
+        </div>
+
+        {/* Drawer Content */}
+        <div className="p-3 space-y-2 overflow-y-auto max-h-[calc(100vh-80px)]">
+          {DRAWER_ITEMS.map((item) => {
+            const canAccess =
+              !item.roles || item.roles.some((r) => position.includes(r));
+
+            if (!canAccess) return null;
+
+            return (
+              <button
+                key={item.label}
+                onClick={() => handleNavClick(item)}
+                className={`w-full flex items-center gap-3 px-4 py-2.5 rounded-lg text-sm font-medium transition-all ${
+                  item.path && isActive(item.path)
+                    ? "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30"
+                    : "text-gray-300 hover:bg-white/5"
+                }`}
+              >
+                <span className="text-base">{item.icon}</span>
+                <span>{item.label}</span>
+              </button>
+            );
+          })}
+        </div>
       </div>
-    </div>
+    </>
   );
 }
