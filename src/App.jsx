@@ -122,8 +122,8 @@ const AppContent = () => {
           <Route path="/online/register" element={<ProtectedRoute roles={['online_team','online_director','super_admin']}><OnlineRegister /></ProtectedRoute>} />
           <Route path="/online/ads" element={<ProtectedRoute roles={['online_team','online_director','super_admin']}><OnlineAds /></ProtectedRoute>} />
           <Route path="/manager" element={<ProtectedRoute roles={['manager']}><ManagerPage /></ProtectedRoute>} />
-          <Route path="/incentive-settings" element={<ProtectedRoute roles={['dealer','call_team','online_team','dealer_admin','call_admin','super_admin','manager','online_director']}><IncentiveSettings /></ProtectedRoute>} />
-          <Route path="/lead-upload" element={<ProtectedRoute roles={['dealer','call_team','call_admin','super_admin']}><LeadExcelUpload /></ProtectedRoute>} />
+          <Route path="/incentive-settings" element={<ProtectedRoute roles={['call_team','dealer','super_admin']}><IncentiveSettings /></ProtectedRoute>} />
+          <Route path="/lead-upload" element={<ProtectedRoute roles={['call_team','dealer','super_admin']}><LeadExcelUpload /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
