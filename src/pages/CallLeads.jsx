@@ -60,7 +60,43 @@ export default function CallLeads() {
     document.title = "SolFort - 고객 리드";
     load();
     loadMyInfo();
+    handleLongOverdueLeads();
   }, []);
+
+  const handleLongOverdueLeads = async () => {
+    const flagKey = `long_overdue_check_${new Date().toISOString().split('T')[0]}`;
+    if (sessionStorage.getItem(flagKey)) return;
+    
+    const allLeads = await base44.entities.CallLead.list('-created_date', 1000);
+    const today = new Date();
+    const threeDaysAgo = new Date(today.getTime() - 3 * 24 * 60 * 60 * 1000).toISOString().split('T')[0];
+    
+    const longOverdue = allLeads.filter(l => l.status === '재콜예정' && l.next_call_date && l.next_call_date < threeDaysAgo);
+    
+    for (const lead of longOverdue) {
+      await base44.entities.CallLead.update(lead.id, { status: '장기미처리', tag: '장기미처리' });
+    }
+    
+    if (longOverdue.length > 0) {
+      const leaders = await base44.entities.CallTeamMember.list('-created_date', 500);
+      const teamLeaders = leaders.filter(l => l.position && (l.position.includes('팀장') || l.position.includes('지사장')));
+      
+      const BOT_TOKEN = '8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8';
+      const CHAT_ID = '5757341051';
+      
+      for (const lead of longOverdue) {
+        const daysOverdue = Math.floor((today.getTime() - new Date(lead.next_call_date).getTime()) / (24 * 60 * 60 * 1000));
+        const msg = `⚠️ 장기미처리 고객\n[${lead.name}] ${lead.phone}\n담당: ${lead.assigned_to}\n${daysOverdue}일째 미처리`;
+        fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: CHAT_ID, text: msg }),
+        }).catch(() => {});
+      }
+    }
+    
+    sessionStorage.setItem(flagKey, 'true');
+  };
 
   const loadMyInfo = async () => {
     const user = await base44.auth.me();
@@ -154,6 +190,8 @@ export default function CallLeads() {
     return matchS && matchT && matchC && matchTag;
   });
 
+  const longOverdueLeads = filtered.filter(l => l.status === '장기미처리');
+
   if (loading) return <><CallNav /><Loader /></>;
 
   return (
@@ -239,13 +277,31 @@ export default function CallLeads() {
           className="w-full bg-white/5 border border-white/10 text-white rounded-xl px-4 py-2.5 text-sm placeholder:text-gray-600" />
 
         <div className="space-y-2">
+          {longOverdueLeads.length > 0 && (
+            <div className="bg-orange-500/10 border-l-4 border-orange-500 rounded-lg p-4 mb-4">
+              <p className="text-sm font-semibold text-orange-400 mb-2">⚠️ 장기미처리 고객 ({longOverdueLeads.length}명)</p>
+              <div className="space-y-1">
+                {longOverdueLeads.map(l => {
+                  const daysOverdue = Math.floor((new Date().getTime() - new Date(l.next_call_date).getTime()) / (24 * 60 * 60 * 1000));
+                  return (
+                    <div key={l.id} className="text-xs text-gray-300">
+                      {l.name} · {l.phone} · {daysOverdue}일 미처리
+                    </div>
+                  );
+                })}
+              </div>
+            </div>
+          )}
           {filtered.length === 0 && <p className="text-center py-12 text-xs text-gray-600">리드가 없습니다</p>}
           {filtered.map(lead => {
            const iStyle = INTEREST_STYLE[lead.interest_level] || INTEREST_STYLE["낙음"];
            const borderCls = COLOR_BORDER[lead.color_tag] || "border-l-4 border-transparent";
+           const isLongOverdue = lead.status === '장기미처리';
+           const daysOverdue = isLongOverdue ? Math.floor((new Date().getTime() - new Date(lead.next_call_date).getTime()) / (24 * 60 * 60 * 1000)) : 0;
+           const longOverdueBorder = isLongOverdue ? 'border-2 border-orange-500' : borderCls;
            return (
               <div key={lead.id} className="space-y-2">
-               <SFCard className={borderCls}>
+               <SFCard className={longOverdueBorder}>
                <div className="flex items-start gap-3" >
                  <div className="flex-1 min-w-0">
                     <div className="flex items-center gap-2 flex-wrap">
