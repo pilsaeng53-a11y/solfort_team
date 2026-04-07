@@ -121,3 +121,31 @@
 .status-new { color: #facc15; }
 .status-existing { color: #34d399; }
 .status-duplicate { color: #f87171; }
+
+/* Light mode overrides */
+.light {
+  --background: 0 0% 98%;
+  --card: 0 0% 100%;
+  --popover: 0 0% 100%;
+  --foreground: 220 15% 10%;
+  --muted: 220 10% 70%;
+  --muted-foreground: 220 8% 40%;
+  --border: 220 15% 85%;
+  --input: 220 15% 90%;
+}
+
+.light body {
+  background-color: #f3f4f6;
+  color: #111827;
+}
+
+.light [class*="bg-[#030f06]"] { @apply bg-gray-100; }
+.light [class*="bg-[#0d1a12]"] { @apply bg-white; }
+.light [class*="bg-[#080a12]"] { @apply bg-white; }
+.light [class*="text-white"] { @apply text-gray-900; }
+.light [class*="border-emerald-800"] { @apply border-emerald-300; }
+.light [class*="text-gray-400"] { @apply text-gray-600; }
+.light [class*="text-gray-500"] { @apply text-gray-700; }
+.light [class*="bg-white/5"] { @apply bg-black/5; }
+.light [class*="bg-white/10"] { @apply bg-black/10; }
+.light [class*="border-white/"] { @apply border-black/20; }
