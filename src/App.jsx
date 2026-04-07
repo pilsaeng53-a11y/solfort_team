@@ -44,6 +44,7 @@ import MyNetwork from './pages/MyNetwork';
 import TeamManagement from './pages/TeamManagement';
 import LeadDistribution from './pages/LeadDistribution';
 import MonthlyReport from './pages/MonthlyReport';
+import SalesSettlement from './pages/SalesSettlement';
 import LeadExcelUpload from './pages/LeadExcelUpload';
 import Register from './pages/Register';
 import InitAdmin from './pages/InitAdmin';
@@ -134,6 +135,7 @@ const AppContent = () => {
           <Route path="/team-management" element={<ProtectedRoute roles={['dealer','call_team','dealer_admin','call_admin','super_admin']}><TeamManagement /></ProtectedRoute>} />
           <Route path="/lead-distribution" element={<ProtectedRoute roles={['call_admin','super_admin']}><LeadDistribution /></ProtectedRoute>} />
           <Route path="/monthly-report" element={<ProtectedRoute roles={['super_admin']}><MonthlyReport /></ProtectedRoute>} />
+          <Route path="/sales-settlement" element={<ProtectedRoute roles={['super_admin','dealer_admin']}><SalesSettlement /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
