@@ -1,6 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
 import { base44 } from "@/api/base44Client";
+import { toast } from "sonner";
 import SFLogo from "../components/SFLogo";
 import SFCard from "../components/SFCard";
 import UsdtBanner from "../components/UsdtBanner";
@@ -32,6 +33,7 @@ export default function Dashboard() {
   const [connectedDealers, setConnectedDealers] = useState([]);
   const [connectedSales, setConnectedSales] = useState([]);
   const [copiedCode, setCopiedCode] = useState(false);
+  const [badges, setBadges] = useState([]);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -43,6 +45,7 @@ export default function Dashboard() {
     base44.entities.CallLead.list("-created_date", 500)
       .then(leads => setRecallLeads(leads.filter(l => l.next_call_date === today && l.status === "재콜예정")))
       .catch(() => {});
+    calculateBadges();
   }, []);
 
   useEffect(() => {
@@ -70,6 +73,55 @@ export default function Dashboard() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const calculateBadges = async () => {
+    if (!dealer?.id) return;
+    const salesRecs = await base44.entities.SalesRecord.list('-created_date', 2000);
+    const myRecords = salesRecs.filter(r => r.dealer_name === dealer.dealer_name);
+    const thisMonth = new Date().toISOString().slice(0, 7);
+    const thisMonthRecords = myRecords.filter(r => r.sale_date?.startsWith(thisMonth));
+    const thisMonthSales = thisMonthRecords.reduce((a, r) => a + (r.sales_amount || 0), 0);
+    
+    const allDealers = await base44.entities.DealerInfo.filter({ status: 'active' }, '-created_date', 500);
+    const dealerSales = {};
+    salesRecs.forEach(r => {
+      if (!dealerSales[r.dealer_name]) dealerSales[r.dealer_name] = { month: 0, total: 0 };
+      dealerSales[r.dealer_name].total += r.sales_amount || 0;
+      if (r.sale_date?.startsWith(thisMonth)) dealerSales[r.dealer_name].month += r.sales_amount || 0;
+    });
+    const monthRanking = Object.entries(dealerSales).sort((a, b) => b[1].month - a[1].month);
+    const isTopDealer = monthRanking[0]?.[0] === dealer.dealer_name;
+    
+    const earned = new Set();
+    if (myRecords.length >= 1) earned.add('첫전환');
+    if (myRecords.length >= 10) earned.add('10건달성');
+    if (thisMonthSales >= (dealer.monthly_goal || 0)) earned.add('월목표달성');
+    if (isTopDealer) earned.add('이달TOP');
+    
+    const dates = [...new Set(myRecords.map(r => r.sale_date).filter(Boolean))].sort();
+    let maxConsecutive = 0, currentStreak = 1;
+    for (let i = 1; i < dates.length; i++) {
+      const curr = new Date(dates[i]);
+      const prev = new Date(dates[i-1]);
+      if ((curr - prev) / (1000 * 60 * 60 * 24) === 1) {
+        currentStreak++;
+        maxConsecutive = Math.max(maxConsecutive, currentStreak);
+      } else {
+        currentStreak = 1;
+      }
+    }
+    if (maxConsecutive >= 5) earned.add('연속5일');
+    
+    const storedKey = `sf_badges_${dealer.id}`;
+    const prevEarned = new Set(JSON.parse(localStorage.getItem(storedKey) || '[]'));
+    const newBadges = [...earned].filter(b => !prevEarned.has(b));
+    newBadges.forEach(b => {
+      const badgeNames = { '첫전환': '🥇첫전환', '10건달성': '💎10건달성', '월목표달성': '🏆월목표달성', '연속5일': '🔥연속5일', '이달TOP': '🌟이달TOP' };
+      toast(`🎉 새 배지 획득! ${badgeNames[b]}`);
+    });
+    localStorage.setItem(storedKey, JSON.stringify([...earned]));
+    setBadges([...earned]);
   };
 
   const handleExcelDownload = async () => {
@@ -337,6 +389,33 @@ export default function Dashboard() {
               <span className="text-white text-sm font-medium">{todayDuplicate}</span>
               <span className="text-xs text-gray-500">중복</span>
             </div>
+          </div>
+        </SFCard>
+
+        {/* Badges */}
+        <SFCard>
+          <p className="text-xs text-gray-500 mb-3">🏅 내 배지</p>
+          <div className="grid grid-cols-3 gap-2">
+            {[
+              { id: '첫전환', emoji: '🥇', name: '첫전환' },
+              { id: '10건달성', emoji: '💎', name: '10건달성' },
+              { id: '월목표달성', emoji: '🏆', name: '월목표달성' },
+              { id: '연속5일', emoji: '🔥', name: '연속5일' },
+              { id: '이달TOP', emoji: '🌟', name: '이달TOP' },
+            ].map(b => {
+              const earned = badges.includes(b.id);
+              return (
+                <div key={b.id} className={`rounded-xl p-3 text-center transition-all ${
+                  earned ? 'bg-gradient-to-br from-yellow-500/20 to-orange-500/20 border border-yellow-500/40' : 'bg-white/5 border border-white/10 opacity-50'
+                }`}>
+                  <p className="text-2xl">{b.emoji}</p>
+                  <p className={`text-xs font-semibold mt-1 ${
+                    earned ? 'text-yellow-300' : 'text-gray-500'
+                  }`}>{b.name}</p>
+                  {!earned && <p className="text-[9px] text-gray-600 mt-0.5">🔒</p>}
+                </div>
+              );
+            })}
           </div>
         </SFCard>
 
