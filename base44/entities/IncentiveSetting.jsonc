@@ -1,0 +1,43 @@
+{
+  "name": "IncentiveSetting",
+  "type": "object",
+  "properties": {
+    "member_id": {
+      "type": "string",
+      "title": "\uba64\ubc84 ID"
+    },
+    "member_name": {
+      "type": "string",
+      "title": "\uba64\ubc84 \uc774\ub984"
+    },
+    "member_username": {
+      "type": "string",
+      "title": "\uba64\ubc84 \uc544\uc774\ub514"
+    },
+    "rate_percent": {
+      "type": "number",
+      "title": "\uc778\uc13c\ud2f0\ube0c \uc694\uc728(%)"
+    },
+    "set_by": {
+      "type": "string",
+      "title": "\uc124\uc815\uc790"
+    },
+    "set_by_name": {
+      "type": "string",
+      "title": "\uc124\uc815\uc790 \uc774\ub984"
+    },
+    "set_at": {
+      "type": "string",
+      "title": "\uc124\uc815 \uc77c\uc2dc"
+    },
+    "month": {
+      "type": "string",
+      "title": "\uc801\uc6a9 \uc6d4 (YYYY-MM)"
+    }
+  },
+  "required": [
+    "member_id",
+    "member_name",
+    "rate_percent"
+  ]
+}
