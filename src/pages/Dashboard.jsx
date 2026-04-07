@@ -24,6 +24,11 @@ export default function Dashboard() {
   const [dispatchRequests, setDispatchRequests] = useState([]);
   const [updating, setUpdating] = useState(null);
   const [activeEvents, setActiveEvents] = useState([]);
+  const [recallLeads, setRecallLeads] = useState([]);
+  const [monthlyGoal, setMonthlyGoal] = useState(0);
+  const [goalInput, setGoalInput] = useState("");
+  const [savingGoal, setSavingGoal] = useState(false);
+  const [editingGoal, setEditingGoal] = useState(false);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -32,7 +37,10 @@ export default function Dashboard() {
     base44.entities.Event.list("-created_date", 50)
       .then(evs => setActiveEvents(evs.filter(e => e.is_active && (e.target === "전체" || e.target === "대리점"))))
       .catch(() => {});
-  }, []);
+    base44.entities.CallLead.list("-created_date", 500)
+      .then(leads => setRecallLeads(leads.filter(l => l.next_call_date === today && l.status === "재콜예정")))
+      .catch(() => {});
+      }, []);
 
   const loadRecords = async () => {
     setLoading(true);
@@ -67,21 +75,30 @@ export default function Dashboard() {
   };
 
   useEffect(() => {
-    if (dealer?.dealer_name) {
-      Promise.all([
-        base44.entities.SalesOrder.list("-created_date", 100),
-        base44.entities.MeetingDispatchRequest.filter({ target_dealer_name: dealer.dealer_name }, "-requested_at", 50),
-      ])
-        .then(([allOrders, reqs]) => {
-          setOrders(allOrders.filter(o => o.dealer_name === dealer.dealer_name));
-          setDispatchRequests(reqs);
-        })
-        .catch(() => {
-          setOrders([]);
-          setDispatchRequests([]);
-        });
+    if (dealer) {
+      const g = dealer.monthly_goal || 0;
+      setMonthlyGoal(g);
+      setGoalInput(g > 0 ? String(g) : "");
     }
   }, [dealer]);
+
+  useEffect(() => {
+    if (dealer?.dealer_name) {
+
+  const thisMonth = (() => { const n = new Date(); return `${n.getFullYear()}-${String(n.getMonth()+1).padStart(2,"0")}`; })();
+  const monthRecords = records.filter(r => (r.sale_date || "").startsWith(thisMonth) && r.dealer_name === dealer?.dealer_name);
+  const monthTotal = monthRecords.reduce((s, r) => s + (r.sales_amount || 0), 0);
+  const goalPct = monthlyGoal > 0 ? Math.min(100, Math.round(monthTotal / monthlyGoal * 100)) : 0;
+  const goalBarColor = goalPct >= 70 ? "bg-emerald-500" : goalPct >= 30 ? "bg-yellow-500" : "bg-red-500";
+
+  const saveGoal = async () => {
+    const val = Number(goalInput.replace(/[^0-9]/g, ""));
+    setSavingGoal(true);
+    await base44.entities.DealerInfo.update(dealer.id, { monthly_goal: val });
+    setMonthlyGoal(val);
+    setEditingGoal(false);
+    setSavingGoal(false);
+  };
 
   const todayRecords = records.filter((r) => r.sale_date === today);
   const todaySales = todayRecords.reduce((sum, r) => sum + (r.sales_amount || 0), 0);
@@ -133,6 +150,18 @@ export default function Dashboard() {
       <div className="absolute bottom-40 left-0 w-60 h-60 bg-purple-500/5 rounded-full blur-3xl" />
 
       <div className="relative max-w-lg mx-auto px-4 py-6 space-y-5">
+        {/* Recall Alert */}
+        {recallLeads.length > 0 && (
+          <div className="bg-orange-500/20 border border-orange-500/40 rounded-xl p-3 animate-pulse">
+            <p className="text-sm font-bold text-orange-400">🔔 오늘 재콜 예정 {recallLeads.length}명 있습니다!</p>
+            <div className="mt-2 flex flex-wrap gap-1">
+              {recallLeads.map(l => (
+                <span key={l.id} className="text-[10px] bg-orange-500/20 text-orange-300 px-2 py-0.5 rounded-full">{l.name}</span>
+              ))}
+            </div>
+          </div>
+        )}
+
         {/* Header */}
         <div className="flex items-center justify-between">
           <div className="flex items-center gap-3">
@@ -196,6 +225,38 @@ export default function Dashboard() {
             icon={<Users className="h-4 w-4" />}
           />
         </div>
+
+        {/* Monthly Goal */}
+        <SFCard>
+          <div className="flex items-center justify-between mb-2">
+            <p className="text-xs text-gray-500">이달 목표</p>
+            <button onClick={() => setEditingGoal(e => !e)} className="text-[10px] text-blue-400 hover:text-blue-300">
+              {editingGoal ? "취소" : "수정"}
+            </button>
+          </div>
+          {editingGoal ? (
+            <div className="flex gap-2 mb-3">
+              <input
+                type="text"
+                value={goalInput}
+                onChange={e => setGoalInput(e.target.value)}
+                placeholder="목표 금액 (원)"
+                className="flex-1 bg-white/5 border border-white/10 text-white rounded-lg px-3 py-1.5 text-xs placeholder:text-gray-600"
+              />
+              <button onClick={saveGoal} disabled={savingGoal}
+                className="px-3 py-1.5 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs hover:bg-emerald-500/30 disabled:opacity-50">
+                {savingGoal ? "저장중" : "저장"}
+              </button>
+            </div>
+          ) : null}
+          <div className="flex items-center justify-between text-xs mb-1.5">
+            <span className="text-gray-400">₩{monthTotal.toLocaleString()} / ₩{monthlyGoal.toLocaleString()}</span>
+            <span className={`font-bold ${goalPct >= 70 ? "text-emerald-400" : goalPct >= 30 ? "text-yellow-400" : "text-red-400"}`}>{goalPct}%</span>
+          </div>
+          <div className="w-full bg-white/10 rounded-full h-2">
+            <div className={`h-2 rounded-full transition-all ${goalBarColor}`} style={{ width: `${goalPct}%` }} />
+          </div>
+        </SFCard>
 
         {/* Today Status */}
         <SFCard>
