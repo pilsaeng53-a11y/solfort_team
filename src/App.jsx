@@ -3,7 +3,6 @@ import { useState, useEffect } from 'react';
 import { QueryClientProvider } from '@tanstack/react-query';
 import { queryClientInstance } from '@/lib/query-client';
 import { Toaster } from "@/components/ui/toaster";
-import { base44 } from '@/api/base44Client';
 import BottomNav from '@/components/BottomNav';
 import ProtectedRoute from '@/components/ProtectedRoute';
 import { Auth } from '@/lib/auth';
@@ -62,23 +61,17 @@ const AppContent = () => {
   const [user, setUser] = useState(null);
 
   useEffect(() => {
-    const checkWelcome = async () => {
-      try {
-        const currentUser = await base44.auth.me();
-        if (currentUser && currentUser.role !== 'super_admin') {
-          const dealers = await base44.entities.DealerInfo.list();
-          const dealer = dealers.find(d => d.id === currentUser.user_id || d.username === currentUser.username);
-          if (dealer && dealer.status === 'active') {
-            const welcomeKey = 'sf_welcome_' + (currentUser.user_id || dealer.id);
-            if (!localStorage.getItem(welcomeKey)) {
-              setUser(currentUser);
-              setShowWelcome(true);
-            }
-          }
+    const userData = localStorage.getItem('sf_user');
+    if (userData) {
+      const currentUser = JSON.parse(userData);
+      if (currentUser && currentUser.role !== 'super_admin' && currentUser.status === 'active') {
+        const welcomeKey = 'sf_welcome_' + currentUser.id;
+        if (!localStorage.getItem(welcomeKey)) {
+          setUser(currentUser);
+          setShowWelcome(true);
         }
-      } catch (e) { }
-    };
-    checkWelcome();
+      }
+    }
   }, [location]);
 
   const handleWelcomeClose = () => {
