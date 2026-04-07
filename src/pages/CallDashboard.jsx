@@ -32,6 +32,7 @@ export default function CallDashboard() {
   const [loading, setLoading] = useState(true);
   const [sales, setSales] = useState([]);
   const [activeEvents, setActiveEvents] = useState([]);
+  const [sentRecalls, setSentRecalls] = useState([]);
 
   useEffect(() => {
     document.title = "SolFort - 콜 대시보드";
@@ -40,6 +41,32 @@ export default function CallDashboard() {
       .then(evs => setActiveEvents(evs.filter(e => e.is_active && (e.target === "전체" || e.target === "콜팀"))))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    const sendRecallAlerts = async () => {
+      const flagKey = `recall_sent_today_${today}`;
+      if (sessionStorage.getItem(flagKey)) return;
+      const stored = JSON.parse(localStorage.getItem('sf_dealer') || '{}');
+      const userName = stored.name || stored.dealer_name || '담당자';
+      const recallLeads = await base44.entities.CallLead.filter({ next_call_date: today, status: '재콜예정' }, '-created_date', 100).catch(() => []);
+      if (recallLeads.length === 0) return;
+      const BOT_TOKEN = '8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8';
+      const CHAT_ID = '5757341051';
+      const sent = [];
+      for (const lead of recallLeads) {
+        const text = `🔔 재콜 알림\n고객: ${lead.name}\n연락처: ${lead.phone}\n담당: ${userName}`;
+        await fetch(`https://api.telegram.org/bot${BOT_TOKEN}/sendMessage`, {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify({ chat_id: CHAT_ID, text }),
+        }).catch(() => {});
+        sent.push(lead);
+      }
+      sessionStorage.setItem(flagKey, 'true');
+      setSentRecalls(sent);
+    };
+    if (!loading) sendRecallAlerts();
+  }, [loading]);
 
   const load = () =>
     Promise.all([
@@ -95,6 +122,22 @@ export default function CallDashboard() {
               </div>
             ))}
           </div>
+        )}
+
+        {/* 재콜 알림 전송 현황 */}
+        {sentRecalls.length > 0 && (
+          <SFCard className="border border-orange-500/30 bg-orange-500/5">
+            <p className="text-xs font-semibold text-orange-400 mb-2">📅 오늘 재콜 자동 알림 전송완료 ({sentRecalls.length}건)</p>
+            <div className="space-y-1">
+              {sentRecalls.map(l => (
+                <div key={l.id} className="flex items-center gap-3 text-xs py-1.5 border-b border-white/[0.04] last:border-0">
+                  <span className="text-white font-medium">{l.name}</span>
+                  <span className="text-gray-500">{l.phone}</span>
+                  <span className="text-orange-400 text-[10px] ml-auto">✅ 알림전송</span>
+                </div>
+              ))}
+            </div>
+          </SFCard>
         )}
 
         {/* Feature 1: Today Briefing */}
