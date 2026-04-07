@@ -2,7 +2,7 @@ import { useNavigate, useLocation } from "react-router-dom";
 import { useEffect, useState } from "react";
 import { base44 } from "@/api/base44Client";
 import { Auth } from "@/lib/auth";
-import { Home, LayoutDashboard, UserPlus, FileText, Calendar, Trophy, GraduationCap, Bell } from "lucide-react";
+import { Home, LayoutDashboard, UserPlus, FileText, Calendar, Trophy, GraduationCap, Bell, Globe } from "lucide-react";
 
 const NAV_ITEMS = [
   { path: "/", icon: Home, label: "홈" },
@@ -14,6 +14,7 @@ const NAV_ITEMS = [
   { path: "/ranking", icon: Trophy, label: "랭킹" },
   { path: "/academy", icon: GraduationCap, label: "학습" },
   { path: "/notices", icon: Bell, label: "공지" },
+  { path: "/foundation", icon: Globe, label: "🌐재단" },
 ];
 
 export default function BottomNav() {
