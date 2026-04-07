@@ -23,7 +23,9 @@ export default function AuthLogin() {
       'call_admin': '콜관리자',
       'dealer': extraData?.grade ? `${extraData.grade}등급 딜러` : '딜러',
       'call_team': '콜팀',
-      'manager': '매니저'
+      'manager': '매니저',
+      'general_manager': '총괄매니저',
+      'online_director': '온라인디렉터'
     };
     return roleMap[role] || role;
   };
@@ -116,22 +118,11 @@ export default function AuthLogin() {
       if (dealer.role === 'manager') {
         localStorage.setItem('sf_assigned_dealer', dealer.assigned_dealer || '');
       }
-      if (dealer.region_scope) {
-        localStorage.setItem('sf_region_scope', dealer.region_scope);
+      if (dealer.role === 'general_manager') {
+        localStorage.setItem('sf_assigned_dealer', dealer.assigned_dealer || '');
       }
-      try {
-        const ipRes = await fetch('https://api.ipify.org?format=json');
-        const { ip } = await ipRes.json();
-        await base44.entities.SystemLog.create({
-          log_type: 'login',
-          actor: username,
-          actor_role: dealer.role || 'dealer',
-          target: username,
-          action: '로그인 성공 - IP: ' + ip,
-          ip_address: ip,
-          created_at: new Date().toISOString()
-        });
-      } catch(e) { }
+      if (dealer.role === 'general_manager') { navigate('/manager'); setLoading(false); return; }
+      if (dealer.role === 'online_director') { navigate('/online-director'); setLoading(false); return; }
       navigate(Auth.getHomeRoute());
       setLoading(false);
       return;
