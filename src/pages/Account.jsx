@@ -6,7 +6,7 @@ import GradeBadge from "../components/GradeBadge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { ArrowLeft, Save, LogOut, User, Eye, EyeOff } from "lucide-react";
+import { ArrowLeft, Save, LogOut, User, Eye, EyeOff, Copy, Check, Network } from "lucide-react";
 import { base44 } from "@/api/base44Client";
 
 const GRADES = ["GREEN", "PURPLE", "GOLD", "PLATINUM"];
@@ -20,6 +20,8 @@ export default function Account() {
   const [pwError, setPwError] = useState('');
   const [showPw, setShowPw] = useState(false);
   const [changingPw, setChangingPw] = useState(false);
+  const [copied, setCopied] = useState(false);
+  const [generatingCode, setGeneratingCode] = useState(false);
 
   useEffect(() => {
     if (dealer) {
@@ -43,6 +45,26 @@ export default function Account() {
     setSaving(true);
     await updateDealer(dealer.id, form);
     setSaving(false);
+  };
+
+  const handleCopyCode = () => {
+    if (!dealer?.my_referral_code) return;
+    navigator.clipboard.writeText(dealer.my_referral_code).catch(() => {});
+    setCopied(true);
+    setTimeout(() => setCopied(false), 2000);
+  };
+
+  const handleGenerateCode = async () => {
+    if (!dealer) return;
+    setGeneratingCode(true);
+    const rand = Math.random().toString(36).slice(2, 6).toUpperCase();
+    const code = (dealer.username || 'USER').toUpperCase().slice(0, 4) + rand;
+    const entity = dealer.role === 'call_team' || dealer.role === 'call_admin'
+      ? base44.entities.CallTeamMember
+      : base44.entities.DealerInfo;
+    await entity.update(dealer.id, { my_referral_code: code });
+    await updateDealer(dealer.id, { my_referral_code: code });
+    setGeneratingCode(false);
   };
 
   const handleLogout = () => {
@@ -98,6 +120,41 @@ export default function Account() {
             <h1 className="text-base font-bold text-white">계정 관리</h1>
           </div>
         </div>
+
+        {/* Referral Code Section */}
+        <SFCard>
+          <div className="flex items-center justify-between mb-3">
+            <h3 className="text-white font-semibold text-sm">내 추천코드</h3>
+            <button onClick={() => navigate('/my-network')}
+              className="flex items-center gap-1 text-[10px] text-emerald-400 border border-emerald-500/30 bg-emerald-500/10 px-2.5 py-1 rounded-lg hover:bg-emerald-500/20 transition-all">
+              🌐 내 네트워크 보기
+            </button>
+          </div>
+          {dealer.my_referral_code ? (
+            <div className="flex items-center gap-2">
+              <div className="flex-1 bg-white/5 border border-emerald-500/20 rounded-xl px-4 py-3 text-center">
+                <p className="text-2xl font-bold text-emerald-400 tracking-widest">{dealer.my_referral_code}</p>
+              </div>
+              <button onClick={handleCopyCode}
+                className="h-12 w-12 flex items-center justify-center rounded-xl bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 hover:bg-emerald-500/20 transition-all shrink-0">
+                {copied ? <Check className="h-4 w-4" /> : <Copy className="h-4 w-4" />}
+              </button>
+            </div>
+          ) : (
+            <button onClick={handleGenerateCode} disabled={generatingCode}
+              className="w-full py-3 bg-emerald-500/10 border border-emerald-500/30 text-emerald-400 rounded-xl text-sm font-semibold hover:bg-emerald-500/20 disabled:opacity-50 transition-all">
+              {generatingCode ? '생성 중...' : '✨ 추천코드 생성'}
+            </button>
+          )}
+          <div className="flex gap-2 mt-3 flex-wrap">
+            {(dealer.position) && (
+              <span className="px-2.5 py-1 bg-blue-500/10 border border-blue-500/20 text-blue-400 rounded-full text-[10px] font-medium">💼 {dealer.position}</span>
+            )}
+            {(dealer.branch || dealer.team_name || dealer.team) && (
+              <span className="px-2.5 py-1 bg-purple-500/10 border border-purple-500/20 text-purple-400 rounded-full text-[10px] font-medium">🏢 {dealer.branch || dealer.team_name || dealer.team}</span>
+            )}
+          </div>
+        </SFCard>
 
         {/* Dealer Info */}
         <SFCard>
