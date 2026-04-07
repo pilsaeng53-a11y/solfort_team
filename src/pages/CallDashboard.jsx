@@ -317,7 +317,88 @@ export default function CallDashboard() {
             </div>
           )}
         </SFCard>
+
+        {/* 콜 성공률 히트맵 */}
+        <CallHeatmap logs={logs} />
       </div>
     </div>
+  );
+}
+
+function CallHeatmap({ logs }) {
+  const DAYS = ['월', '화', '수', '목', '금', '토', '일'];
+  const HOURS = Array.from({ length: 24 }, (_, i) => i);
+
+  // Build grid[dayIndex 0=Mon][hour] = {total, success}
+  const grid = Array.from({ length: 7 }, () =>
+    Array.from({ length: 24 }, () => ({ total: 0, success: 0 }))
+  );
+
+  logs.forEach(l => {
+    if (!l.called_at) return;
+    const d = new Date(l.called_at);
+    const dow = (d.getDay() + 6) % 7; // 0=Mon
+    const hour = d.getHours();
+    grid[dow][hour].total += 1;
+    if (l.call_result === '전환완료') grid[dow][hour].success += 1;
+  });
+
+  const cellColor = (total) => {
+    if (total === 0) return 'bg-gray-900';
+    if (total <= 2) return 'bg-emerald-900';
+    if (total <= 5) return 'bg-emerald-700';
+    return 'bg-emerald-500';
+  };
+
+  const [tooltip, setTooltip] = useState(null);
+
+  return (
+    <SFCard>
+      <h3 className="text-sm font-semibold text-white mb-4">📊 요일×시간대 콜 히트맵</h3>
+      <div className="overflow-x-auto">
+        <div className="inline-block min-w-full">
+          {/* Hour labels */}
+          <div className="flex mb-1 ml-6">
+            {HOURS.map(h => (
+              <div key={h} className="w-5 shrink-0 text-center text-[8px] text-gray-600">
+                {h % 3 === 0 ? h : ''}
+              </div>
+            ))}
+          </div>
+          {/* Rows */}
+          {DAYS.map((day, di) => (
+            <div key={day} className="flex items-center mb-0.5">
+              <span className="text-[10px] text-gray-500 w-6 shrink-0 text-center">{day}</span>
+              {HOURS.map(h => {
+                const cell = grid[di][h];
+                return (
+                  <div
+                    key={h}
+                    className={`w-5 h-5 shrink-0 rounded-sm cursor-pointer ${cellColor(cell.total)} relative`}
+                    onMouseEnter={() => setTooltip({ di, h, ...cell })}
+                    onMouseLeave={() => setTooltip(null)}
+                  >
+                    {tooltip && tooltip.di === di && tooltip.h === h && (
+                      <div className="absolute bottom-full left-1/2 -translate-x-1/2 mb-1 z-50 bg-gray-800 border border-white/10 text-white text-[10px] px-2 py-1 rounded whitespace-nowrap pointer-events-none">
+                        {cell.total}건 / 성공{cell.success}건
+                      </div>
+                    )}
+                  </div>
+                );
+              })}
+            </div>
+          ))}
+          {/* Legend */}
+          <div className="flex items-center gap-3 mt-3 ml-6">
+            {[['bg-gray-900','0건'],['bg-emerald-900','1-2건'],['bg-emerald-700','3-5건'],['bg-emerald-500','6건+']].map(([cls, lbl]) => (
+              <div key={lbl} className="flex items-center gap-1">
+                <div className={`w-3 h-3 rounded-sm ${cls}`} />
+                <span className="text-[9px] text-gray-500">{lbl}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      </div>
+    </SFCard>
   );
 }
