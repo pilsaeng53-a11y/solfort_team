@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
 import { base44 } from "@/api/base44Client";
-import { Auth } from "@/lib/auth";
 import SFCard from "./SFCard";
 
 const today = new Date();
@@ -48,7 +47,7 @@ export default function IncentivePanel() {
       } else {
         await base44.entities.SystemSettings.create({
           setting_key: "incentive_per_count",
-          setting_label: "매출전환 건당 인센티브",
+          setting_label: "ë§¤ì¶ì í ê±´ë¹ ì¸ì¼í°ë¸",
           setting_value: perCount,
           updated_at: new Date().toISOString(),
         });
@@ -58,7 +57,7 @@ export default function IncentivePanel() {
       } else {
         await base44.entities.SystemSettings.create({
           setting_key: "incentive_pct_amount",
-          setting_label: "매출금액 인센티브 %",
+          setting_label: "ë§¤ì¶ê¸ì¡ ì¸ì¼í°ë¸ %",
           setting_value: pctAmount,
           updated_at: new Date().toISOString(),
         });
@@ -73,7 +72,7 @@ export default function IncentivePanel() {
 
   const incentives = {};
   monthSales.forEach(s => {
-    const key = s.created_by || "미지정";
+    const key = s.created_by || "ë¯¸ì§ì ";
     if (!incentives[key]) {
       incentives[key] = { name: key, count: 0, total: 0, paid: [] };
     }
@@ -95,8 +94,8 @@ export default function IncentivePanel() {
     try {
       await base44.entities.SystemLog.create({
         log_type: "incentive",
-        actor: Auth.getDealerName(),
-        actor_role: Auth.getRole(),
+        actor: JSON.parse(localStorage.getItem('sf_user')||'{}').name,
+        actor_role: JSON.parse(localStorage.getItem('sf_user')||'{}').role,
         action: "incentive_paid",
         before_value: JSON.stringify({
           month,
@@ -106,7 +105,7 @@ export default function IncentivePanel() {
         }),
         created_at: new Date().toISOString(),
       });
-      alert("인센티브 지급이 기록되었습니다.");
+      alert("ì¸ì¼í°ë¸ ì§ê¸ì´ ê¸°ë¡ëììµëë¤.");
       const h = await base44.entities.SystemLog.filter({ action: "incentive_paid" });
       setPayHistory(h);
     } catch {}
@@ -119,10 +118,10 @@ export default function IncentivePanel() {
     <div className="space-y-6">
       {/* Settings */}
       <SFCard>
-        <h3 className="text-sm font-semibold text-white mb-4">인센티브 기준 설정</h3>
+        <h3 className="text-sm font-semibold text-white mb-4">ì¸ì¼í°ë¸ ê¸°ì¤ ì¤ì </h3>
         <div className="space-y-3">
           <div>
-            <label className="text-xs text-gray-400 block mb-1">매출전환 건당 인센티브</label>
+            <label className="text-xs text-gray-400 block mb-1">ë§¤ì¶ì í ê±´ë¹ ì¸ì¼í°ë¸</label>
             <input
               type="number"
               value={perCount}
@@ -131,7 +130,7 @@ export default function IncentivePanel() {
             />
           </div>
           <div>
-            <label className="text-xs text-gray-400 block mb-1">매출금액 × (%) 인센티브</label>
+            <label className="text-xs text-gray-400 block mb-1">ë§¤ì¶ê¸ì¡ Ã (%) ì¸ì¼í°ë¸</label>
             <input
               type="number"
               value={pctAmount}
@@ -144,23 +143,23 @@ export default function IncentivePanel() {
             disabled={saving}
             className="w-full py-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-xs font-semibold hover:bg-purple-500/30 disabled:opacity-50"
           >
-            {saving ? "저장 중..." : "저장"}
+            {saving ? "ì ì¥ ì¤..." : "ì ì¥"}
           </button>
         </div>
       </SFCard>
 
       {/* Calculation */}
       <SFCard>
-        <h3 className="text-sm font-semibold text-white mb-4">{month} 인센티브 계산</h3>
+        <h3 className="text-sm font-semibold text-white mb-4">{month} ì¸ì¼í°ë¸ ê³ì°</h3>
         {incentiveList.length === 0 ? (
-          <p className="text-xs text-gray-600 text-center py-4">이번 달 매출이 없습니다</p>
+          <p className="text-xs text-gray-600 text-center py-4">ì´ë² ë¬ ë§¤ì¶ì´ ììµëë¤</p>
         ) : (
           <>
             <div className="overflow-x-auto mb-4">
               <table className="w-full text-xs">
                 <thead>
                   <tr className="text-gray-500 border-b border-white/[0.06]">
-                    {["팀원명", "건수", "총매출", "건수인센", "금액인센", "합계"].map(h => (
+                    {["íìëª", "ê±´ì", "ì´ë§¤ì¶", "ê±´ìì¸ì¼", "ê¸ì¡ì¸ì¼", "í©ê³"].map(h => (
                       <th key={h} className="text-left py-2 px-2 font-medium whitespace-nowrap">{h}</th>
                     ))}
                   </tr>
@@ -170,25 +169,25 @@ export default function IncentivePanel() {
                     <tr key={idx} className="border-b border-white/[0.04] hover:bg-white/[0.02]">
                       <td className="py-2 px-2 text-white">{i.name}</td>
                       <td className="py-2 px-2 text-gray-400">{i.count}</td>
-                      <td className="py-2 px-2 text-white">₩{i.total.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-emerald-400">₩{i.countIncentive.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-emerald-400">₩{i.amountIncentive.toLocaleString()}</td>
-                      <td className="py-2 px-2 text-yellow-400 font-semibold">₩{i.totalIncentive.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-white">â©{i.total.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-emerald-400">â©{i.countIncentive.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-emerald-400">â©{i.amountIncentive.toLocaleString()}</td>
+                      <td className="py-2 px-2 text-yellow-400 font-semibold">â©{i.totalIncentive.toLocaleString()}</td>
                     </tr>
                   ))}
                 </tbody>
               </table>
             </div>
             <div className="flex justify-end gap-2 text-sm">
-              <span className="text-gray-500">전체 합계:</span>
-              <span className="text-yellow-400 font-bold">₩{totalIncentive.toLocaleString()}</span>
+              <span className="text-gray-500">ì ì²´ í©ê³:</span>
+              <span className="text-yellow-400 font-bold">â©{totalIncentive.toLocaleString()}</span>
             </div>
             <button
               onClick={submitPayment}
               disabled={paying}
               className="w-full mt-4 py-2 bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 rounded-lg text-xs font-semibold hover:bg-emerald-500/30 disabled:opacity-50"
             >
-              {paying ? "처리 중..." : "지급 완료 처리"}
+              {paying ? "ì²ë¦¬ ì¤..." : "ì§ê¸ ìë£ ì²ë¦¬"}
             </button>
           </>
         )}
@@ -197,12 +196,12 @@ export default function IncentivePanel() {
       {/* History */}
       {payHistory.length > 0 && (
         <SFCard>
-          <h3 className="text-sm font-semibold text-white mb-3">지급 이력</h3>
+          <h3 className="text-sm font-semibold text-white mb-3">ì§ê¸ ì´ë ¥</h3>
           <div className="space-y-2 max-h-64 overflow-y-auto">
             {payHistory.slice(0, 20).map(h => (
               <div key={h.id} className="text-xs text-gray-400 pb-2 border-b border-white/[0.04]">
                 <p className="text-white font-medium">{(h.created_at || "").split("T")[0]}</p>
-                <p>{h.actor} 처리</p>
+                <p>{h.actor} ì²ë¦¬</p>
               </div>
             ))}
           </div>
