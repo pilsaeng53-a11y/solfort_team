@@ -48,6 +48,9 @@ import SalesSettlement from './pages/SalesSettlement';
 import LeadExcelUpload from './pages/LeadExcelUpload';
 import Register from './pages/Register';
 import InitAdmin from './pages/InitAdmin';
+import FoundationLinks from './pages/FoundationLinks';
+import DailyJournal from './pages/DailyJournal';
+import CustomerSatisfaction from './pages/CustomerSatisfaction';
 
 const HIDE_NAV = ['/', '/call', '/admin/dealer', '/admin/call', '/admin/super', '/manager', '/call/dashboard', '/call/leads', '/call/queue', '/call/logs', '/call/interest', '/call/convert', '/call/scripts', '/call/ai'];
 
@@ -136,6 +139,9 @@ const AppContent = () => {
           <Route path="/lead-distribution" element={<ProtectedRoute roles={['call_admin','super_admin']}><LeadDistribution /></ProtectedRoute>} />
           <Route path="/monthly-report" element={<ProtectedRoute roles={['super_admin']}><MonthlyReport /></ProtectedRoute>} />
           <Route path="/sales-settlement" element={<ProtectedRoute roles={['super_admin','dealer_admin']}><SalesSettlement /></ProtectedRoute>} />
+          <Route path="/foundation" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin']}><FoundationLinks /></ProtectedRoute>} />
+          <Route path="/daily-journal" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin']}><DailyJournal /></ProtectedRoute>} />
+          <Route path="/satisfaction" element={<ProtectedRoute roles={['super_admin','manager']}><CustomerSatisfaction /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
