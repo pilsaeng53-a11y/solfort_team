@@ -242,12 +242,95 @@ export default function AdminSuper() {
   const [onlineTab, setOnlineTab] = useState(0);
   const [accountTab, setAccountTab] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
+  const [backupLoading, setBackupLoading] = useState(false);
 
   useEffect(() => {
     base44.entities.SalesOrder.list("-created_date", 200)
       .then(orders => setPendingOrders(orders.filter(o => o.status === "pending").length))
       .catch(() => {});
   }, []);
+
+  const handleFullBackup = async () => {
+    setBackupLoading(true);
+    try {
+      const [sales, dealers, callMembers, onlineMembers, leads] = await Promise.all([
+        base44.entities.SalesRecord.list('-created_date', 10000),
+        base44.entities.DealerInfo.list('-created_date', 500),
+        base44.entities.CallTeamMember.list('-created_date', 500),
+        base44.entities.OnlineTeamMember.list('-created_date', 200),
+        base44.entities.CallLead.list('-created_date', 1000),
+      ]);
+
+      const wb = utils.book_new();
+
+      const salesData = sales.map(r => ({
+        '날짜': r.sale_date || '',
+        '대리점명': r.dealer_name || '',
+        '고객명': r.customer_name || '',
+        '연락처': r.phone || '',
+        '매출금액': r.sales_amount || 0,
+        'SOF수량': r.final_quantity || 0,
+        '지갑주소': r.wallet_address || '',
+        '상태': r.customer_status || '',
+      }));
+      utils.book_append_sheet(wb, utils.json_to_sheet(salesData), '매출기록');
+
+      const dealersData = dealers.map(d => ({
+        '대리점명': d.dealer_name || '',
+        '대리점주': d.owner_name || '',
+        '아이디': d.username || '',
+        '연락처': d.phone || '',
+        '등급': d.grade || '',
+        '상태': d.status || '',
+        '추천코드': d.referral_code || '',
+        '가입일': (d.created_date || '').split('T')[0],
+      }));
+      utils.book_append_sheet(wb, utils.json_to_sheet(dealersData), '대리점');
+
+      const callData = callMembers.map(m => ({
+        '이름': m.name || '',
+        '아이디': m.username || '',
+        '소속팀': m.team || '',
+        '연락처': m.phone || '',
+        '사원번호': m.employee_id || '',
+        '상태': m.status || '',
+        '가입일': (m.created_date || '').split('T')[0],
+      }));
+      utils.book_append_sheet(wb, utils.json_to_sheet(callData), '콜팀');
+
+      const onlineData = onlineMembers.map(m => ({
+        '이름': m.name || '',
+        '아이디': m.username || '',
+        '연락처': m.phone || '',
+        '메타 광고 계정': m.meta_ad_account || '',
+        '상태': m.status || '',
+        '가입일': (m.created_date || '').split('T')[0],
+      }));
+      utils.book_append_sheet(wb, utils.json_to_sheet(onlineData), '온라인팀');
+
+      const leadsData = leads.map(l => ({
+        '고객명': l.name || '',
+        '연락처': l.phone || '',
+        '유입경로': l.source || '',
+        '상태': l.status || '',
+        '관심금액': l.interest_amount || 0,
+        '관심도': l.interest_level || '',
+        '담당자': l.assigned_to || '',
+        '다음콜': l.next_call_date || '',
+        '메모': l.memo || '',
+      }));
+      utils.book_append_sheet(wb, utils.json_to_sheet(leadsData), '리드');
+
+      const now = new Date();
+      const dateStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`;
+      writeFile(wb, `SolFort_전체백업_${dateStr}.xlsx`);
+      toast.success('백업 완료');
+    } catch (e) {
+      toast.error('백업 실패: ' + e.message);
+    } finally {
+      setBackupLoading(false);
+    }
+  };
 
   return (
     <div className="min-h-screen bg-[#080a12]">
@@ -279,6 +362,10 @@ export default function AdminSuper() {
             className="px-3 py-1.5 bg-blue-500/20 text-blue-400 border border-blue-500/30 rounded-lg text-xs hover:bg-blue-500/30 transition-all">📊 분석</button>
           <button onClick={() => navigate("/telegram-bot")}
             className="px-3 py-1.5 bg-cyan-500/20 text-cyan-400 border border-cyan-500/30 rounded-lg text-xs hover:bg-cyan-500/30 transition-all">🤖 텔레그램봇</button>
+          <button onClick={handleFullBackup} disabled={backupLoading}
+            className="px-3 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs hover:bg-green-500/30 transition-all disabled:opacity-50">
+            {backupLoading ? '💾 백업 중...' : '💾 전체 데이터 백업'}
+          </button>
           <button onClick={() => navigate("/incentive-settings")}
             className="px-3 py-1.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-500/30 transition-all">💰 인센티브관리</button>
           <button onClick={() => navigate("/my-network")}
