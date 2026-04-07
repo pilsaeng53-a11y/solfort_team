@@ -39,6 +39,11 @@ export default function CallDashboard() {
   const [totalPoints, setTotalPoints] = useState(0);
   const [checkingIn, setCheckingIn] = useState(false);
   const [user, setUser] = useState(null);
+  const [workStatus, setWorkStatus] = useState("not_checked");
+  const [checkInTime, setCheckInTime] = useState(null);
+  const [checkOutTime, setCheckOutTime] = useState(null);
+  const [elapsedTime, setElapsedTime] = useState("00:00");
+  const [sevenDayHistory, setSevenDayHistory] = useState([]);
 
   useEffect(() => {
     document.title = "SolFort - 콜 대시보드";
@@ -58,58 +63,131 @@ export default function CallDashboard() {
   const loadAttendance = async (currentUser) => {
     if (!currentUser?.id) return;
     const todayStr = today;
-    const checkinKey = `sf_checkin_${currentUser.id}_${todayStr}`;
-    if (localStorage.getItem(checkinKey)) {
-      setCheckedIn(true);
+    const statusKey = `sf_work_status_${currentUser.id}_${todayStr}`;
+    const statusData = JSON.parse(localStorage.getItem(statusKey) || '{}');
+
+    // Load today's logs
+    const todayLogs = await base44.entities.AttendanceLog.filter(
+      { username: currentUser.username, work_date: todayStr },
+      "created_date",
+      10
+    ).catch(() => []);
+
+    const checkInLog = todayLogs.find(l => l.type === "출근");
+    const checkOutLog = todayLogs.find(l => l.type === "퇴근");
+
+    if (checkInLog) {
+      setCheckInTime(checkInLog.time);
+      setWorkStatus(checkOutLog ? "checked_out" : "checked_in");
+    } else {
+      setWorkStatus("not_checked");
     }
-    const logs = await base44.entities.AttendanceLog.filter({ username: currentUser.username }, '-check_in_at', 100).catch(() => []);
-    if (logs.length === 0) {
-      setStreak(0);
-      setTotalPoints(0);
-      return;
+
+    if (checkOutLog) {
+      setCheckOutTime(checkOutLog.time);
     }
-    let currentStreak = 0;
-    let lastDate = null;
-    for (const log of logs) {
-      const logDate = log.check_in_at?.split('T')[0];
-      if (!logDate) continue;
-      if (!lastDate) {
-        lastDate = logDate;
-        currentStreak = 1;
-      } else {
-        const last = new Date(lastDate);
-        const curr = new Date(logDate);
-        if ((last.getTime() - curr.getTime()) / (1000 * 60 * 60 * 24) === 1) {
-          currentStreak++;
-          lastDate = logDate;
-        } else {
-          break;
-        }
+
+    // Load 7-day history
+    const allLogs = await base44.entities.AttendanceLog.filter(
+      { username: currentUser.username },
+      "-work_date",
+      100
+    ).catch(() => []);
+
+    const historyMap = {};
+    allLogs.forEach(log => {
+      const date = log.work_date;
+      if (!historyMap[date]) {
+        historyMap[date] = { date, checkIn: null, checkOut: null };
       }
-    }
-    setStreak(currentStreak);
-    const pts = logs.length + (currentStreak >= 7 ? 5 : 0);
-    setTotalPoints(pts);
+      if (log.type === "출근") historyMap[date].checkIn = log.time;
+      if (log.type === "퇴근") historyMap[date].checkOut = log.time;
+    });
+
+    const history = Object.values(historyMap).slice(0, 7).map(h => {
+      const checkIn = h.checkIn ? new Date(`2000-01-01T${h.checkIn}`) : null;
+      const checkOut = h.checkOut ? new Date(`2000-01-01T${h.checkOut}`) : null;
+      let workingHours = 0, workingMins = 0, status = "결근";
+      if (checkIn && checkOut) {
+        const diff = (checkOut - checkIn) / 1000 / 60;
+        workingHours = Math.floor(diff / 60);
+        workingMins = diff % 60;
+        const checkInHour = parseInt(h.checkIn?.split(":")[0] || "09");
+        status = checkInHour > 9 ? "지각" : "정상";
+      } else if (checkIn && !checkOut) {
+        status = "조퇴";
+      }
+      return { ...h, workingHours, workingMins, status };
+    });
+    setSevenDayHistory(history);
   };
 
-  const handleCheckin = async () => {
+  const handleCheckIn = async () => {
     if (!user?.id) return;
     setCheckingIn(true);
     try {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
       await base44.entities.AttendanceLog.create({
         username: user.username,
         user_id: user.id,
-        check_in_at: new Date().toISOString(),
+        work_date: today,
+        type: "출근",
+        time: timeStr,
         member_name: user.full_name || user.username,
       });
-      localStorage.setItem(`sf_checkin_${user.id}_${today}`, 'true');
-      setCheckedIn(true);
-      await loadAttendance(user);
+      setCheckInTime(timeStr);
+      setWorkStatus("checked_in");
+      const statusKey = `sf_work_status_${user.id}_${today}`;
+      localStorage.setItem(statusKey, JSON.stringify({ checkIn: timeStr }));
     } catch (e) {
-      console.error('Check-in failed', e);
+      console.error("Check-in failed", e);
     }
     setCheckingIn(false);
   };
+
+  const handleCheckOut = async () => {
+    if (!user?.id) return;
+    setCheckingIn(true);
+    try {
+      const now = new Date();
+      const timeStr = `${String(now.getHours()).padStart(2, "0")}:${String(now.getMinutes()).padStart(2, "0")}`;
+      await base44.entities.AttendanceLog.create({
+        username: user.username,
+        user_id: user.id,
+        work_date: today,
+        type: "퇴근",
+        time: timeStr,
+        member_name: user.full_name || user.username,
+      });
+      setCheckOutTime(timeStr);
+      setWorkStatus("checked_out");
+      const statusKey = `sf_work_status_${user.id}_${today}`;
+      localStorage.setItem(statusKey, JSON.stringify({ checkIn: checkInTime, checkOut: timeStr }));
+      await loadAttendance(user);
+    } catch (e) {
+      console.error("Check-out failed", e);
+    }
+    setCheckingIn(false);
+  };
+
+  // Update elapsed time
+  useEffect(() => {
+    if (workStatus !== "checked_in" || !checkInTime) return;
+    const timer = setInterval(() => {
+      const [h, m] = checkInTime.split(":").map(Number);
+      const checkInDate = new Date();
+      checkInDate.setHours(h, m, 0);
+      const now = new Date();
+      const diff = Math.floor((now - checkInDate) / 1000 / 60);
+      const hours = Math.floor(diff / 60);
+      const mins = diff % 60;
+      setElapsedTime(`${String(hours).padStart(2, "0")}:${String(mins).padStart(2, "0")}`);
+    }, 1000);
+    return () => clearInterval(timer);
+  }, [workStatus, checkInTime]);
+
+
 
   useEffect(() => {
     const sendRecallAlerts = async () => {
@@ -180,39 +258,86 @@ export default function CallDashboard() {
     <div className="min-h-screen bg-[#080a12]">
       <CallNav/>
       <div className="p-4 md:p-6 space-y-5 max-w-5xl mx-auto">
-        {/* Attendance Check Section */}
+        {/* Attendance System */}
         {user && (
-          <div>
-            {checkedIn ? (
-              <SFCard className="bg-emerald-500/10 border border-emerald-500/30">
-                <div className="text-center">
-                  <p className="text-sm font-semibold text-emerald-400">✅ 올 출근 완료</p>
-                  {streak > 0 && (
-                    <p className="text-xs text-emerald-400 mt-1">🔥 {streak}일 연속 출근!</p>
+          <div className="space-y-4">
+            {/* Checkin/Checkout Buttons */}
+            <div className="grid grid-cols-2 gap-3">
+              <button
+                onClick={handleCheckIn}
+                disabled={workStatus !== "not_checked" || checkingIn}
+                className={`py-4 rounded-xl font-bold text-sm transition-all ${
+                  workStatus !== "not_checked"
+                    ? "bg-gray-500/20 text-gray-400 border border-gray-500/30 cursor-not-allowed"
+                    : "bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/30 animate-pulse"
+                }`}
+              >
+                🟢 출근
+              </button>
+              <button
+                onClick={handleCheckOut}
+                disabled={workStatus !== "checked_in" || checkingIn}
+                className={`py-4 rounded-xl font-bold text-sm transition-all ${
+                  workStatus !== "checked_in"
+                    ? "bg-gray-500/20 text-gray-400 border border-gray-500/30 cursor-not-allowed"
+                    : "bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30 animate-pulse"
+                }`}
+              >
+                🔴 퇴근
+              </button>
+            </div>
+
+            {/* Today Status */}
+            {(checkInTime || checkOutTime) && (
+              <SFCard className="bg-emerald-500/5 border border-emerald-500/20">
+                <div className="space-y-2 text-sm">
+                  <p className="text-gray-300">
+                    {checkInTime && <span>출근 {checkInTime}</span>}
+                    {checkOutTime && <span className="ml-3">퇴근 {checkOutTime}</span>}
+                  </p>
+                  {workStatus === "checked_in" && (
+                    <p className="text-emerald-400 font-semibold">근무중 {elapsedTime}</p>
                   )}
-                  <p className="text-[10px] text-gray-500 mt-2">⭐ 총 {totalPoints}포인트</p>
+                  {checkOutTime && checkInTime && (
+                    <p className="text-gray-400">
+                      근무시간 {Math.floor((new Date(`2000-01-01T${checkOutTime}`) - new Date(`2000-01-01T${checkInTime}`)) / 1000 / 60 / 60)}h {Math.floor(((new Date(`2000-01-01T${checkOutTime}`) - new Date(`2000-01-01T${checkInTime}`)) / 1000 / 60) % 60)}m
+                    </p>
+                  )}
                 </div>
               </SFCard>
-            ) : (
-              <div className="space-y-3">
-                <button
-                  onClick={handleCheckin}
-                  disabled={checkingIn}
-                  className="w-full py-4 bg-gradient-to-r from-emerald-500/30 to-emerald-600/20 text-emerald-300 border border-emerald-500/50 rounded-xl font-semibold text-sm hover:from-emerald-500/40 hover:to-emerald-600/30 disabled:opacity-50 transition-all animate-pulse"
-                >
-                  ✅ 출근 체크
-                </button>
-                {streak > 0 && (
-                  <div className="flex items-center justify-between bg-yellow-500/10 border border-yellow-500/30 rounded-lg p-3">
-                    <div>
-                      <p className="text-xs font-semibold text-yellow-400">🔥 {streak}일 연속!</p>
-                      <p className="text-[10px] text-yellow-400/70">⭐ {totalPoints}포인트</p>
-                    </div>
-                    <Flame className="h-5 w-5 text-yellow-400" />
-                  </div>
-                )}
-              </div>
             )}
+
+            {/* 7-Day History */}
+            <SFCard className="border border-white/10">
+              <h3 className="text-xs font-semibold text-gray-400 mb-3">📅 최근 7일 출퇴근 기록</h3>
+              <div className="overflow-x-auto">
+                <table className="w-full text-[10px]">
+                  <thead>
+                    <tr className="text-gray-500 border-b border-white/10">
+                      {["날짜", "출근", "퇴근", "근무", "상태"].map(h => (
+                        <th key={h} className="text-left py-2 px-1 font-medium">{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {sevenDayHistory.map(h => (
+                      <tr key={h.date} className="border-b border-white/5 hover:bg-white/[0.02]">
+                        <td className="py-2 px-1 text-gray-400">{h.date}</td>
+                        <td className="py-2 px-1 text-gray-300">{h.checkIn || "-"}</td>
+                        <td className="py-2 px-1 text-gray-300">{h.checkOut || "-"}</td>
+                        <td className="py-2 px-1 text-gray-300">{h.workingHours > 0 ? `${h.workingHours}h ${h.workingMins}m` : "-"}</td>
+                        <td className={`py-2 px-1 font-semibold ${
+                          h.status === "정상" ? "text-emerald-400" :
+                          h.status === "지각" ? "text-yellow-400" :
+                          h.status === "조퇴" ? "text-orange-400" :
+                          "text-red-400"
+                        }`}>{h.status}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
+            </SFCard>
           </div>
         )}
         {/* Active Events */}
