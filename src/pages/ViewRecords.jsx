@@ -4,7 +4,7 @@ import { base44 } from "@/api/base44Client";
 import SFCard from "../components/SFCard";
 import StatusBadge from "../components/StatusBadge";
 import { Input } from "@/components/ui/input";
-import { ArrowLeft, Search } from "lucide-react";
+import { ArrowLeft, Search, Star } from "lucide-react";
 
 const FILTERS = [
   { key: "all", label: "전체" },
@@ -20,6 +20,9 @@ export default function ViewRecords() {
   const [loading, setLoading] = useState(true);
   const [search, setSearch] = useState("");
   const [filter, setFilter] = useState("all");
+  const [showRating, setShowRating] = useState(null);
+  const [selectedRating, setSelectedRating] = useState({});
+  const [savingRating, setSavingRating] = useState(null);
 
   const today = new Date().toISOString().split("T")[0];
 
@@ -37,6 +40,18 @@ export default function ViewRecords() {
     } finally {
       setLoading(false);
     }
+  };
+
+  const saveRating = async (recordId, rating) => {
+    setSavingRating(recordId);
+    await base44.entities.SalesRecord.update(recordId, {
+      satisfaction_sent: true,
+      satisfaction_rating: rating,
+    });
+    setRecords(prev => prev.map(r => r.id === recordId ? { ...r, satisfaction_sent: true, satisfaction_rating: rating } : r));
+    setShowRating(null);
+    setSelectedRating({});
+    setSavingRating(null);
   };
 
   const filtered = records.filter((r) => {
@@ -115,22 +130,51 @@ export default function ViewRecords() {
         ) : (
           <div className="space-y-3">
             {filtered.map((r) => (
-              <SFCard key={r.id}>
-                <div className="flex items-start justify-between">
-                  <div>
-                    <div className="flex items-center gap-2">
-                      <p className="text-sm font-semibold text-white">{r.customer_name}</p>
-                      <StatusBadge status={r.customer_status} />
+              <div key={r.id}>
+                <SFCard>
+                  <div className="flex items-start justify-between mb-2">
+                    <div>
+                      <div className="flex items-center gap-2">
+                        <p className="text-sm font-semibold text-white">{r.customer_name}</p>
+                        <StatusBadge status={r.customer_status} />
+                        {r.satisfaction_sent && <span className="text-[10px] bg-emerald-500/20 text-emerald-400 px-2 py-0.5 rounded">✓ 확인완료</span>}
+                      </div>
+                      <p className="text-xs text-gray-500 mt-1">{r.phone}</p>
+                      <p className="text-[10px] text-gray-600 mt-0.5">{r.sale_date} · {r.dealer_name}</p>
                     </div>
-                    <p className="text-xs text-gray-500 mt-1">{r.phone}</p>
-                    <p className="text-[10px] text-gray-600 mt-0.5">{r.sale_date} · {r.dealer_name}</p>
+                    <div className="text-right">
+                      <p className="text-sm font-bold text-white">₩{r.sales_amount?.toLocaleString()}</p>
+                      <p className="text-xs text-blue-400 mt-0.5">{r.final_quantity?.toFixed(1)} SOF</p>
+                    </div>
                   </div>
-                  <div className="text-right">
-                    <p className="text-sm font-bold text-white">₩{r.sales_amount?.toLocaleString()}</p>
-                    <p className="text-xs text-blue-400 mt-0.5">{r.final_quantity?.toFixed(1)} SOF</p>
-                  </div>
-                </div>
-              </SFCard>
+                  {r.satisfaction_rating && (
+                    <p className="text-[10px] text-yellow-400 mb-2">만족도: {'⭐'.repeat(r.satisfaction_rating)}</p>
+                  )}
+                  {!r.satisfaction_sent && (
+                    <button onClick={() => setShowRating(showRating === r.id ? null : r.id)}
+                      className="w-full px-3 py-1.5 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-[10px] font-medium hover:bg-purple-500/30 transition-all">
+                      만족도 확인 완료
+                    </button>
+                  )}
+                </SFCard>
+                {showRating === r.id && (
+                  <SFCard className="bg-purple-500/5 border-purple-500/30 mt-2">
+                    <p className="text-xs text-gray-400 mb-3">고객 만족도를 선택해주세요</p>
+                    <div className="flex gap-2 justify-center">
+                      {[1, 2, 3, 4, 5].map(star => (
+                        <button key={star} onClick={() => setSelectedRating(p => ({ ...p, [r.id]: star }))}
+                          className={`text-2xl transition-all ${(selectedRating[r.id] || 0) >= star ? 'text-yellow-400' : 'text-gray-500'}`}>
+                          ⭐
+                        </button>
+                      ))}
+                    </div>
+                    <button onClick={() => saveRating(r.id, selectedRating[r.id] || 0)} disabled={savingRating === r.id || !selectedRating[r.id]}
+                      className="w-full px-3 py-2 bg-purple-500/20 text-purple-400 border border-purple-500/30 rounded-lg text-xs font-medium hover:bg-purple-500/30 disabled:opacity-40 transition-all mt-3">
+                      {savingRating === r.id ? '저장 중...' : '저장'}
+                    </button>
+                  </SFCard>
+                )}
+              </div>
             ))}
           </div>
         )}

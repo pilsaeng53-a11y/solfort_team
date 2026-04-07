@@ -62,6 +62,7 @@ export default function RegisterCustomer() {
   const handleRegister = async () => {
     setSaving(true);
     const today = new Date().toISOString().split("T")[0];
+    const now = new Date();
 
     // Check duplicate
     let customerStatus = "new";
@@ -106,8 +107,8 @@ export default function RegisterCustomer() {
 
     // Send telegram notification
     try {
-      const now = new Date().toLocaleString('ko-KR');
-      const msg = `신규 고객 등록\n고객명: ${form.customer_name}\n연락처: ${form.phone}\n매출: ₩${salesAmount.toLocaleString()}\n딜러: ${dealer?.dealer_name || '미설정'}\n일시: ${now}`;
+      const nowStr = new Date().toLocaleString('ko-KR');
+      const msg = `신규 고객 등록\n고객명: ${form.customer_name}\n연락처: ${form.phone}\n매출: ₩${salesAmount.toLocaleString()}\n딜러: ${dealer?.dealer_name || '미설정'}\n일시: ${nowStr}`;
       await fetch('https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage', {
         method: 'POST',
         headers: { 'Content-Type': 'application/json' },
@@ -116,6 +117,23 @@ export default function RegisterCustomer() {
     } catch (e) {
       console.error('Telegram notification failed', e);
     }
+
+    // Schedule satisfaction check after 24 hours
+    setTimeout(async () => {
+      try {
+        const rec = await base44.entities.SalesRecord.filter({ id: created?.id }, '-created_at', 1);
+        if (rec.length > 0 && !rec[0].satisfaction_sent) {
+          const msg = `📋 만족도 확인 요청\n고객: ${form.customer_name}\n연락처: ${form.phone}\n담당: ${dealer?.dealer_name || '미설정'}\n→ 24시간 경과. 고객 만족도를 확인해주세요!`;
+          await fetch('https://api.telegram.org/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage', {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({ chat_id: 5757341051, text: msg })
+          });
+        }
+      } catch (e) {
+        console.error('Satisfaction check failed', e);
+      }
+    }, 24 * 60 * 60 * 1000);
   };
 
   const valid = form.customer_name && form.phone && salesAmount > 0;
