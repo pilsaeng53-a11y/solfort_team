@@ -243,12 +243,30 @@ export default function AdminSuper() {
   const [accountTab, setAccountTab] = useState(0);
   const [pendingOrders, setPendingOrders] = useState(0);
   const [backupLoading, setBackupLoading] = useState(false);
+  const [liveMode, setLiveMode] = useState(false);
+  const [onlineCount, setOnlineCount] = useState(0);
 
   useEffect(() => {
     base44.entities.SalesOrder.list("-created_date", 200)
       .then(orders => setPendingOrders(orders.filter(o => o.status === "pending").length))
       .catch(() => {});
   }, []);
+
+  useEffect(() => {
+    if (!liveMode) return;
+    const refreshLiveData = async () => {
+      try {
+        const dealers = await base44.entities.DealerInfo.list('-created_date', 500);
+        const now = new Date();
+        const thirtyMinsAgo = new Date(now.getTime() - 30 * 60 * 1000);
+        const online = dealers.filter(d => d.last_login_at && new Date(d.last_login_at) > thirtyMinsAgo).length;
+        setOnlineCount(online);
+      } catch {}
+    };
+    refreshLiveData();
+    const interval = setInterval(refreshLiveData, 30000);
+    return () => clearInterval(interval);
+  }, [liveMode]);
 
   const handleFullBackup = async () => {
     setBackupLoading(true);
@@ -365,6 +383,15 @@ export default function AdminSuper() {
           <button onClick={handleFullBackup} disabled={backupLoading}
             className="px-3 py-1.5 bg-green-500/20 text-green-400 border border-green-500/30 rounded-lg text-xs hover:bg-green-500/30 transition-all disabled:opacity-50">
             {backupLoading ? '💾 백업 중...' : '💾 전체 데이터 백업'}
+          </button>
+          <button onClick={() => setLiveMode(!liveMode)}
+            className={`px-3 py-1.5 rounded-lg text-xs font-medium transition-all ${
+              liveMode
+                ? 'bg-red-500/20 text-red-400 border border-red-500/30 hover:bg-red-500/30'
+                : 'bg-gray-500/20 text-gray-400 border border-gray-500/30 hover:bg-gray-500/30'
+            }`}>
+            {liveMode ? '🔴 실시간' : '⚫ 정지됨'} {liveMode && `(${onlineCount}명)`}
+            {liveMode && <span className="inline-block animate-pulse ml-1">●</span>}
           </button>
           <button onClick={() => navigate("/incentive-settings")}
             className="px-3 py-1.5 bg-yellow-500/20 text-yellow-400 border border-yellow-500/30 rounded-lg text-xs hover:bg-yellow-500/30 transition-all">💰 인센티브관리</button>
