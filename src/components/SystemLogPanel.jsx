@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import React from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 import SFCard from "./SFCard";
 
 const LOG_TYPES = [
