@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
-import { Auth } from "@/lib/auth";
+import { base44 } from "@/api/neonClient";
+import { Auth } from "@/api/neonClient";
 
 const today = new Date().toISOString().split("T")[0];
 
