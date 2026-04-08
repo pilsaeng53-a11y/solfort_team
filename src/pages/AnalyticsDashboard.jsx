@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 import { LineChart, BarChart, PieChart, ResponsiveContainer, XAxis, YAxis, Tooltip, Bar, Line, Pie, Cell } from "recharts";
 
 const COLORS = ["#3b82f6","#10b981","#f59e0b","#8b5cf6","#ef4444","#06b6d4","#f97316","#ec4899"];
