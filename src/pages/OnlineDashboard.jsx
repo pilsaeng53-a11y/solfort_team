@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
-import { Auth } from "@/lib/auth";
+import { base44 } from "@/api/neonClient";
+import { Auth } from "@/api/neonClient";
 import OnlineNav from "../components/OnlineNav";
 
 function StatCard({ label, value, color = "text-emerald-400" }) {
