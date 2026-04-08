@@ -1,5 +1,5 @@
 import { useState, useEffect, useCallback } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 
 export default function useDealer() {
   const [dealer, setDealer] = useState(null);
