@@ -51,6 +51,7 @@ import FoundationLinks from './pages/FoundationLinks';
 import DailyJournal from './pages/DailyJournal';
 import CustomerSatisfaction from './pages/CustomerSatisfaction';
 import ReferralCode from './pages/ReferralCode';
+import MySalesExcel from './pages/MySalesExcel';
 
 const HIDE_NAV = ['/', '/call', '/admin/dealer', '/admin/call', '/admin/super', '/manager', '/call/dashboard', '/call/leads', '/call/queue', '/call/logs', '/call/interest', '/call/convert', '/call/scripts', '/call/ai'];
 
@@ -89,7 +90,7 @@ const AppContent = () => {
           <Route path="/register" element={<Register />} />
           <Route path="/init-admin" element={<InitAdmin />} />
 
-          {/* 딜러 */}
+          {/* ëë¬ */}
           <Route path="/dashboard" element={<ProtectedRoute roles={['dealer']}><Dashboard /></ProtectedRoute>} />
           <Route path="/register" element={<ProtectedRoute roles={['dealer']}><RegisterCustomer /></ProtectedRoute>} />
           <Route path="/records" element={<ProtectedRoute roles={['dealer']}><ViewRecords /></ProtectedRoute>} />
@@ -100,7 +101,7 @@ const AppContent = () => {
           <Route path="/account" element={<ProtectedRoute roles={['dealer']}><Account /></ProtectedRoute>} />
           <Route path="/calendar" element={<ProtectedRoute roles={['dealer', 'call_team', 'dealer_admin', 'call_admin', 'super_admin']}><CalendarView /></ProtectedRoute>} />
 
-          {/* 콜팀 */}
+          {/* ì½í */}
           <Route path="/call" element={<ProtectedRoute roles={['call_team']}><CallTeam /></ProtectedRoute>} />
           <Route element={<ProtectedRoute roles={['call_team','call_admin','super_admin']}><CallLayout /></ProtectedRoute>}>
             <Route path="/call/dashboard" element={<CallDashboard />} />
@@ -114,7 +115,7 @@ const AppContent = () => {
             <Route path="/call/competition" element={<CallCompetition />} />
           </Route>
 
-          {/* 관리자 및 매니저 */}
+          {/* ê´ë¦¬ì ë° ë§¤ëì  */}
           <Route path="/admin/dealer" element={<ProtectedRoute roles={['dealer_admin','super_admin']}><AdminDealer /></ProtectedRoute>} />
           <Route path="/admin/call" element={<ProtectedRoute roles={['call_admin','super_admin']}><AdminCall /></ProtectedRoute>} />
           <Route path="/admin/super" element={<ProtectedRoute roles={['super_admin']}><AdminSuper /></ProtectedRoute>} />
@@ -136,7 +137,8 @@ const AppContent = () => {
           <Route path="/foundation" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin']}><FoundationLinks /></ProtectedRoute>} />
           <Route path="/daily-journal" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin']}><DailyJournal /></ProtectedRoute>} />
           <Route path="/satisfaction" element={<ProtectedRoute roles={['super_admin','manager']}><CustomerSatisfaction /></ProtectedRoute>} />
-          <Route path="/referral-code" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin']}><ReferralCode /></ProtectedRoute>} />
+          <Route path="/my-sales-excel" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin','online_director']}><MySalesExcel /></ProtectedRoute>} />
+              <Route path="/referral-code" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin']}><ReferralCode /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
         </Routes>
@@ -145,14 +147,14 @@ const AppContent = () => {
       {showWelcome && (
         <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 px-4">
           <div className="bg-[#0a0c15] border border-emerald-500/30 rounded-2xl p-6 max-w-sm text-center space-y-4">
-            <p className="text-2xl">🎉</p>
-            <h2 className="text-lg font-bold text-white">가입이 승인되었습니다!</h2>
-            <p className="text-sm text-gray-400">SolFort 서비스를 이용하실 수 있습니다.</p>
+            <p className="text-2xl">ð</p>
+            <h2 className="text-lg font-bold text-white">ê°ìì´ ì¹ì¸ëììµëë¤!</h2>
+            <p className="text-sm text-gray-400">SolFort ìë¹ì¤ë¥¼ ì´ì©íì¤ ì ììµëë¤.</p>
             <button
               onClick={handleWelcomeClose}
               className="w-full bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 py-2.5 rounded-xl font-semibold hover:bg-emerald-500/30 transition-all"
             >
-              시작하기
+              ììíê¸°
             </button>
           </div>
         </div>
