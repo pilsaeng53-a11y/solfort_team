@@ -1,6 +1,6 @@
 import { useState, useRef } from 'react';
 import { useNavigate } from 'react-router-dom';
-import { base44 } from '@/api/base44Client';
+import { base44 } from '@/api/neonClient';
 import SFLogo from '@/components/SFLogo';
 import { Eye, EyeOff, Check, ChevronLeft } from 'lucide-react';
 
