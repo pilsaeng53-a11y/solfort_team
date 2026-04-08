@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 import CallNav from "@/components/CallNav";
 import SFCard from "@/components/SFCard";
 import { Bot, Copy, Check, Sparkles } from "lucide-react";
