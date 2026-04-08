@@ -1,6 +1,6 @@
 import { useState, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 import SFCard from "../components/SFCard";
 import StatCard from "../components/StatCard";
 import StatusBadge from "../components/StatusBadge";
