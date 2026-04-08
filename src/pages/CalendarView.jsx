@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react';
-import { Auth } from '@/lib/auth';
-import { base44 } from '@/api/base44Client';
+import { Auth } from '@/api/neonClient';
+import { base44 } from '@/api/neonClient';
 import SFCard from '@/components/SFCard';
 import { ChevronLeft, ChevronRight, X } from 'lucide-react';
 
