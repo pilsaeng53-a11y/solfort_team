@@ -45,6 +45,8 @@ const _entities = {
   IncentiveSetting: _makeEntity('/api/incentives'),
   AuditLog: _makeEntity('/api/audit'),
   SalesSettlement: _makeEntity('/api/settlements'),
+  SettlementRecord: _makeEntity('/api/settlements'),
+  SystemSettings: _makeEntity('/api/settings'),
   CallScript: _makeEntity('/api/scripts'),
   CallLog: _makeEntity('/api/leads'),
   User: {
@@ -60,6 +62,22 @@ const _entities = {
 const _auth = {
   currentUser: () => {
     try { return JSON.parse(localStorage.getItem('sf_user')); } catch { return null; }
+  },
+  me: () => {
+    try { return JSON.parse(localStorage.getItem('sf_user')); } catch { return null; }
+  },
+  updateMe: async (data) => {
+    const user = JSON.parse(localStorage.getItem('sf_user') || '{}');
+    const res = await fetch(NEON_API + '/api/users/' + user.id, {
+      method: 'PUT',
+      headers: _headers(),
+      body: JSON.stringify(data)
+    });
+    const updated = await res.json();
+    if (!res.ok) throw new Error(updated.error || 'Update failed');
+    const merged = { ...user, ...data };
+    localStorage.setItem('sf_user', JSON.stringify(merged));
+    return merged;
   },
   login: async (username, password) => {
     const res = await fetch(NEON_API + '/api/auth/login', {

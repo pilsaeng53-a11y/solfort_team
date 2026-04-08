@@ -16,7 +16,7 @@ const DRAWER_ITEMS = [
   { icon: "🌐", label: "네트워크", path: "/my-network" },
   { icon: "💰", label: "인센티브", path: "/incentive-settings" },
   { icon: "📁", label: "업로드", path: "/lead-upload" },
-  { icon: "📋", label: "계약서", path: "/register-customer" },
+  { icon: "📋", label: "계약서", path: "/records" },
   { icon: "👤", label: "계정", path: "/account" },
 ];
 
