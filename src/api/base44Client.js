@@ -2,30 +2,39 @@
 // base44 SDK를 사용하는 모든 파일이 자동으로 Neon API를 사용하게 됨
 
 const API = 'https://solfort-api-9red.onrender.com';
-const getToken = () => localStorage.getItem('sf_token');
-const h = () => ({ 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + getToken() });
-const kst = (d) => d ? new Date(d).toLocaleString('ko-KR', {timeZone:'Asia/Seoul'}) : '-';
 
-const req = async (method, path, body, params) => {
+const getAuthToken = () => localStorage.getItem('sf_token');
+
+const makeHeaders = () => ({
+  'Content-Type': 'application/json',
+  'Authorization': 'Bearer ' + getAuthToken()
+});
+
+const apiReq = async (method, path, body, params) => {
   const url = new URL(API + path);
-  if (params) Object.entries(params).forEach(([k,v]) => v != null && v !== '' && url.searchParams.set(k, v));
-  const res = await fetch(url, { method, headers: h(), body: body ? JSON.stringify(body) : undefined });
-  const data = await res.json();
+  if (params) Object.entries(params).forEach(([k,v]) => {
+    if (v != null && v !== '') url.searchParams.set(k, String(v));
+  });
+  const res = await fetch(url, {
+    method,
+    headers: makeHeaders(),
+    body: body ? JSON.stringify(body) : undefined
+  });
+  const data = await res.json().catch(() => ({}));
   if (!res.ok) throw new Error(data.error || 'API Error');
   return data;
 };
 
-// 엔티티 팩토리 - 각 엔티티 타입에 맞는 API 경로 매핑
-const makeEntity = (apiPath, extraCreate = {}) => ({
-  list: (sort, limit, filters) => req('GET', apiPath, null, filters),
-  filter: (filters) => req('GET', apiPath, null, filters),
-  get: (id) => req('GET', apiPath + '/' + id),
-  create: (data) => req('POST', apiPath, {...data, ...extraCreate}),
-  update: (id, data) => req('PUT', apiPath + '/' + id, data),
-  delete: (id) => req('PUT', apiPath + '/' + id, {status:'deleted'}),
+// 엔티티 팩토리
+const makeEntity = (apiPath, extraCreate) => ({
+  list: (_sort, _limit, filters) => apiReq('GET', apiPath, null, filters),
+  filter: (filters) => apiReq('GET', apiPath, null, filters),
+  get: (id) => apiReq('GET', apiPath + '/' + id),
+  create: (data) => apiReq('POST', apiPath, extraCreate ? {...data, ...extraCreate} : data),
+  update: (id, data) => apiReq('PUT', apiPath + '/' + id, data),
+  delete: (id) => apiReq('PUT', apiPath + '/' + id, {status:'deleted'}),
 });
 
-// base44.entities 완전 모사
 const entities = {
   DealerInfo: makeEntity('/api/users'),
   CallTeamMember: makeEntity('/api/users', {role:'call_team'}),
@@ -41,27 +50,20 @@ const entities = {
   SalesSettlement: makeEntity('/api/settlements'),
   CallScript: makeEntity('/api/scripts'),
   CallLog: makeEntity('/api/leads'),
-  // 추가 엔티티들
   User: {
-    me: () => {
-      const u = localStorage.getItem('sf_user');
-      return u ? JSON.parse(u) : null;
-    },
-    list: (sort, limit) => req('GET', '/api/users'),
-    get: (id) => req('GET', '/api/users/' + id),
-    update: (id, data) => req('PUT', '/api/users/' + id, data),
+    me: () => { try { return JSON.parse(localStorage.getItem('sf_user')); } catch { return null; } },
+    list: () => apiReq('GET', '/api/users'),
+    get: (id) => apiReq('GET', '/api/users/' + id),
+    update: (id, data) => apiReq('PUT', '/api/users/' + id, data),
   },
 };
 
-// Auth 헬퍼
 const auth = {
-  currentUser: () => {
-    const u = localStorage.getItem('sf_user');
-    return u ? JSON.parse(u) : null;
-  },
+  currentUser: () => { try { return JSON.parse(localStorage.getItem('sf_user')); } catch { return null; } },
   login: async (username, password) => {
     const res = await fetch(API + '/api/auth/login', {
-      method:'POST', headers:{'Content-Type':'application/json'},
+      method: 'POST',
+      headers: {'Content-Type': 'application/json'},
       body: JSON.stringify({username, password})
     });
     const data = await res.json();
@@ -82,16 +84,7 @@ const auth = {
   getUserId: () => localStorage.getItem('sf_user_id'),
 };
 
-// base44 객체 - 기존 코드와 완전 호환
-export const base44 = {
-  entities,
-  auth,
-  api: API,
-};
-
+export const base44 = { entities, auth, api: API };
 export default base44;
-
-// 추가 export들 (기존 코드 호환)
 export { entities, auth };
 export const getCurrentUser = auth.currentUser;
-export const getToken = auth.getToken;
