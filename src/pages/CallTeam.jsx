@@ -1,6 +1,6 @@
 import { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
-import { Auth } from "@/lib/auth";
+import { base44 } from "@/api/neonClient";
+import { Auth } from "@/api/neonClient";
 import AdminHeader from "../components/AdminHeader";
 import StatusBadge from "../components/StatusBadge";
 import SFCard from "../components/SFCard";
