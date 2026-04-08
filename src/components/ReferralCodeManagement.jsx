@@ -1,5 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 import SFCard from "@/components/SFCard";
 import { toast } from "sonner";
 
