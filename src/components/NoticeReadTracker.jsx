@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 
 export default function NoticeReadTracker({ noticeId }) {
   const track = () => {
