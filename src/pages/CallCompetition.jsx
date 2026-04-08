@@ -1,5 +1,5 @@
 import { useState, useEffect, useRef } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 
 const today = new Date().toISOString().split("T")[0];
 const currentMonth = today.slice(0, 7);
