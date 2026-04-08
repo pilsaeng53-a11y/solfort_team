@@ -1,4 +1,4 @@
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 
 export const Logger = {
   log: async (type, actor, actorRole, target, action, beforeVal = "", afterVal = "") => {
