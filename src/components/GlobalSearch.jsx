@@ -1,6 +1,6 @@
 import { useState, useRef, useEffect } from "react";
 import { useNavigate } from "react-router-dom";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 import { Search, X } from "lucide-react";
 
 export default function GlobalSearch() {
