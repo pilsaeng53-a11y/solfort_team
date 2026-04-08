@@ -1,5 +1,5 @@
 import { useState, useCallback, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 
 export default function useMarketData(autoRefreshMs = 0) {
   const [rate, setRate] = useState(null);
