@@ -1,7 +1,7 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/base44Client";
+import { base44 } from "@/api/neonClient";
 import SFCard from "./SFCard";
-import { Auth } from "@/lib/auth";
+import { Auth } from "@/api/neonClient";
 
 function Loader() {
   return <div className="flex justify-center py-12"><div className="w-6 h-6 border-2 border-purple-500/30 border-t-purple-500 rounded-full animate-spin" /></div>;
