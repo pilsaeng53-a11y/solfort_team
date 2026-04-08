@@ -1,7 +1,7 @@
 import { useState, useRef } from "react";
 import { read, utils } from "xlsx";
-import { base44 } from "@/api/base44Client";
-import { Auth } from "@/lib/auth";
+import { base44 } from "@/api/neonClient";
+import { Auth } from "@/api/neonClient";
 import { toast } from "sonner";
 
 const STATUS_MAP = { 수락: "전환완료", 거절: "거절", 가망: "재콜예정" };
