@@ -1,4 +1,6 @@
 // Neon API 직접 연결 (Base44 완전 제거)
+import { base44 as _b44 } from './base44Client.js';
+
 const NEON_API = 'https://solfort-api-9red.onrender.com';
 
 const _getToken = () => localStorage.getItem('sf_token');
@@ -140,3 +142,7 @@ export const Settlements = {
   list: () => _request('GET', '/api/settlements'),
   update: (id, data) => _request('PUT', `/api/settlements/${id}`, data)
 };
+
+// base44 compat export
+export const base44 = _b44;
+export default _b44;
