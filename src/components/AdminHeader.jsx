@@ -57,6 +57,7 @@ export default function AdminHeader({ title, accent = "blue" }) {
         <button
           onClick={Auth.logout}
           className="flex items-center gap-1.5 text-xs text-red-400 bg-red-500/10 px-3 py-1.5 rounded-lg hover:bg-red-500/20 transition-all"
+          style={{ fontFamily: "\'Noto Sans KR\', \'Malgun Gothic\', sans-serif" }}
         >
           <LogOut className="h-3.5 w-3.5" />
           ë¡ê·¸ìì
