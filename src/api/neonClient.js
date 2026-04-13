@@ -69,6 +69,7 @@ export const Auth = {
   isLoggedIn: () => !!_getToken(),
   getToken: _getToken,
   getRole: () => localStorage.getItem('sf_role'),
+  getDealerName: () => localStorage.getItem('sf_dealer_name') || localStorage.getItem('sf_user') && JSON.parse(localStorage.getItem('sf_user')).dealer_name || '',
   getUserId: () => {
     const user = localStorage.getItem('sf_user');
     return user ? JSON.parse(user).id : null;
