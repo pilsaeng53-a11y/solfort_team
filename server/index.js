@@ -323,4 +323,131 @@ app.get('/health', async (req,res) => {
 
 app.get('/', (req,res) => res.json({name:'SolFort API Server',version:'1.0.0',status:'running'}));
 
+// === TELEGRAM BOT WEBHOOK ===
+app.post('/api/telegram/webhook', async (req, res) => {
+  try {
+    const { message } = req.body;
+    
+    if (!message || !message.text) {
+      return res.json({ ok: true });
+    }
+    
+    const chatId = message.chat.id;
+    const text = message.text.trim();
+    const username = message.from.username || message.from.first_name || '익명';
+    
+    // 정규식 파싱
+    const nameMatch = text.match(/([가-힣]{2,4})/);
+    const name = nameMatch ? nameMatch[1] : null;
+    
+    const phoneMatch = text.match(/010[-\s]?(\d{4})[-\s]?(\d{4})/);
+    const phone = phoneMatch ? `010-${phoneMatch[1]}-${phoneMatch[2]}` : null;
+    
+    const amountMatch = text.match(/(\d{1,3}(?:,?\d{3})*)\s*(만원|만|원)?/);
+    let amount = null;
+    if (amountMatch) {
+      const num = parseInt(amountMatch[1].replace(/,/g, ''));
+      const unit = amountMatch[2];
+      if (unit === '만원' || unit === '만') amount = num * 10000;
+      else amount = num >= 1000 ? num : num * 10000;
+    }
+    
+    const walletMatch = text.match(/([A-Za-z0-9]{20,})/);
+    const wallet = walletMatch ? walletMatch[1] : null;
+    
+    const isLead = text.includes('리드');
+    const isNew = text.includes('신규');
+    const isDuplicate = text.includes('추가');
+    
+    // 텔레그램 메시지 전송 함수
+    const sendMsg = async (msg) => {
+      await fetch(`https://api.telegram.com/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: 'HTML' })
+      });
+    };
+    
+    // 1. 모든 메시지 로그 (telegram_messages 테이블)
+    try {
+      await pool.query(`
+        INSERT INTO telegram_messages (chat_id, username, message_text, created_at)
+        VALUES ($1, $2, $3, NOW())
+      `, [chatId, username, text]);
+    } catch (e) { console.error('Message log error:', e); }
+    
+    // 2. Chat ID로 직원 조회
+    const staffResult = await pool.query(
+      'SELECT * FROM telegram_users WHERE chat_id = $1 AND is_active = true',
+      [chatId]
+    );
+    
+    const staffName = staffResult.rows.length > 0 ? staffResult.rows[0].user_name : username;
+    const source = staffResult.rows.length > 0
+      ? (staffResult.rows[0].role === 'call_team' ? 'telegram_call' : 'telegram_dealer')
+      : 'telegram_unknown';
+    
+    // 3. 매출 처리
+    if (name && amount && !isLead) {
+      const today = new Date().toISOString().split('T')[0];
+      const status = isNew ? 'new' : isDuplicate ? 'duplicate' : 'existing';
+      
+      const result = await pool.query(`
+        INSERT INTO sales_records 
+        (customer_name, phone, amount, wallet_address, source, dealer_name, customer_status, sale_date, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
+        RETURNING *
+      `, [name, phone, amount, wallet, source, staffName, status, today]);
+      
+      const emoji = status === 'new' ? '🟡' : status === 'duplicate' ? '🔴' : '🟢';
+      const statusText = status === 'new' ? '신규고객' : status === 'duplicate' ? '추가매출' : '기존고객';
+      
+      const msg = `💰 매출 등록 완료!\n\n👤 고객: ${name}\n${phone ? `📞 연락처: ${phone}\n` : ''}💰 금액: ₩${amount.toLocaleString()}\n${wallet ? `💳 지갑: ${wallet.slice(0,10)}...\n` : ''}👨‍💼 담당: ${staffName}\n${emoji} ${statusText}`;
+      
+      await sendMsg(msg);
+    }
+    // 4. 리드 처리
+    else if (name && isLead) {
+      await pool.query(`
+        INSERT INTO call_leads
+        (customer_name, phone, interested_amount, assigned_to, status, memo, created_at)
+        VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      `, [name, phone, amount, staffName, '대기', text]);
+      
+      const msg = `📋 리드 등록 완료!\n\n👤 고객: ${name}\n${phone ? `📞 연락처: ${phone}\n` : ''}${amount ? `💰 관심금액: ₩${amount.toLocaleString()}\n` : ''}👨‍💼 담당: ${staffName}`;
+      
+      await sendMsg(msg);
+    }
+    // 5. 일반 메시지
+    else {
+      await sendMsg('✅ 메시지가 수집되었습니다.\n\n사용법:\n• 매출: "홍길동 50만원 신규 010-1234-5678"\n• 리드: "김철수 리드 010-5678-1234"');
+    }
+    
+    return res.json({ ok: true });
+    
+  } catch (error) {
+    console.error('Telegram webhook error:', error);
+    return res.json({ ok: true });
+  }
+});
+
+// Webhook 설정 (최초 1회)
+app.get('/api/telegram/set-webhook', async (req, res) => {
+  const WEBHOOK_URL = 'https://solfort-api-9red.onrender.com/api/telegram/webhook';
+  try {
+    const response = await fetch(`https://api.telegram.com/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/setWebhook`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ 
+        url: WEBHOOK_URL,
+        drop_pending_updates: true
+      })
+    });
+    const result = await response.json();
+    res.json({ success: true, webhook: WEBHOOK_URL, telegram_response: result });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
 app.listen(PORT, () => console.log('SolFort API running on port ' + PORT));
