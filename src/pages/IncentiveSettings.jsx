@@ -1,6 +1,5 @@
 import { useState, useEffect } from "react";
-import { base44 } from "@/api/neonClient";
-import { Auth } from "@/api/neonClient";
+import { Auth, Incentives, Sales, Users } from "@/api/neonClient";
 import SFCard from "@/components/SFCard";
 
 const LEADER_POSITIONS = ["콜지사장", "대리점지사장"];
@@ -23,22 +22,51 @@ function MyIncentiveCard({ userId, userName }) {
   const thisMonth = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, "0")}`;
 
   useEffect(() => {
+    let timeout;
     (async () => {
-      const [settings, sales, allSettings] = await Promise.all([
-        base44.entities.IncentiveSetting.filter({ member_id: userId }, "-set_at", 1),
-        base44.entities.SalesRecord.list("-sale_date", 5000),
-        base44.entities.IncentiveSetting.filter({ member_id: userId }, "-set_at", 20),
-      ]);
-      const current = settings[0] || null;
-      setSetting(current);
-      const thisMonthSales = sales
-        .filter(s => s.dealer_name === Auth.getDealerName() && (s.sale_date || "").startsWith(thisMonth))
-        .reduce((a, s) => a + (s.sales_amount || 0), 0);
-      setMonthlySales(thisMonthSales);
-      setHistory(allSettings);
-      setLoading(false);
+      try {
+        // 10초 타임아웃 설정
+        timeout = setTimeout(() => {
+          console.error('Incentive data loading timeout');
+          setLoading(false);
+        }, 10000);
+
+        const [allIncentives, allSales] = await Promise.all([
+          Incentives.list().catch(() => []),
+          Sales.list().catch(() => []),
+        ]);
+
+        clearTimeout(timeout);
+
+        // 클라이언트 측 필터링
+        const userIncentives = (allIncentives || []).filter(s => s.member_id === userId);
+        const settings = userIncentives.sort((a, b) => 
+          (b.set_at || '').localeCompare(a.set_at || '')
+        ).slice(0, 1);
+        
+        const current = settings[0] || null;
+        setSetting(current);
+        
+        const thisMonthSales = (allSales || [])
+          .filter(s => s.dealer_name === Auth.getDealerName() && (s.sale_date || "").startsWith(thisMonth))
+          .reduce((a, s) => a + (s.sales_amount || 0), 0);
+        setMonthlySales(thisMonthSales);
+        
+        const allSettings = userIncentives.sort((a, b) => 
+          (b.set_at || '').localeCompare(a.set_at || '')
+        ).slice(0, 20);
+        setHistory(allSettings);
+        
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load incentive data:', error);
+        clearTimeout(timeout);
+        setLoading(false);
+      }
     })();
-  }, [userId]);
+    
+    return () => clearTimeout(timeout);
+  }, [userId, thisMonth]);
 
   if (loading) return <Loader />;
 
@@ -95,27 +123,39 @@ function MemberRateRow({ member, setByUsername, setByName }) {
   const [saved, setSaved] = useState(false);
 
   useEffect(() => {
-    base44.entities.IncentiveSetting.filter({ member_id: member.id }, "-set_at", 1)
-      .then(res => { if (res[0]) setRate(res[0].rate_percent); });
+    Incentives.list()
+      .then(all => {
+        const userSettings = (all || []).filter(s => s.member_id === member.id);
+        const latest = userSettings.sort((a, b) => 
+          (b.set_at || '').localeCompare(a.set_at || '')
+        )[0];
+        if (latest) setRate(latest.rate_percent);
+      })
+      .catch(() => {});
   }, [member.id]);
 
   const handleSave = async () => {
     setSaving(true);
-    const now = new Date().toISOString();
-    const month = now.slice(0, 7);
-    await base44.entities.IncentiveSetting.create({
-      member_id: member.id,
-      member_name: member.name || member.dealer_name || member.owner_name,
-      member_username: member.username,
-      rate_percent: rate,
-      set_by: setByUsername,
-      set_by_name: setByName,
-      set_at: now,
-      month,
-    });
-    setSaving(false);
-    setSaved(true);
-    setTimeout(() => setSaved(false), 2000);
+    try {
+      const now = new Date().toISOString();
+      const month = now.slice(0, 7);
+      await Incentives.create({
+        member_id: member.id,
+        member_name: member.name || member.dealer_name || member.owner_name,
+        member_username: member.username,
+        rate_percent: rate,
+        set_by: setByUsername,
+        set_by_name: setByName,
+        set_at: now,
+        month,
+      });
+      setSaving(false);
+      setSaved(true);
+      setTimeout(() => setSaved(false), 2000);
+    } catch (error) {
+      console.error('Failed to save incentive setting:', error);
+      setSaving(false);
+    }
   };
 
   const memberName = member.name || member.dealer_name || member.owner_name || member.username;
@@ -158,17 +198,31 @@ function TeamIncentivePanel({ currentUser }) {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let timeout;
     (async () => {
-      const [dealers, callMembers, onlineMembers] = await Promise.all([
-        base44.entities.DealerInfo.list("-created_date", 500),
-        base44.entities.CallTeamMember.list("-created_date", 500),
-        base44.entities.OnlineTeamMember.list("-created_date", 200),
-      ]);
-      const all = [...dealers, ...callMembers, ...onlineMembers];
-      const myTeam = all.filter(m => m.parent_dealer_id === currentUser.id && m.status === "active");
-      setMembers(myTeam);
-      setLoading(false);
+      try {
+        timeout = setTimeout(() => {
+          console.error('Team data loading timeout');
+          setLoading(false);
+        }, 10000);
+
+        const allUsers = await Users.list().catch(() => []);
+        clearTimeout(timeout);
+
+        // parent_dealer_id로 필터링
+        const myTeam = (allUsers || []).filter(m => 
+          m.parent_dealer_id === currentUser.id && m.status === "active"
+        );
+        setMembers(myTeam);
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load team data:', error);
+        clearTimeout(timeout);
+        setLoading(false);
+      }
     })();
+    
+    return () => clearTimeout(timeout);
   }, [currentUser.id]);
 
   if (loading) return <Loader />;
@@ -198,19 +252,53 @@ export default function IncentiveSettings() {
   const [loading, setLoading] = useState(true);
 
   useEffect(() => {
+    let timeout;
     (async () => {
-      const userId = Auth.getUserId();
-      const role = Auth.getRole();
-      const [dealers, callMembers, onlineMembers] = await Promise.all([
-        base44.entities.DealerInfo.list("-created_date", 500),
-        base44.entities.CallTeamMember.list("-created_date", 500),
-        base44.entities.OnlineTeamMember.list("-created_date", 200),
-      ]);
-      const all = [...dealers, ...callMembers, ...onlineMembers];
-      const me = all.find(m => m.id === userId || m.username === Auth.getDealerName() || m.dealer_name === Auth.getDealerName());
-      setCurrentUser(me || { id: userId, username: Auth.getDealerName(), name: Auth.getDealerName(), position: "" });
-      setLoading(false);
+      try {
+        const userId = Auth.getUserId();
+        const role = Auth.getRole();
+        
+        timeout = setTimeout(() => {
+          console.error('User data loading timeout');
+          setCurrentUser({ 
+            id: userId, 
+            username: Auth.getDealerName(), 
+            name: Auth.getDealerName(), 
+            position: "" 
+          });
+          setLoading(false);
+        }, 10000);
+
+        const allUsers = await Users.list().catch(() => []);
+        clearTimeout(timeout);
+
+        const me = (allUsers || []).find(m => 
+          m.id === userId || 
+          m.username === Auth.getDealerName() || 
+          m.dealer_name === Auth.getDealerName()
+        );
+        setCurrentUser(me || { 
+          id: userId, 
+          username: Auth.getDealerName(), 
+          name: Auth.getDealerName(), 
+          position: "" 
+        });
+        setLoading(false);
+      } catch (error) {
+        console.error('Failed to load user data:', error);
+        clearTimeout(timeout);
+        const userId = Auth.getUserId();
+        setCurrentUser({ 
+          id: userId, 
+          username: Auth.getDealerName(), 
+          name: Auth.getDealerName(), 
+          position: "" 
+        });
+        setLoading(false);
+      }
     })();
+    
+    return () => clearTimeout(timeout);
   }, []);
 
   if (loading) return (
