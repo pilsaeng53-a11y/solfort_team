@@ -9,6 +9,7 @@ import GradeBadge, { GRADE_CONFIG } from "../components/GradeBadge";
 import StatusBadge from "../components/StatusBadge";
 import StatCard from "../components/StatCard";
 import WalletDisplay from "../components/WalletDisplay";
+import SalesChart from "../components/SalesChart";
 import useMarketData from "../lib/useMarketData";
 import useDealer from "../lib/useDealer";
 import { UserPlus, FileText, Trophy, Send, TrendingUp, Users, DollarSign, Download, Check, X } from "lucide-react";
@@ -274,6 +275,9 @@ export default function Dashboard() {
             </button>
           ))}
         </div>
+
+        {/* 매출 추이 차트 */}
+        <SalesChart records={records} dealerName={dealer?.dealer_name} />
 
         {/* 내 추천코드 */}
         {dealer?.my_referral_code && (
