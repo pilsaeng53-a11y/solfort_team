@@ -52,6 +52,8 @@ import DailyJournal from './pages/DailyJournal';
 import CustomerSatisfaction from './pages/CustomerSatisfaction';
 import ReferralCode from './pages/ReferralCode';
 import MySalesExcel from './pages/MySalesExcel';
+import NotificationCenter from './pages/NotificationCenter';
+import SystemLogPanel from './pages/SystemLogPanel';
 
 const HIDE_NAV = ['/', '/call', '/admin/dealer', '/admin/call', '/admin/super', '/manager', '/call/dashboard', '/call/leads', '/call/queue', '/call/logs', '/call/interest', '/call/convert', '/call/scripts', '/call/ai'];
 
@@ -138,6 +140,8 @@ const AppContent = () => {
           <Route path="/daily-journal" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin']}><DailyJournal /></ProtectedRoute>} />
           <Route path="/satisfaction" element={<ProtectedRoute roles={['super_admin','manager']}><CustomerSatisfaction /></ProtectedRoute>} />
           <Route path="/my-sales-excel" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin','online_director']}><MySalesExcel /></ProtectedRoute>} />
+          <Route path="/notifications" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin','online_director']}><NotificationCenter /></ProtectedRoute>} />
+          <Route path="/system-logs" element={<ProtectedRoute roles={['super_admin','call_admin','dealer_admin']}><SystemLogPanel /></ProtectedRoute>} />
               <Route path="/referral-code" element={<ProtectedRoute roles={['dealer','call_team','online_team','manager','dealer_admin','call_admin','super_admin']}><ReferralCode /></ProtectedRoute>} />
 
           <Route path="*" element={<Navigate to="/" />} />
