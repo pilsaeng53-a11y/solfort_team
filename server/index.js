@@ -323,7 +323,41 @@ app.get('/health', async (req,res) => {
 
 app.get('/', (req,res) => res.json({name:'SolFort API Server',version:'1.0.0',status:'running'}));
 
+
 // === TELEGRAM BOT WEBHOOK ===
+const https = require('https');
+
+// 텔레그램 메시지 전송 함수
+function sendTelegramMessage(chatId, text) {
+  return new Promise((resolve, reject) => {
+    const data = JSON.stringify({
+      chat_id: chatId,
+      text: text,
+      parse_mode: 'HTML'
+    });
+    
+    const options = {
+      hostname: 'api.telegram.com',
+      path: '/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': data.length
+      }
+    };
+    
+    const req = https.request(options, (res) => {
+      let body = '';
+      res.on('data', chunk => body += chunk);
+      res.on('end', () => resolve(JSON.parse(body)));
+    });
+    
+    req.on('error', reject);
+    req.write(data);
+    req.end();
+  });
+}
+
 app.post('/api/telegram/webhook', async (req, res) => {
   try {
     const { message } = req.body;
@@ -359,16 +393,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
     const isNew = text.includes('신규');
     const isDuplicate = text.includes('추가');
     
-    // 텔레그램 메시지 전송 함수
-    const sendMsg = async (msg) => {
-      await fetch(`https://api.telegram.com/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/sendMessage`, {
-        method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ chat_id: chatId, text: msg, parse_mode: 'HTML' })
-      });
-    };
-    
-    // 1. 모든 메시지 로그 (telegram_messages 테이블)
+    // 1. 모든 메시지 로그
     try {
       await pool.query(`
         INSERT INTO telegram_messages (chat_id, username, message_text, created_at)
@@ -392,11 +417,10 @@ app.post('/api/telegram/webhook', async (req, res) => {
       const today = new Date().toISOString().split('T')[0];
       const status = isNew ? 'new' : isDuplicate ? 'duplicate' : 'existing';
       
-      const result = await pool.query(`
+      await pool.query(`
         INSERT INTO sales_records 
         (customer_name, phone, amount, wallet_address, source, dealer_name, customer_status, sale_date, created_at)
         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, NOW())
-        RETURNING *
       `, [name, phone, amount, wallet, source, staffName, status, today]);
       
       const emoji = status === 'new' ? '🟡' : status === 'duplicate' ? '🔴' : '🟢';
@@ -404,7 +428,7 @@ app.post('/api/telegram/webhook', async (req, res) => {
       
       const msg = `💰 매출 등록 완료!\n\n👤 고객: ${name}\n${phone ? `📞 연락처: ${phone}\n` : ''}💰 금액: ₩${amount.toLocaleString()}\n${wallet ? `💳 지갑: ${wallet.slice(0,10)}...\n` : ''}👨‍💼 담당: ${staffName}\n${emoji} ${statusText}`;
       
-      await sendMsg(msg);
+      await sendTelegramMessage(chatId, msg);
     }
     // 4. 리드 처리
     else if (name && isLead) {
@@ -416,11 +440,11 @@ app.post('/api/telegram/webhook', async (req, res) => {
       
       const msg = `📋 리드 등록 완료!\n\n👤 고객: ${name}\n${phone ? `📞 연락처: ${phone}\n` : ''}${amount ? `💰 관심금액: ₩${amount.toLocaleString()}\n` : ''}👨‍💼 담당: ${staffName}`;
       
-      await sendMsg(msg);
+      await sendTelegramMessage(chatId, msg);
     }
     // 5. 일반 메시지
     else {
-      await sendMsg('✅ 메시지가 수집되었습니다.\n\n사용법:\n• 매출: "홍길동 50만원 신규 010-1234-5678"\n• 리드: "김철수 리드 010-5678-1234"');
+      await sendTelegramMessage(chatId, '✅ 메시지가 수집되었습니다.\n\n사용법:\n• 매출: "홍길동 50만원 신규 010-1234-5678"\n• 리드: "김철수 리드 010-5678-1234"');
     }
     
     return res.json({ ok: true });
@@ -434,20 +458,42 @@ app.post('/api/telegram/webhook', async (req, res) => {
 // Webhook 설정 (최초 1회)
 app.get('/api/telegram/set-webhook', async (req, res) => {
   const WEBHOOK_URL = 'https://solfort-api-9red.onrender.com/api/telegram/webhook';
-  try {
-    const response = await fetch(`https://api.telegram.com/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/setWebhook`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ 
-        url: WEBHOOK_URL,
-        drop_pending_updates: true
-      })
+  
+  return new Promise((resolve) => {
+    const data = JSON.stringify({ 
+      url: WEBHOOK_URL,
+      drop_pending_updates: true
     });
-    const result = await response.json();
-    res.json({ success: true, webhook: WEBHOOK_URL, telegram_response: result });
-  } catch (e) {
-    res.status(500).json({ error: e.message });
-  }
+    
+    const options = {
+      hostname: 'api.telegram.com',
+      path: '/bot8761677364:AAGCYaWWvlIP5kO3cx5hQiap7-e_3gczlz8/setWebhook',
+      method: 'POST',
+      headers: {
+        'Content-Type': 'application/json',
+        'Content-Length': data.length
+      }
+    };
+    
+    const request = https.request(options, (response) => {
+      let body = '';
+      response.on('data', chunk => body += chunk);
+      response.on('end', () => {
+        const result = JSON.parse(body);
+        res.json({ success: true, webhook: WEBHOOK_URL, telegram_response: result });
+        resolve();
+      });
+    });
+    
+    request.on('error', (e) => {
+      res.status(500).json({ error: e.message });
+      resolve();
+    });
+    
+    request.write(data);
+    request.end();
+  });
 });
+
 
 app.listen(PORT, () => console.log('SolFort API running on port ' + PORT));
