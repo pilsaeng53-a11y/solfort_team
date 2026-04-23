@@ -84,32 +84,17 @@ export default function SystemLogPanel() {
         setLoading(false);
       }, 10000);
       
-      // Neon DB에서 audit_logs 테이블 조회
-      const { Pool } = require('pg');
-      const pool = new Pool({
-        connectionString: process.env.DATABASE_URL || '',
-        ssl: { rejectUnauthorized: false }
-      });
+      // API를 통해 audit_logs 조회
+      const { base44 } = await import('@/api/base44Client');
+      const filterParams = {};
+      if (dateRange === 'today') filterParams.range = 'today';
+      else if (dateRange === 'week') filterParams.range = 'week';
+      else if (dateRange === 'month') filterParams.range = 'month';
       
-      let query = 'SELECT * FROM audit_logs WHERE 1=1';
-      const params = [];
-      
-      // 날짜 필터
-      if (dateRange === 'today') {
-        query += ' AND created_at >= NOW() - INTERVAL \'1 day\'';
-      } else if (dateRange === 'week') {
-        query += ' AND created_at >= NOW() - INTERVAL \'7 days\'';
-      } else if (dateRange === 'month') {
-        query += ' AND created_at >= NOW() - INTERVAL \'30 days\'';
-      }
-      
-      query += ' ORDER BY created_at DESC LIMIT 100';
-      
-      const result = await pool.query(query, params);
-      await pool.end();
+      const result = await base44.entities.AuditLog.filter(filterParams);
       
       clearTimeout(timeout);
-      setLogs(result.rows || []);
+      setLogs(result || []);
       setLoading(false);
       
     } catch (error) {

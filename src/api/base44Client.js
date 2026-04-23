@@ -9,6 +9,8 @@ const _headers = () => ({
 });
 
 const _req = async (method, path, body, params) => {
+  const token = _getAuthToken();
+  if (!token) return Array.isArray([]) ? [] : {};
   const url = new URL(NEON_API + path);
   if (params) Object.entries(params).forEach(([k,v]) => {
     if (v != null && v !== '') url.searchParams.set(k, v);
@@ -18,6 +20,11 @@ const _req = async (method, path, body, params) => {
     headers: _headers(),
     body: body ? JSON.stringify(body) : undefined
   });
+  if (res.status === 401) {
+    ['sf_token', 'sf_user', 'sf_role', 'sf_user_id'].forEach(k => localStorage.removeItem(k));
+    window.location.href = '/';
+    return;
+  }
   const data = await res.json();
   if (!res.ok) throw new Error(data.error || 'API Error');
   return data;
