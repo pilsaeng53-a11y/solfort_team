@@ -1,0 +1,9 @@
+{
+  "name": "SolFort \ub51c\ub7ec \uc138\uc77c\uc988 \uc624\ud37c\ub808\uc774\uc158",
+  "site": {
+    "installCommand": "npm install",
+    "buildCommand": "npm run build",
+    "serveCommand": "npm run dev",
+    "outputDirectory": "./dist"
+  }
+}
